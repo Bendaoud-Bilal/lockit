@@ -1,0 +1,36 @@
+{
+  "name": "lockit",
+  "version": "1.0.0",
+  "description": "Secure desktop password manager with 2FA authenticator built with Electron + React",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "vite"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rymene7/lockit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rymene7/lockit/issues"
+  },
+  "homepage": "https://github.com/rymene7/lockit#readme",
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "electron": "^38.2.2",
+    "otpauth": "^9.4.1",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.14",
+    "vite": "^7.1.9"
+  }
+}
