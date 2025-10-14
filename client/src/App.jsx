@@ -1,9 +1,12 @@
+import Sidebar from './components/shared/Sidebar'
+
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100">
-      <h1 className="text-3xl font-bold text-center pt-10">
-        Lockit Password Manager
-      </h1>
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex-1">
+        {/* Your main content */}
+      </div>
     </div>
   )
 }
