@@ -1,39 +1,36 @@
 {
   "name": "lockit",
   "version": "1.0.0",
-  "description": "Secure desktop password manager with 2FA authenticator built with Electron + React",
-  "main": "main.js",
+  "description": "Lockit Password Manager - Desktop Application",
+  "main": "electron/main.js",
   "scripts": {
-    "dev": "vite --config frontend/vite.config.js",
-    "dev:electron": "electron .",
-    "build": "vite build --config frontend/vite.config.js",
-    "preview": "vite preview --config frontend/vite.config.js",
-    "start": "electron ."
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rymene7/lockit.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/rymene7/lockit/issues"
-  },
-  "homepage": "https://github.com/rymene7/lockit#readme",
-  "dependencies": {
-    "better-sqlite3": "^12.4.1",
-    "electron": "^38.2.2",
-    "otpauth": "^9.4.1",
-    "qrcode": "^1.5.4",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run electron:dev\"",
+    "build:client": "cd client && npm run build",
+    "electron:dev": "electron .",
+    "electron:build": "electron-builder",
+    "start": "npm run build:client && npm run electron:dev"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^5.0.4",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.14",
-    "vite": "^7.1.9"
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.lockit.app",
+    "productName": "Lockit",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "client/dist/**/*"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "client/public/icons/icon.ico"
+    }
   }
 }
