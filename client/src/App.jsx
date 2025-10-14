@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState } from 'react';
 import Sidebar from './components/shared/Sidebar';
+import Vault from './pages/Vault';
 
 function App() {
   const [activeFilter, setActiveFilter] = useState('all-items');
@@ -30,13 +31,8 @@ function App() {
             {/* My Vault - Single page with filter state */}
             <Route 
               path="/my-vault" 
-              element={
-                <div className="p-8">
-                  <h2 className="text-2xl font-bold mb-4">My Vault</h2>
-                  <p className="text-gray-600">Active Filter: {activeFilter}</p>
-                  {/* Your vault items component will go here, filtered by activeFilter */}
-                </div>
-              } 
+              exact
+              element={<Vault />} 
             />
             
             {/* Other Main Routes */}
