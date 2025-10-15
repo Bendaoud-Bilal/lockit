@@ -1,12 +1,17 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import Sidebar from './components/shared/Sidebar';
 import Vault from './pages/Vault';
 
 function App() {
-  const [activeFilter, setActiveFilter] = useState('all-items');
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState(
+    localStorage.getItem('activeFilter') || 'all-items'
+  );
+   useEffect(() => {
+    localStorage.setItem('activeFilter', activeFilter);
+  }, [activeFilter]);
 
   return (
     <Router>
@@ -32,7 +37,7 @@ function App() {
             <Route 
               path="/my-vault" 
               exact
-              element={<Vault />} 
+              element={<Vault activeFilter={activeFilter} />} 
             />
             
             {/* Other Main Routes */}

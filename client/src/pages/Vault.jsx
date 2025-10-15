@@ -1,24 +1,37 @@
 import React from 'react'
 import FilterAddBar from '../components/vault/FilterAddBar'
 import PasswordCard from '../components/vault/PasswordCard'
-const Vault = () => {
-    
+import { useState } from 'react'
+
+//hna ndir api t3 get w nb3th les info f cards t3 password card 
+//hna ndir edit card tban ki ndght 3la edit w n3tiha les props mta3 les info
+const Vault = ({activeFilter}) => {
+  
+
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const passwords = [
+    { id: 1, title: 'LinkedIn', filter: 'logins' },
+    { id: 2, title: 'GitHub', filter: 'credit-cards' },
+    { id: 3, title: 'Twitter', filter: 'logins' },
+    { id: 4, title: 'Note Sécu', filter: 'secure-notes' },
+  
+  ]
+
+  const filteredPasswords = passwords.filter((item) => {
+    const matchFilter =
+      activeFilter === 'all-items' ||
+      item.filter.toLowerCase() === activeFilter.toLowerCase();
+    const matchSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchFilter && matchSearch;
+  });
   return (
     <div className="w-full h-screen flex flex-col  bg-white ">
-         <FilterAddBar />
+         <FilterAddBar searchQuery={searchQuery} setSearchQuery={setSearchQuery}   />
         <div className='w-full flex-1 overflow-y-scroll flex flex-col items-center mb-5 gap-y-4 mt-10'>
-          <div className='w-[70%]'><PasswordCard /></div> 
-          <div className='w-[70%]'><PasswordCard /></div> 
-          <div className='w-[70%]'><PasswordCard /></div> 
-          <div className='w-[70%]'><PasswordCard /></div> 
-          <div className='w-[70%]'><PasswordCard /></div> 
-         <div className='w-[70%]'><PasswordCard /></div> 
-          <div className='w-[70%]'><PasswordCard /></div> 
-          <div className='w-[70%]'><PasswordCard /></div> 
-          <div className='w-[70%]'><PasswordCard /></div> 
-
-
-          
+         {filteredPasswords.map((p) => (
+          <div key={p.id} className='w-[70%]'><PasswordCard title={p.title} category={p.filter} /></div>       
+         ))}   
         </div>
       
     </div>
