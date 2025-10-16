@@ -17,6 +17,7 @@ import {
   Lock
 } from 'lucide-react';
 
+
 const Sidebar = ({ onOpenPasswordGenerator, onOpenProfile, activeFilter, onFilterChange }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,12 +48,7 @@ const Sidebar = ({ onOpenPasswordGenerator, onOpenProfile, activeFilter, onFilte
     }
   };
 
-  const handleCategoryClick = (categoryId) => {
-    // Only trigger filter change, don't navigate
-    if (onFilterChange) {
-      onFilterChange(categoryId);
-    }
-  };
+  
 
   const handleLockVault = () => {
     // TODO: Clear auth state/session storage
@@ -73,6 +69,13 @@ const Sidebar = ({ onOpenPasswordGenerator, onOpenProfile, activeFilter, onFilte
   };
 
   const activeSection = getActiveSection();
+
+   const handleCategoryClick = (filterId) => {
+    if (onFilterChange) {
+      onFilterChange(filterId);
+      localStorage.setItem('activeFilter', filterId);
+    }
+  };
 
   return (
     <div className="w-64 lg:w-56 xl:w-64 h-screen bg-white flex flex-col border-r border-gray-100">
