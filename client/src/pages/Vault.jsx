@@ -10,13 +10,13 @@ const Vault = ({activeFilter}) => {
 
   const [searchQuery, setSearchQuery] = useState('')
 
-  const passwords = [
+  const [passwords,setPasswords] =useState( [
     { id: 1, title: 'LinkedIn', filter: 'logins' },
     { id: 2, title: 'GitHub', filter: 'credit-cards' },
     { id: 3, title: 'Twitter', filter: 'logins' },
     { id: 4, title: 'Note Sécu', filter: 'secure-notes' },
   
-  ]
+  ])
 
   const filteredPasswords = passwords.filter((item) => {
     const matchFilter =

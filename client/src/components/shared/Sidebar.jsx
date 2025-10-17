@@ -54,6 +54,7 @@ const Sidebar = ({ onOpenPasswordGenerator, onOpenProfile, activeFilter, onFilte
     // TODO: Clear auth state/session storage
     navigate('/unlock');
   };
+  
 
   const isInVaultSection = location.pathname === '/my-vault';
   

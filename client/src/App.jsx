@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useState,useEffect } from 'react';
 import Sidebar from './components/shared/Sidebar';
 import Vault from './pages/Vault';
+import Archive from './pages/Archive';
 
 function App() {
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
@@ -45,7 +46,7 @@ function App() {
             <Route path="/authenticator" element={<div className="p-8">Authenticator</div>} />
             <Route path="/send" element={<div className="p-8">Send</div>} />
             <Route path="/folders" element={<div className="p-8">Folders</div>} />
-            <Route path="/archive" element={<div className="p-8">Archive</div>} />
+            <Route path="/archive" element={<Archive />} />
           </Routes>
         </div>
 
