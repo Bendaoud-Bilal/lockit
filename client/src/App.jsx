@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState } from 'react';
+import {X} from "lucide-react"
 import Sidebar from './components/shared/Sidebar';
-
+import PasswordGenerator from './components/tools/passwordGenerator';
 function App() {
   const [activeFilter, setActiveFilter] = useState('all-items');
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
@@ -50,18 +51,21 @@ function App() {
 
         {/* Password Generator Modal */}
         {showPasswordGenerator && (
+
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className='relative w-full max-w-md'>
+            <button 
+            onClick={()=> setShowPasswordGenerator(false)}
+            className="absolute top-2 right-2">
+                <X size={20} />
+              </button>
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
               <h2 className="text-xl font-bold mb-4">Password Generator</h2>
-              <p className="text-gray-600 mb-4">Modal content goes here...</p>
-              <button 
-                onClick={() => setShowPasswordGenerator(false)}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg"
-              >
-                Close
-              </button>
+              <p className="text-gray-600 mb-4"></p>
+              <PasswordGenerator />
             </div>
-          </div>
+            </div>
+            </div>
         )}
 
         {/* Profile Modal */}
