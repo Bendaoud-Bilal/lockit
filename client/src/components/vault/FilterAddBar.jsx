@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { Search, Plus } from 'lucide-react'
+import AddItemModal from './AddItemModal'
 
 const FilterAddBar = ({searchQuery, setSearchQuery}) => {
-  
-    
+  const [show, setShow] = useState(false)
 
   return (
          <div className='w-full flex gap-x-1 justify-around items-center h-16 bg-white border-b border-gray-100 px-4'> 
@@ -19,10 +19,12 @@ const FilterAddBar = ({searchQuery, setSearchQuery}) => {
 
             />  
          
-            <button className=" w-[10%] flex justify-center text-sm items-center  bg-black text-white gap-x-2 rounded-md py-1 px-3">
+            <button className=" w-[10%] flex justify-center text-sm items-center  bg-black text-white gap-x-2 rounded-md py-1 px-3" onClick={() => setShow(true)}>
                 <Plus className="w-4" strokeWidth={1}/>
                 <span className="">Add item</span>
             </button>
+
+            {show && <AddItemModal show={show} setShow={setShow} />}
         </div>
   )
 }
