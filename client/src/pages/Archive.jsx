@@ -7,12 +7,12 @@ function Archive() {
     const [isEmpty, setIsEmpty] = useState(false);
     const [searchQuery, setSearchQuery] = useState('')
      const [passwords, setPasswords] = useState([
-    // { id: 1, title: 'LinkedIn', filter: 'logins' },
-    // { id: 2, title: 'GitHub', filter: 'credit-cards' },
-    { id: 3, title: 'Twitter', filter: 'logins' },
-    { id: 4, title: 'Note Sécu', filter: 'secure-notes' },
-    { id: 5, title: 'Twitter', filter: 'logins' },
-    { id: 6, title: 'Twitter', filter: 'logins' },
+    { id: 1, title: 'LinkedIn', filter: 'logins' },
+    { id: 2, title: 'GitHub', filter: 'credit-cards' },
+    // { id: 3, title: 'Twitter', filter: 'logins' },
+    // { id: 4, title: 'Note Sécu', filter: 'secure-notes' },
+    // { id: 5, title: 'Twitter', filter: 'logins' },
+    // { id: 6, title: 'Twitter', filter: 'logins' },
   ])
   useEffect(() => {
     if (passwords.length === 0) {

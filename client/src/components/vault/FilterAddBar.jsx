@@ -21,33 +21,34 @@ const FilterAddBar = ({ searchQuery, setSearchQuery }) => {
   
 
   return (
-    <div className='w-full flex gap-x-1 justify-around items-center h-16 bg-white border-b border-gray-100 px-4'>
-      <div className='w-[2%]'>
+    <div className='w-full flex items-center gap-3 h-16 bg-white border-b border-gray-100 px-4'>
+      <div className='flex-shrink-0'>
         <Search className='w-5' strokeWidth={1} />
       </div>
-      <input
-        type='text'
-        placeholder='Search... '
-        className={wideSearch && archiveNotEmpty==false ? 'w-[95%] py-1.5 rounded-md bg-gray-100 px-3 focus:outline-none' :
-        'w-[85%] py-2 rounded-md px-2 text-xs bg-gray-100 outline-none'}
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
+
+      <div className='flex-1 min-w-0'>
+        <input
+          type='text'
+          placeholder='Search...'
+          className={`w-full rounded-md bg-gray-100 px-3 focus:outline-none text-sm sm:text-base ${wideSearch && archiveNotEmpty==false ? 'py-2' : 'py-1.5'}`}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
       {location.pathname !== '/archive' && (
-        <button className='w-[10%] flex justify-center text-sm items-center bg-black text-white gap-x-2 rounded-md py-1 px-3'>
+        <button className='flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2'>
           <Plus className='w-4' strokeWidth={1} />
-          <span>Add item</span>
+          <span className='hidden sm:inline'>Add item</span>
         </button>
       )}
 
-      {
-        archiveNotEmpty && location.pathname === '/archive' && (
-        <button className='w-[10%] flex justify-center text-sm items-center bg-black text-white gap-x-2 rounded-md py-1 px-3'>
+      {archiveNotEmpty && location.pathname === '/archive' && (
+        <button className='flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2'>
           <Trash className='w-4' strokeWidth={1} />
-          <span>Delete All</span>
+          <span className='hidden sm:inline mt-[2px]'>Delete All</span>
         </button>
-        )
-      }
+      )}
     </div>
   )
 }
