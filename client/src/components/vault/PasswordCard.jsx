@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { RefreshCcw, Globe, Shield, Star, Folder, Eye, EyeOff, Copy, Ellipsis, SquarePen, Archive } from 'lucide-react'
+import { RefreshCcw,Paperclip, Globe, Shield, Star, Folder, Eye, EyeOff, Copy, Ellipsis, SquarePen, Archive } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Show2FA from './Show2FA'
 import { useLocation } from 'react-router-dom'
@@ -88,7 +88,7 @@ const PasswordCard = ({ title, category }) => {
                 className={
                   isArchived
                     ? 'absolute'
-                    : 'absolute bg-white left-0 sm:left-auto sm:right-0 sm:top-auto sm:mt-2 border border-gray-200 shadow-lg w-36 rounded-lg z-50'
+                    : 'absolute bg-white left-0 sm:left-auto sm:right-0 sm:top-auto sm:mt-2 border border-gray-200 shadow-lg w-44 rounded-lg z-50'
                 }
               >
                 {isActive2FA && !isArchived && (
@@ -114,6 +114,13 @@ const PasswordCard = ({ title, category }) => {
                   <button className="w-full text-left text-sm text-gray-700 hover:bg-black pl-2 hover:text-white flex gap-x-2 py-1.5 items-center">
                     <SquarePen className="w-4" strokeWidth={2} />
                     <div>Edit Item</div>
+                  </button>
+                )}
+                 
+                 {!isArchived && (
+                  <button className="w-full text-left text-sm text-gray-700 hover:bg-black pl-2 hover:text-white flex gap-x-2 py-1.5 items-center">
+                    <Paperclip className="w-4" strokeWidth={2} />
+                    <div>View Attachments</div>
                   </button>
                 )}
 

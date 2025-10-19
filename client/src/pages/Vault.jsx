@@ -4,7 +4,6 @@ import PasswordCard from '../components/vault/PasswordCard'
 import { useState } from 'react'
 
 //hna ndir api t3 get w nb3th les info f cards t3 password card 
-//hna ndir edit card tban ki ndght 3la edit w n3tiha les props mta3 les info
 const Vault = ({activeFilter}) => {
   
 
