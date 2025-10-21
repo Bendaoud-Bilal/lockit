@@ -3,6 +3,8 @@ import { useState } from 'react';
 import {X} from "lucide-react"
 import Sidebar from './components/shared/Sidebar';
 import PasswordGenerator from './components/tools/passwordGenerator';
+import Authenticator from './components/authenticator/authenticator';
+
 function App() {
   const [activeFilter, setActiveFilter] = useState('all-items');
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
@@ -42,7 +44,7 @@ function App() {
             
             {/* Other Main Routes */}
             <Route path="/security-dashboard" element={<div className="p-8">Security Dashboard</div>} />
-            <Route path="/authenticator" element={<div className="p-8">Authenticator</div>} />
+            <Route path="/authenticator" element={<div className="p-8">{<Authenticator />}</div>} />
             <Route path="/send" element={<div className="p-8">Send</div>} />
             <Route path="/folders" element={<div className="p-8">Folders</div>} />
             <Route path="/archive" element={<div className="p-8">Archive</div>} />
@@ -60,7 +62,7 @@ function App() {
                 <X size={20} />
               </button>
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-xl font-bold mb-4">Password Generator</h2>
+              <h2 className="text-2xl font-bold mb-4">Password Generator</h2>
               <p className="text-gray-600 mb-4"></p>
               <PasswordGenerator />
             </div>
