@@ -1,0 +1,433 @@
+/* CSS Variables - 9 Core Colors Only */
+:root {
+    --color-red: #d4183d;
+    --color-orange: #ff5500;
+    --color-light-yellow: #fff243;
+    --color-yellow: #d08700;
+    --color-blue: #407bfc;
+    --color-black: #030213;
+    --color-light-green: #4cc478;
+    --color-grey-writing: #9c9ca9;
+    --color-grey-border: #eaeaea;
+}
+
+/* Reset */
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+}
+
+/* Page */
+body {
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #fff;
+    color: var(--color-black);
+    padding: 48px 28px;
+}
+
+/* Big centered container */
+.container {
+    max-width: 1320px;
+    margin: 0 auto;
+}
+
+/* generic card */
+.card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 22px;
+    border: 2px solid var(--color-grey-border);
+}
+
+/* TOP SECURITY SCORE CARD: two column layout */
+.score-card {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 28px;
+    align-items: center;
+}
+
+/* left score column */
+.score-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding-left: 4px;
+}
+
+.security-score-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.shield-icon {
+    width: 22px; 
+    height: 22px; 
+    color: var(--color-black);
+    flex-shrink: 0;
+}
+
+.security-score-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-black);
+}
+
+.score-number {
+    font-size: 72px;
+    font-weight: 800;
+    line-height: 0.95;
+    color: var(--color-yellow);
+}
+
+.score-sub {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--color-grey-writing);
+    font-size: 13px;
+}
+
+.score-badge {
+    width: 28px; 
+    height: 28px; 
+    border-radius: 50%;
+    background: #FFF3E6; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+}
+
+.score-badge svg { 
+    width: 16px; 
+    height: 16px; 
+    fill: none; 
+    stroke: var(--color-yellow); 
+    stroke-width: 1.5; 
+}
+
+/* right column: progress + metrics */
+.score-right { 
+    width: 100%; 
+}
+
+.progress-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.progress-line {
+    height: 14px;
+    width: 100%;
+    background: var(--color-grey-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    width: 63%;
+    height: 100%;
+    background: var(--color-black);
+    border-radius: 10px;
+}
+
+.progress-caption { 
+    color: var(--color-grey-writing); 
+    font-size: 13px; 
+}
+
+/* metrics row */
+.metrics {
+    display: flex;
+    gap: 22px;
+    margin-top: 8px;
+}
+
+.metric {
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-width: 160px;
+}
+
+.metric-number { 
+    font-size: 28px; 
+    font-weight: 700; 
+    color: var(--color-black); 
+}
+
+.metric-label { 
+    font-size: 13px; 
+    color: var(--color-grey-writing); 
+    margin-top: 6px; 
+}
+
+.metric.weak .metric-number { 
+    color: var(--color-red); 
+}
+
+.metric.reused .metric-number { 
+    color: var(--color-light-yellow); 
+}
+
+/* Password cards row */
+.password-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin: 10px 0 22px 0;
+}
+
+.password-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 120px;
+    border: 2px solid var(--color-grey-border);
+}
+
+.password-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.password-card-info { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+}
+
+.icon-circle {
+    width: 46px; 
+    height: 46px; 
+    border-radius: 10px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.icon-circle.red { 
+    background: #ffe5ed; 
+}
+
+.icon-circle.yellow { 
+    background: #fff8e8; 
+}
+
+.icon-circle.orange { 
+    background: #fff3e8; 
+}
+
+.icon-circle.blue { 
+    background: #e8f1ff; 
+}
+
+.password-card-title h3 {
+    font-size: 14px; 
+    color: var(--color-black); 
+    font-weight: 700;
+}
+
+.eye-icon { 
+    width: 20px; 
+    height: 20px; 
+    color: var(--color-grey-writing); 
+    flex-shrink: 0; 
+}
+
+.password-card-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.password-count { 
+    font-size: 28px; 
+    font-weight: 700; 
+    color: var(--color-black); 
+    min-width: 44px; 
+    text-align: left; 
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.badge.action-needed { 
+    background: var(--color-red); 
+    color: #fff; 
+}
+
+.badge.review { 
+    background: var(--color-grey-border); 
+    color: var(--color-black); 
+    border: 1px solid var(--color-grey-border); 
+}
+
+.badge.update { 
+    background: #e8f1ff; 
+    color: var(--color-blue); 
+    border: 1px solid var(--color-grey-border); 
+}
+
+/* Data Breach Card specifics */
+.breach-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.breach-title { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+}
+
+.breach-title h2 { 
+    font-size: 16px; 
+    font-weight: 700; 
+    color: var(--color-black); 
+}
+
+.check-button { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    color: var(--color-grey-writing); 
+    font-size: 14px; 
+    cursor: pointer; 
+}
+
+.breach-list { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 14px; 
+    margin-top: 6px; 
+}
+
+.breach-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: #fff;
+    border-radius: 10px;
+    padding: 18px;
+    border: 1px solid var(--color-grey-border);
+}
+
+.breach-icon { 
+    width: 52px; 
+    height: 52px; 
+    border-radius: 12px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    flex-shrink: 0; 
+}
+
+.breach-icon.red { 
+    background: #ffe5ed; 
+}
+
+.breach-icon.green { 
+    background: #e8f7ed; 
+}
+
+.breach-content { 
+    flex: 1; 
+}
+
+.breach-service { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+}
+
+.breach-service h3 { 
+    font-size: 16px; 
+    font-weight: 800; 
+    color: var(--color-black); 
+}
+
+.badge.action-required { 
+    background: var(--color-red); 
+    color: #fff; 
+    padding: 6px 10px; 
+    border-radius: 8px; 
+    font-size: 12px; 
+}
+
+.badge.resolved { 
+    background: #e8f7ed; 
+    color: var(--color-light-green); 
+    padding: 6px 10px; 
+    border-radius: 8px; 
+    font-size: 12px; 
+}
+
+.breach-description { 
+    color: var(--color-grey-writing); 
+    font-size: 14px; 
+    margin-top: 8px; 
+}
+
+.breach-details { 
+    color: var(--color-grey-writing); 
+    font-size: 13px; 
+    margin-top: 6px; 
+}
+
+/* Responsive */
+@media (max-width: 1150px) {
+    .score-card { 
+        grid-template-columns: 190px 1fr; 
+    }
+    .password-cards { 
+        grid-template-columns: repeat(2, 1fr); 
+    }
+    .metrics { 
+        flex-wrap: wrap; 
+        gap: 12px; 
+    }
+}
+
+@media (max-width: 760px) {
+    body { 
+        padding: 20px 14px; 
+    }
+    .score-card { 
+        grid-template-columns: 1fr; 
+    }
+    .password-cards { 
+        grid-template-columns: 1fr; 
+    }
+    .metrics { 
+        gap: 16px; 
+    }
+    .score-left { 
+        align-items: flex-start; 
+    }
+    .score-number { 
+        font-size: 56px; 
+    }
+}

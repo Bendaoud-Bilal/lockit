@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState } from 'react';
 import Sidebar from './components/shared/Sidebar';
+import Dashboard from './components/dashboard/components/Dashboard';
 
 function App() {
   const [activeFilter, setActiveFilter] = useState('all-items');
@@ -40,7 +41,7 @@ function App() {
             />
             
             {/* Other Main Routes */}
-            <Route path="/security-dashboard" element={<div className="p-8">Security Dashboard</div>} />
+            <Route path="/security-dashboard" element={<Dashboard />} />
             <Route path="/authenticator" element={<div className="p-8">Authenticator</div>} />
             <Route path="/send" element={<div className="p-8">Send</div>} />
             <Route path="/folders" element={<div className="p-8">Folders</div>} />
