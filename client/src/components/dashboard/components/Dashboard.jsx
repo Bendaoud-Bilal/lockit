@@ -1,198 +1,88 @@
+
 import React from 'react';
 import '../style/dashboard.css';
 
-import shieldUrl from '../../../assets/icons/dashboard-icons/shield.svg';
-import eyeUrl from '../../../assets/icons/dashboard-icons/eye.svg';
-import iconWeakUrl from '../../../assets/icons/dashboard-icons/icon-weak.svg';
-import iconReusedUrl from '../../../assets/icons/dashboard-icons/icon-reused.svg';
-import iconExposedUrl from '../../../assets/icons/dashboard-icons/icon-exposed.svg';
-import iconOldUrl from '../../../assets/icons/dashboard-icons/icon-old.svg';
-import breachTriUrl from '../../../assets/icons/dashboard-icons/breach-triangle.svg';
-import breachCheckUrl from '../../../assets/icons/dashboard-icons/breach-check.svg';
-import refreshUrl from '../../../assets/icons/dashboard-icons/refresh.svg';
+import SecurityScoreCard from './SecurityScoreCard';
+import PasswordCards from './PasswordCards';
+import BreachAlerts from './BreachAlerts';
 
 export default function Dashboard() {
+  // sample data can be replaced with real props or fetched data later
+  const security = { score: 63, pct: 75, statusText: 'Good security', total: 4, weak: 1, reused: 1, exposed: 0 };
+
+const passwordCards = [
+  {
+    id: 'weak',
+    title: 'Weak Passwords',
+    color: 'red',
+    count: 1,
+    badge: { text: 'Action needed', variant: 'action-needed' },
+    passwords: [
+      {
+        id: 1,
+        site: 'LinkedIn',
+        icon: '/src/assets/icons/sites/linkedin.svg',
+        login: 'Work',
+        password: '********',
+        tag: { text: 'Weak', variant: 'weak' }
+      }
+    ]
+  },
+  {
+    id: 'reused',
+    title: 'Reused Passwords',
+    color: 'yellow',
+    count: 1,
+    badge: { text: 'Review', variant: 'review' },
+    passwords: [
+      {
+        id: 2,
+        site: 'Github',
+        icon: '/src/assets/icons/sites/github.svg',
+        login: 'Login',
+        password: '********',
+        tag: { text: '2FA', variant: 'strong' }
+      }
+    ]
+  },
+  {
+    id: 'exposed',
+    title: 'Exposed Passwords',
+    color: 'orange',
+    count: 0,
+    passwords: []
+  },
+  {
+    id: 'old',
+    title: 'Old Passwords',
+    color: 'blue',
+    count: 1,
+    badge: { text: 'Update', variant: 'update' },
+    passwords: [
+      {
+        id: 3,
+        site: 'Facebook',
+        icon: '/src/assets/icons/sites/facebook.svg',
+        login: 'Login',
+        password: 'qqqqqqq',
+        tag: { text: 'good', variant: 'good' }
+      }
+    ]
+  }
+];
+
+  const breaches = [
+    { id: 1, service: 'LinkedIn', status: 'action', description: '700 million user records exposed including emails and passwords', date: '1/15/2024', affected: 'john.doe@gmail.com' },
+    { id: 2, service: 'Adobe', status: 'resolved', description: 'Security breach affecting 38 million users', date: '12/10/2023', affected: 'johndoe@work.com' },
+
+  ];
+
   return (
     <div className="container">
-      {/* Security Score Card */}
-      <div className="card score-card">
-        <div className="score-left">
-          <div className="security-score-header">
-            <img src={shieldUrl} className="shield-icon" alt="Shield" />
-            <h2>Security Score</h2>
-          </div>
-
-          <div className="score-number">63</div>
-
-          
-        </div>
-
-        <div className="score-right">
-          <div className="progress-wrap">
-            <div className="progress-line" aria-hidden="true">
-              <div className="progress-fill" style={{ width: '75%' }} />
-            </div>
-            <div className="score-sub">
-            <div className="score-badge" aria-hidden="true">
-              <img src={shieldUrl} alt="" />
-            </div>
-            <div>Good security</div>
-          </div>
-          </div>
-
-          <div className="metrics">
-            <div className="metric">
-              <div className="metric-number">4</div>
-              <div className="metric-label">Total Items</div>
-            </div>
-
-            <div className="metric weak">
-              <div className="metric-number">1</div>
-              <div className="metric-label">Weak</div>
-            </div>
-
-            <div className="metric reused">
-              <div className="metric-number">1</div>
-              <div className="metric-label">Reused</div>
-            </div>
-
-            <div className="metric">
-              <div className="metric-number">0</div>
-              <div className="metric-label">Exposed</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Password Cards Row */}
-      <div className="password-cards">
-        {/* Weak */}
-        <div className="password-card">
-          <div className="password-card-header">
-            <div className="password-card-info">
-              <div className="icon-circle red">
-                <img src={iconWeakUrl} width="22" height="22" alt="Weak icon" />
-              </div>
-              <div className="password-card-title">
-                <h3>Weak Passwords</h3>
-              </div>
-            </div>
-            <img src={eyeUrl} className="eye-icon" alt="Toggle visibility" />
-          </div>
-
-          <div className="password-card-content">
-            <div className="password-count">1</div>
-            <div className="badge action-needed">Action needed</div>
-          </div>
-        </div>
-
-        {/* Reused */}
-        <div className="password-card">
-          <div className="password-card-header">
-            <div className="password-card-info">
-              <div className="icon-circle yellow">
-                <img src={iconReusedUrl} width="22" height="22" alt="Reused icon" />
-              </div>
-              <div className="password-card-title">
-                <h3>Reused Passwords</h3>
-              </div>
-            </div>
-            <img src={eyeUrl} className="eye-icon" alt="Toggle visibility" />
-          </div>
-
-          <div className="password-card-content">
-            <div className="password-count">1</div>
-            <div className="badge review">Review</div>
-          </div>
-        </div>
-
-        {/* Exposed */}
-        <div className="password-card">
-          <div className="password-card-header">
-            <div className="password-card-info">
-              <div className="icon-circle orange">
-                <img src={iconExposedUrl} width="22" height="22" alt="Exposed icon" />
-              </div>
-              <div className="password-card-title">
-                <h3>Exposed Passwords</h3>
-              </div>
-            </div>
-            <img src={eyeUrl} className="eye-icon" alt="Toggle visibility" />
-          </div>
-
-          <div className="password-card-content">
-            <div className="password-count">0</div>
-          </div>
-        </div>
-
-        {/* Old */}
-        <div className="password-card">
-          <div className="password-card-header">
-            <div className="password-card-info">
-              <div className="icon-circle blue">
-                <img src={iconOldUrl} width="22" height="22" alt="Old icon" />
-              </div>
-              <div className="password-card-title">
-                <h3>Old Passwords</h3>
-              </div>
-            </div>
-          </div>
-
-          <div className="password-card-content">
-            <div className="password-count">4</div>
-            <div className="badge update">Update</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Data Breach Alerts Card */}
-      <div className="card">
-        <div className="breach-header">
-          <div className="breach-title">
-            <img src={breachTriUrl} width="20" height="20" alt="" />
-            <h2>Data Breach Alerts</h2>
-          </div>
-
-          <div className="check-button">
-            <img src={refreshUrl} width="16" height="16" alt="Refresh" />
-            <div>Check for breaches</div>
-          </div>
-        </div>
-
-        <div className="breach-list">
-          <div className="breach-item">
-            <div className="breach-icon red">
-              <img src={breachTriUrl} width="24" height="24" alt="" />
-            </div>
-
-            <div className="breach-content">
-              <div className="breach-service">
-                <h3>LinkedIn</h3>
-                <span className="badge action-required">Action Required</span>
-              </div>
-              <div className="breach-description">700 million user records exposed including emails and passwords</div>
-              <div className="breach-details">Breach Date: 1/15/2024 • Affected: john.doe@gmail.com</div>
-            </div>
-          </div>
-
-          <div className="breach-item">
-            <div className="breach-icon green">
-              <img src={breachCheckUrl} width="24" height="24" alt="" />
-            </div>
-
-            <div className="breach-content">
-              <div className="breach-service">
-                <h3>Adobe</h3>
-                <span className="badge resolved">Resolved</span>
-              </div>
-              <div className="breach-description">Security breach affecting 38 million users</div>
-              <div className="breach-details">Breach Date: 12/10/2023 • Affected: johndoe@work.com</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p>this is prof of auto update</p>
+      <SecurityScoreCard security={security} />
+      <PasswordCards items={passwordCards} />
+      <BreachAlerts items={breaches} />
+      <p>auto update</p>
     </div>
   );
 }
-

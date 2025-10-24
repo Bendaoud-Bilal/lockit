@@ -18,7 +18,7 @@ function App() {
           onOpenProfile={() => setShowProfileModal(true)}
         />
         
-        <div className="flex-1">
+        <div className="flex-1 overflow-auto">
           <Routes>
             {/* Authentication Routes */}
             <Route path="/welcome" element={<div className="p-8">Welcome Screen</div>} />
