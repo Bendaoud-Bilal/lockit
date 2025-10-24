@@ -4,12 +4,12 @@ import icon from "../../assets/icons/Icon.svg"
 import Security from "./Security"
 import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
+import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
 
 const AddItemModal= ({show, setShow}) => {
   const [activeTab, setActiveTab] = useState("general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
-  const [password, setPassword] = useState("")
   const [showIcon, setShowIcon] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
@@ -18,6 +18,7 @@ const AddItemModal= ({show, setShow}) => {
     // Login fields
     username: "",
     email: "",
+    password: "",  // Password is now part of formData
     website: "",
     // Credit Card fields
     cardholderName: "",
@@ -30,6 +31,46 @@ const AddItemModal= ({show, setShow}) => {
     // Common field
     notes: "",
   })
+
+  const saveItem = async () => { 
+    // Clear old invalid keys from sessionStorage
+    sessionStorage.removeItem('vaultKey');
+    
+    // Use a properly generated 256-bit key (32 bytes = 256 bits)
+    // Generated using: crypto.randomBytes(32).toString('base64')
+    const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
+    
+    // Store it for future use
+    sessionStorage.setItem('vaultKey', vaultKey);
+    
+    if (!vaultKey) {
+      throw new Error('No vault key found. Please login first.');
+    }
+  
+    // console.log('Using vault key:', vaultKey);
+    // console.log('Vault key length:', vaultKey.length);
+  
+    // console.log('Data to encrypt:', formData);
+  
+    // Encrypt and prepare for API
+    const encryptedCredential = await prepareCredentialForStorage(formData, vaultKey);
+    
+    console.log('Encrypted credential ready for API:', encryptedCredential);
+
+    const decryptedCredential = await decryptCredentialForClient(encryptedCredential, vaultKey);
+
+    console.log('decrypted credential :', decryptedCredential)
+  
+    // Send to your API
+    // const response = await fetch('/api/credentials', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+    //   },
+    //   body: JSON.stringify(encryptedCredential)
+    // });
+   }
 
   const category = [
     {id : 1, name: "Login"},
@@ -45,7 +86,7 @@ const AddItemModal= ({show, setShow}) => {
     return { strength: 5, label: "Strong" }
   }
 
-  const passwordStrength = calculatePasswordStrength(password)
+  const passwordStrength = calculatePasswordStrength(formData.password)
 
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
@@ -53,7 +94,7 @@ const AddItemModal= ({show, setShow}) => {
     for (let i = 0; i < 16; i++) {
       newPassword += chars.charAt(Math.floor(Math.random() * chars.length))
     }
-    setPassword(newPassword)
+    setFormData({ ...formData, password: newPassword })
   }
 
   const closeModal = () => {
@@ -201,8 +242,8 @@ const AddItemModal= ({show, setShow}) => {
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="Enter password"
                     className="w-full px-3 py-2.5 pr-20 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
                   />
@@ -228,7 +269,7 @@ const AddItemModal= ({show, setShow}) => {
                   </div>
                 </div>
                 {/* Password Strength Indicator */}
-                {password && (
+                {formData.password && (
                   <div className="mt-3">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-xs font-semibold text-gray-700">
@@ -441,7 +482,7 @@ const AddItemModal= ({show, setShow}) => {
           <button className="px-5 py-2.5 text-sm text-gray-700 font-semibold hover:bg-gray-200 rounded-lg transition-all" onClick={closeModal}>
             Cancel
           </button>
-          <button className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {console.log(formData)}}>
+          <button className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {saveItem()}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
