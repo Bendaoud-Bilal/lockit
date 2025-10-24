@@ -1,0 +1,27 @@
+what i gave claude in that conversation :
+
+sidebar + app.jsx       good
+design                  good
+github tree + branches + team.md
+welcome + signup + unlock frontend
+db
+
+app full local or no?
+maybe problem with send feature 
+(either hybrid architechture or peer-to-peer), 
+breach alerts, custom icons, data sync
+
+use sqlite
+
+
+-----------------------------------------------
+
+add prisma to main and sqlite config and stuff 
+work on my frontend in my branch
+
+
+ask abdelawal/melissa about db, and this :
+app full local or no?
+maybe problem with send feature 
+(either hybrid architechture or peer-to-peer), 
+breach alerts, custom icons, data sync
