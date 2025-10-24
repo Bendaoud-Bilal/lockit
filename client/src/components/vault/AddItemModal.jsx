@@ -3,12 +3,14 @@ import { X, Globe, Eye, EyeOff, RefreshCw, ChevronDown, Plus } from "lucide-reac
 import icon from "../../assets/icons/Icon.svg"
 import Security from "./Security"
 import Attachments from "./Attachments"
+import IconPicker from "./IconPicker"
 
 const AddItemModal= ({show, setShow}) => {
   const [activeTab, setActiveTab] = useState("general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
   const [password, setPassword] = useState("")
+  const [showIcon, setShowIcon] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     category: "Login",
@@ -138,7 +140,8 @@ const AddItemModal= ({show, setShow}) => {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Icon</label>
-              <button className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 font-medium text-gray-700">
+              <button className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 font-medium text-gray-700"
+                onClick={() => setShowIcon(!showIcon)}  >
                 <Globe className="w-4 h-4" />
                 Change Icon
               </button>
@@ -451,6 +454,8 @@ const AddItemModal= ({show, setShow}) => {
           </button>
         </div>
       </div>
+
+      {showIcon && <IconPicker showIcon= {showIcon} setShowIcon={setShowIcon} />}
     </div>
   )
 }
