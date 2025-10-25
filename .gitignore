@@ -3,6 +3,9 @@ dist
 .env
 *.log
 .DS_Store
+tree.js
+structure.txt
+conception.txt
 
 # Electron
 out/

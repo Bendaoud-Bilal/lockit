@@ -4,6 +4,7 @@
   "description": "Lockit Password Manager - Desktop Application",
   "main": "electron/main.js",
   "scripts": {
+    
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
     "dev:client": "cd client && npm run dev",
     "dev:server": "cd server && npm run dev",
