@@ -1,14 +1,21 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import {X} from "lucide-react"
 import Sidebar from './components/shared/Sidebar';
 import PasswordGenerator from './components/tools/passwordGenerator';
 import Authenticator from './components/authenticator/authenticator';
+import Vault from './pages/Vault';
+
 
 function App() {
-  const [activeFilter, setActiveFilter] = useState('all-items');
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState(
+    localStorage.getItem('activeFilter') || 'all-items'
+  );
+   useEffect(() => {
+    localStorage.setItem('activeFilter', activeFilter);
+  }, [activeFilter]);
 
   return (
     <Router>
@@ -33,13 +40,8 @@ function App() {
             {/* My Vault - Single page with filter state */}
             <Route 
               path="/my-vault" 
-              element={
-                <div className="p-8">
-                  <h2 className="text-2xl font-bold mb-4">My Vault</h2>
-                  <p className="text-gray-600">Active Filter: {activeFilter}</p>
-                  {/* Your vault items component will go here, filtered by activeFilter */}
-                </div>
-              } 
+              exact
+              element={<Vault activeFilter={activeFilter} />} 
             />
             
             {/* Other Main Routes */}
