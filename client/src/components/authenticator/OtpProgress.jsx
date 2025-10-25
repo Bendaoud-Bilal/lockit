@@ -1,41 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 
 /**
  * OtpProgress Component
  * 
  * Displays a countdown progress bar representing the remaining time
- * before an OTP (One-Time Password) expires. It shows both the visual
- * progress and the remaining seconds beside it.
+ * before an OTP (One-Time Password) expires.
  *
  * @param {number} duration - Total countdown time in seconds (default: 30)
+ * @param {number} timeLeft - Current remaining time (synchronized from parent)
  */
-const OtpProgress = ({ duration = 30 }) => {
-  const [progress, setProgress] = useState(100);
-  const [timeLeft, setTimeLeft] = useState(duration);
+const OtpProgress = ({ duration = 30, timeLeft }) => {
+  // Calcul du pourcentage restant
+  const progress = (timeLeft / duration) * 100;
 
-  // Color of the progress bar depending on remaining time
-  const getProgressColor = (progress) => {
-    if (progress > 70) return "bg-green-600";
-    if (progress > 40) return "bg-yellow-500";
-    if (progress > 20) return "bg-orange-500";
+  // Couleur dynamique selon le temps restant
+  const getProgressColor = (p) => {
+    if (p > 70) return "bg-green-600";
+    if (p > 40) return "bg-yellow-500";
+    if (p > 20) return "bg-orange-500";
     return "bg-red-600";
   };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev <= 0) return 100;
-        return prev - 100 / duration;
-      });
-
-      setTimeLeft((prev) => {
-        if (prev <= 1) return duration;
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [duration]);
 
   return (
     <div className="flex items-center gap-2 w-full">

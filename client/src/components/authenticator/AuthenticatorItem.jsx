@@ -1,34 +1,81 @@
-// Description:
-// Displays an authentication item containing a service label, user email,
-// TOTP code with progress bar, and control buttons to copy or delete the entry.
-
-import React, { useState } from "react";
-import { Shield, Copy, Check, X } from "lucide-react";
-import OtpProgress from "./OtpProgress";
+import React, { useEffect, useState, useRef } from "react";
+import { Shield, Copy, Check, X,ScanQrCode } from "lucide-react";
+import { generateTOTP } from "../../utils/TotpGenerator";
+import OtpProgress from "./otpProgress";
 
 /**
  * AuthenticatorItem Component
  *
  * @param {string} label - The service or account name (e.g., "GitHub", "Google").
  * @param {string} email - The associated user email or identifier.
- * @param {string} TOTP - The current One-Time Password value.
- * @param {function} onDelete - Callback function triggered when delete is clicked.
+ * @param {string} secret - The secret key used to generate TOTP codes.
+ * @param {function} onDelete - Callback triggered when delete is clicked.
  */
-const AuthenticatorItem = ({ label, email, TOTP, onDelete }) => {
+const AuthenticatorItem = ({ label, email, secret, onDelete}) => {
   const [copied, setCopied] = useState(false);
+  const [totp, setTotp] = useState("------");
+  const [timeLeft, setTimeLeft] = useState(30);
+  const counterRef = useRef(null);
 
-  /** Copies the TOTP code to clipboard */
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(TOTP);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  // Génération du code TOTP
+  const generateCode = () => {
+    try {
+      const newCode = generateTOTP(secret);
+      setTotp(newCode);
+    } catch (err) {
+      console.error("Erreur lors de la génération du TOTP :", err);
+      setTotp("------");
+    }
+  };
+
+  useEffect(() => {
+    if (!secret) {
+      setTotp("------");
+      return;
+    }
+    const nowSec = Math.floor(Date.now() / 1000);
+    const currentCounter = Math.floor(nowSec / 30);
+    counterRef.current = currentCounter;
+    // Génération du premier code
+    generateCode();
+    // Calcul du temps restant
+    setTimeLeft(30 - (nowSec % 30));
+    // Interval pour mise à jour chaque seconde
+    const interval = setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+      const counter = Math.floor(now / 30);
+      const remaining = 30 - (now % 30);  
+      setTimeLeft(remaining);
+
+      // Regénération du code si la période de 30s a changé
+      if (counter !== counterRef.current) {
+        counterRef.current = counter;
+        generateCode();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [secret]);
+  
+
+  // Copie dans le presse-papier
+  const copyToClipboard = async () => {
+    if (!totp || totp === "------") return;
+    
+    try {
+      await navigator.clipboard.writeText(totp);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error("Erreur de copie :", err);
+    }
   };
 
   return (
     <div className="flex flex-col bg-white p-4 rounded-xl shadow-md mb-4 transition-all hover:shadow-lg sm:p-5">
-      {/* Top section */}
+      {/* Partie haute */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        {/* Left: Label + Email */}
+        {/* Gauche : label + email */}
         <div className="flex items-center gap-3">
           <Shield size={22} className="text-blue-600 flex-shrink-0" />
           <div className="min-w-0">
@@ -41,19 +88,20 @@ const AuthenticatorItem = ({ label, email, TOTP, onDelete }) => {
 
         <div className="flex items-center gap-3">
           <div className="flex flex-col items-center justify-center w-20">
-            <span className="text-xl w-full font-mono text-gray-800">{TOTP}</span>
+            <span className="text-xl w-full font-mono text-gray-800">{totp}</span>
             <div className="w-full">
-              <OtpProgress duration={30} color="" />
+              <OtpProgress duration={30} timeLeft={timeLeft} />
             </div>
           </div>
 
-          {/* Action buttons */}
+          {/* Boutons d'action */}
           <div className="flex items-center gap-2">
-            {/* Copy */}
+            {/* Copier */}
             <button
               onClick={copyToClipboard}
+              disabled={totp === "------"}
               aria-label="Copy TOTP code"
-              className="bg-white p-2 rounded-lg hover:bg-gray-200 transition"
+              className="bg-white p-2 rounded-lg hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? (
                 <Check size={18} className="text-green-500" />
@@ -62,7 +110,6 @@ const AuthenticatorItem = ({ label, email, TOTP, onDelete }) => {
               )}
             </button>
 
-            {/* Delete */}
             <button
               onClick={onDelete}
               aria-label="Delete account"

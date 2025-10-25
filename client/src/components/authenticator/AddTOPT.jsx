@@ -50,7 +50,7 @@ export default function AddTOTP({ onAddTOTP , onCancel}) {
       id: Date.now(),
       label: service,
       email: account,
-      TOTP: secret,
+      secret: secret,
     });
 
     // Reset form

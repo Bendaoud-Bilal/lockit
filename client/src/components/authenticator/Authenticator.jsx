@@ -1,25 +1,27 @@
 import React, { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X,ScanQrCode } from "lucide-react";
 import AuthenticatorItem from "./AuthenticatorItem";
 import AddTOTP from "./AddTOPT";
+import { QrCode } from "lucide-react";
+
 
 const Authenticator = () => {
   const [showAddTOTP, setShowAddTOTP] = useState(false);
   const [accounts, setAccounts] = useState([
-    { id: 1, label: "GitHub", email: "user@github.com", TOTP: "1111" },
-    { id: 2, label: "Google", email: "user@gmail.com", TOTP: "24243" },
+    { id: 1, label: "GitHub", email: "user@github.com",secret:"MFRGGZA="},
+    { id: 2, label: "Google", email: "user@gmail.com",secret:"MFRGG"},
   ]);
-
+  
   const handleOnCancel=()=>{
     setShowAddTOTP(false);
   }
 
-  const handleAddNewAccount = ({ label, email, TOTP }) => {
+  const handleAddNewAccount = ({ label, email,secret}) => {
     const newAccount = {
       id: Date.now(),
       label,
       email,
-      TOTP,
+      secret
     };
     setAccounts((prev) => [...prev, newAccount]);
     setShowAddTOTP(false);
@@ -53,7 +55,7 @@ const Authenticator = () => {
           key={account.id}
           label={account.label}
           email={account.email}
-          TOTP={account.TOTP}
+          secret={account.secret}
           onDelete={() => handleDelete(account.id)}
         />
       ))}
@@ -78,6 +80,21 @@ const Authenticator = () => {
           </div>
         </div>
       )}
+    <div>
+      <div className="flex flex-col bg-white p-4 rounded-xl shadow-md mb-4 transition-all hover:shadow-lg sm:p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <ScanQrCode size={22} className="text-blue-600 flex-shrink-0" />
+          <div className="min-w-0">
+            <div className="font-semibold text-gray-800 text-sm sm:text-base truncate">
+              How to add 2FA codes
+            </div>
+            <div className="text-xs text-gray-500 truncate">When setting up 2FA on a service , look for "Manual Entry" or "Secret Key" instead of scanning the QR code.Copy that secret key and add it here.</div>
+          </div>
+        </div>
+    </div>
+    </div>
+    </div>
     </div>
   );
 };
