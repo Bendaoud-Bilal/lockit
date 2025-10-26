@@ -18,7 +18,7 @@ import {
  * @returns {Promise<Object>} Encrypted credential object ready for API
  */
 export async function prepareCredentialForStorage(credentialData, vaultKeyBase64) {
-  const { title, category, icon, favorite, folderId, has2fa } = credentialData;
+  const { userId, title, category, icon, favorite, folderId, has2fa } = credentialData;
   
   // Extract the sensitive data that needs to be encrypted
   let sensitiveData = {};
@@ -85,7 +85,9 @@ export async function prepareCredentialForStorage(credentialData, vaultKeyBase64
 
   // Return object ready for API
   return {
+    userId,
     title,
+    // state,
     category: category.toLowerCase().replace(' ', '_'), // Normalize category
     icon: icon || null,
     favorite: favorite || false,
@@ -118,8 +120,10 @@ export async function decryptCredentialForClient(encryptedCredential, vaultKeyBa
 
     // Combine with non-encrypted fields
     return {
+      userId: encryptedCredential.userId,
       id: encryptedCredential.id,
       title: encryptedCredential.title,
+      // state: encryptedCredential.state,
       category: encryptedCredential.category,
       icon: encryptedCredential.icon,
       favorite: encryptedCredential.favorite,

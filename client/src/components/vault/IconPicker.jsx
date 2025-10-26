@@ -22,8 +22,8 @@ import {
   Trash2,
 } from "lucide-react"
 
-const IconPicker = ({showIcon, setShowIcon}) => {
-     const [searchQuery, setSearchQuery] = useState("")
+const IconPicker = ({showIcon, setShowIcon, formData, setFormData}) => {
+  const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("general")
 
   const generalIcons = [
@@ -35,16 +35,16 @@ const IconPicker = ({showIcon, setShowIcon}) => {
     { id: "database", icon: Database, label: "Database" },
     { id: "layers", icon: Layers, label: "Layers" },
     { id: "cloud", icon: Cloud, label: "Cloud" },
-    { id: "gitbranch", icon: GitBranch, label: "Git Branch" },
+    { id: "gitbranch", icon: GitBranch, label: "GitBranch" },
     { id: "target", icon: Target, label: "Target" },
     { id: "wallet", icon: Wallet, label: "Wallet" },
     { id: "camera", icon: Camera, label: "Camera" },
     { id: "music", icon: Music, label: "Music" },
     { id: "video", icon: Video, label: "Video" },
-    { id: "image", icon: ImageIcon, label: "Image" },
-    { id: "filetext", icon: FileText, label: "File" },
+    { id: "image", icon: ImageIcon, label: "ImageIcon" },
+    { id: "filetext", icon: FileText, label: "FileText" },
     { id: "folder", icon: Folder, label: "Folder" },
-    { id: "trash", icon: Trash2, label: "Trash" },
+    { id: "trash", icon: Trash2, label: "Trash2" },
   ]
 
     const filteredIcons = generalIcons.filter((icon) => icon.label.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -99,11 +99,20 @@ const IconPicker = ({showIcon, setShowIcon}) => {
         <div className="grid grid-cols-8 gap-3">
           {filteredIcons.map((item) => {
             const IconComponent = item.icon
+            const isSelected = formData.icon === item.id
             return (
               <button
                 key={item.id}
-                className="flex items-center justify-center w-12 h-12 border border-[#ececf0] rounded-lg hover:bg-[#f3f3f5] transition-colors group"
+                className={`flex items-center justify-center w-12 h-12 border rounded-lg hover:bg-[#f3f3f5] transition-colors group ${
+                  isSelected ? 'border-black bg-[#f3f3f5] border-2' : 'border-[#ececf0]'
+                }`}
                 title={item.label}
+                onClick={() => {
+                  // Handle icon selection
+                  setFormData({...formData, icon: item.id})
+                  console.log(`Selected icon: ${item.label}`)
+                  closeModal()
+                }}
               >
                 <IconComponent size={22} className="text-[#000000] group-hover:scale-110 transition-transform" />
               </button>

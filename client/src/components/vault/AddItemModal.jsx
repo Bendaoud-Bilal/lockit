@@ -1,17 +1,46 @@
 import { useState } from "react"
-import { X, Globe, Eye, EyeOff, RefreshCw, ChevronDown, Plus } from "lucide-react"
+import { 
+  X, 
+  Globe, 
+  Eye, 
+  EyeOff, 
+  RefreshCw, 
+  ChevronDown, 
+  Plus,
+  Mail,
+  Lock,
+  Shield,
+  Wrench,
+  Database,
+  Layers,
+  Cloud,
+  GitBranch,
+  Target,
+  Wallet,
+  Camera,
+  Music,
+  Video,
+  ImageIcon,
+  FileText,
+  Folder,
+  Trash2,
+} from "lucide-react"
 import icon from "../../assets/icons/Icon.svg"
 import Security from "./Security"
 import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
+import axios from "axios"
 
 const AddItemModal= ({show, setShow}) => {
   const [activeTab, setActiveTab] = useState("general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
+  
   const [showIcon, setShowIcon] = useState(false)
+  const [errors, setErrors] = useState({})
   const [formData, setFormData] = useState({
+    userId: 1,
     title: "",
     category: "Login",
     folder: "Work",
@@ -30,27 +59,141 @@ const AddItemModal= ({show, setShow}) => {
     content: "",
     // Common field
     notes: "",
+    icon: "globe",
+    
   })
 
-  const saveItem = async () => { 
-    // Clear old invalid keys from sessionStorage
-    sessionStorage.removeItem('vaultKey');
-    
-    // Use a properly generated 256-bit key (32 bytes = 256 bits)
-    // Generated using: crypto.randomBytes(32).toString('base64')
-    const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
-    
-    // Store it for future use
-    sessionStorage.setItem('vaultKey', vaultKey);
-    
-    if (!vaultKey) {
-      throw new Error('No vault key found. Please login first.');
+  // Icon mapping
+  const iconMap = {
+    globe: Globe,
+    mail: Mail,
+    lock: Lock,
+    shield: Shield,
+    wrench: Wrench,
+    database: Database,
+    layers: Layers,
+    cloud: Cloud,
+    gitbranch: GitBranch,
+    target: Target,
+    wallet: Wallet,
+    camera: Camera,
+    music: Music,
+    video: Video,
+    image: ImageIcon,
+    filetext: FileText,
+    folder: Folder,
+    trash: Trash2,
+  }
+
+  // Get the current icon component
+  const CurrentIcon = iconMap[formData.icon] || Globe
+
+  // Validation function
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Title is required for all categories
+    if (!formData.title.trim()) {
+      newErrors.title = "Title is required";
     }
+
+    // Category-specific validation
+    if (formData.category === "Login") {
+      // Login requires at least username or email
+      if (!formData.username.trim() && !formData.email.trim()) {
+        newErrors.username = "Username or Email is required";
+        newErrors.email = "Username or Email is required";
+      }
+      
+      // Email format validation if provided
+      if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = "Invalid email format";
+      }
+
+      // Password is required for Login
+      if (!formData.password.trim()) {
+        newErrors.password = "Password is required";
+      }
+
+      // Website URL validation if provided
+      if (formData.website.trim() && !/^https?:\/\/.+/.test(formData.website)) {
+        newErrors.website = "Invalid URL format (must start with http:// or https://)";
+      }
+    }
+
+    if (formData.category === "Credit Card") {
+      // Cardholder name is required
+      if (!formData.cardholderName.trim()) {
+        newErrors.cardholderName = "Cardholder name is required";
+      }
+
+      // Card number is required and must be 13-19 digits
+      const cardNumber = formData.cardNumber.replace(/\s/g, '');
+      if (!cardNumber) {
+        newErrors.cardNumber = "Card number is required";
+      } else if (!/^\d{13,19}$/.test(cardNumber)) {
+        newErrors.cardNumber = "Card number must be 13-19 digits";
+      }
+
+      // Expiry month validation (01-12)
+      if (!formData.expiryMonth) {
+        newErrors.expiryMonth = "Expiry month is required";
+      } else if (!/^(0[1-9]|1[0-2])$/.test(formData.expiryMonth)) {
+        newErrors.expiryMonth = "Invalid month (01-12)";
+      }
+
+      // Expiry year validation (current year or future)
+      const currentYear = new Date().getFullYear();
+      if (!formData.expiryYear) {
+        newErrors.expiryYear = "Expiry year is required";
+      } else if (!/^\d{4}$/.test(formData.expiryYear)) {
+        newErrors.expiryYear = "Year must be 4 digits";
+      } else if (parseInt(formData.expiryYear) < currentYear) {
+        newErrors.expiryYear = "Card is expired";
+      }
+
+      // CVV validation (3-4 digits)
+      if (!formData.cvv) {
+        newErrors.cvv = "CVV is required";
+      } else if (!/^\d{3,4}$/.test(formData.cvv)) {
+        newErrors.cvv = "CVV must be 3-4 digits";
+      }
+    }
+
+    if (formData.category === "Note") {
+      // Content is required for Secure Note
+      if (!formData.content.trim()) {
+        newErrors.content = "Content is required";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const saveItem = async () => { 
+    try {
+      // Validate form before saving
+      if (!validateForm()) {
+        // alert('Please fix the errors in the form');
+        return;
+      }
+
+      // Clear old invalid keys from sessionStorage
+      sessionStorage.removeItem('vaultKey');
+    
+      // Use a properly generated 256-bit key (32 bytes = 256 bits)
+      // Generated using: crypto.randomBytes(32).toString('base64')
+      const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
+    
+      // Store it for future use
+      sessionStorage.setItem('vaultKey', vaultKey);
+    
+      if (!vaultKey) {
+        throw new Error('No vault key found. Please login first.');
+      }
   
-    // console.log('Using vault key:', vaultKey);
-    // console.log('Vault key length:', vaultKey.length);
-  
-    // console.log('Data to encrypt:', formData);
+    
   
     // Encrypt and prepare for API
     const encryptedCredential = await prepareCredentialForStorage(formData, vaultKey);
@@ -60,16 +203,17 @@ const AddItemModal= ({show, setShow}) => {
     const decryptedCredential = await decryptCredentialForClient(encryptedCredential, vaultKey);
 
     console.log('decrypted credential :', decryptedCredential)
+
+    const response = await axios.post('http://localhost:5000/api/vault/credentials', {
+      encryptedCredential})
+
+    console.log(response.data)
   
-    // Send to your API
-    // const response = await fetch('/api/credentials', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${sessionStorage.getItem('token')}`
-    //   },
-    //   body: JSON.stringify(encryptedCredential)
-    // });
+    }catch (error) {
+      console.error("Error saving item:", error);
+    }
+  
+    
    }
 
   const category = [
@@ -126,6 +270,7 @@ const AddItemModal= ({show, setShow}) => {
               General
             </button>
             <button
+            disabled={formData.category !== 'Login'}
               onClick={() => setActiveTab("security")}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-all ${
                 activeTab === "security" 
@@ -155,14 +300,22 @@ const AddItemModal= ({show, setShow}) => {
           {/* Title, Category, Icon Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Title</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                Title <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, title: e.target.value });
+                  if (errors.title) setErrors({ ...errors, title: '' });
+                }}
                 placeholder="Enter title"
-                className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                  errors.title ? 'border-red-500' : 'border-gray-200'
+                }`}
               />
+              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Category</label>
@@ -183,7 +336,7 @@ const AddItemModal= ({show, setShow}) => {
               <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Icon</label>
               <button className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 font-medium text-gray-700"
                 onClick={() => setShowIcon(!showIcon)}  >
-                <Globe className="w-4 h-4" />
+                <CurrentIcon className="w-4 h-4" />
                 Change Icon
               </button>
             </div>
@@ -215,37 +368,60 @@ const AddItemModal= ({show, setShow}) => {
               {/* Username and Email Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Username</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                    Username <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, username: e.target.value });
+                      if (errors.username) setErrors({ ...errors, username: '' });
+                    }}
                     placeholder="Enter username"
-                    className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                    className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                      errors.username ? 'border-red-500' : 'border-gray-200'
+                    }`}
                   />
+                  {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Email</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                    Email <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (errors.email) setErrors({ ...errors, email: '' });
+                    }}
                     placeholder="Enter email"
-                    className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                    className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                      errors.email ? 'border-red-500' : 'border-gray-200'
+                    }`}
                   />
+                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                 </div>
               </div>
 
               {/* Password */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Password</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                  Password <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value });
+                      if (errors.password) setErrors({ ...errors, password: '' });
+                    }}
                     placeholder="Enter password"
-                    className="w-full px-3 py-2.5 pr-20 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                    className={`w-full px-3 py-2.5 pr-20 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                      errors.password ? 'border-red-500' : 'border-gray-200'
+                    }`}
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
                     <button
@@ -268,6 +444,7 @@ const AddItemModal= ({show, setShow}) => {
                     </button>
                   </div>
                 </div>
+                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                 {/* Password Strength Indicator */}
                 {formData.password && (
                   <div className="mt-3">
@@ -306,10 +483,16 @@ const AddItemModal= ({show, setShow}) => {
                 <input
                   type="url"
                   value={formData.website}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, website: e.target.value });
+                    if (errors.website) setErrors({ ...errors, website: '' });
+                  }}
                   placeholder="https://example.com"
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none placeholder:text-gray-400"
+                  className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none placeholder:text-gray-400 ${
+                    errors.website ? 'border-red-500' : 'border-gray-200'
+                  }`}
                 />
+                {errors.website && <p className="text-red-500 text-xs mt-1">{errors.website}</p>}
               </div>
 
               {/* Notes */}
@@ -331,63 +514,102 @@ const AddItemModal= ({show, setShow}) => {
             <>
               {/* Cardholder Name */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Cardholder Name</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                  Cardholder Name <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.cardholderName}
-                  onChange={(e) => setFormData({ ...formData, cardholderName: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, cardholderName: e.target.value });
+                    if (errors.cardholderName) setErrors({ ...errors, cardholderName: '' });
+                  }}
                   placeholder="Enter cardholder name"
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                  className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                    errors.cardholderName ? 'border-red-500' : 'border-gray-200'
+                  }`}
                 />
+                {errors.cardholderName && <p className="text-red-500 text-xs mt-1">{errors.cardholderName}</p>}
               </div>
 
               {/* Card Number */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Card Number</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                  Card Number <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.cardNumber}
-                  onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, cardNumber: e.target.value });
+                    if (errors.cardNumber) setErrors({ ...errors, cardNumber: '' });
+                  }}
                   placeholder="1234 5678 9012 3456"
                   maxLength="19"
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                  className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                    errors.cardNumber ? 'border-red-500' : 'border-gray-200'
+                  }`}
                 />
+                {errors.cardNumber && <p className="text-red-500 text-xs mt-1">{errors.cardNumber}</p>}
               </div>
 
               {/* Expiry and CVV Row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Expiry Month</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                    Expiry Month <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={formData.expiryMonth}
-                    onChange={(e) => setFormData({ ...formData, expiryMonth: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, expiryMonth: e.target.value });
+                      if (errors.expiryMonth) setErrors({ ...errors, expiryMonth: '' });
+                    }}
                     placeholder="MM"
                     maxLength="2"
-                    className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                    className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                      errors.expiryMonth ? 'border-red-500' : 'border-gray-200'
+                    }`}
                   />
+                  {errors.expiryMonth && <p className="text-red-500 text-xs mt-1">{errors.expiryMonth}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Expiry Year</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                    Expiry Year <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={formData.expiryYear}
-                    onChange={(e) => setFormData({ ...formData, expiryYear: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, expiryYear: e.target.value });
+                      if (errors.expiryYear) setErrors({ ...errors, expiryYear: '' });
+                    }}
                     placeholder="YYYY"
                     maxLength="4"
-                    className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                    className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                      errors.expiryYear ? 'border-red-500' : 'border-gray-200'
+                    }`}
                   />
+                  {errors.expiryYear && <p className="text-red-500 text-xs mt-1">{errors.expiryYear}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">CVV</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                    CVV <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
                     <input
                       type={showCVV ? "text" : "password"}
                       value={formData.cvv}
-                      onChange={(e) => setFormData({ ...formData, cvv: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, cvv: e.target.value });
+                        if (errors.cvv) setErrors({ ...errors, cvv: '' });
+                      }}
                       placeholder="123"
                       maxLength="4"
-                      className="w-full px-3 py-2.5 pr-10 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none"
+                      className={`w-full px-3 py-2.5 pr-10 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                        errors.cvv ? 'border-red-500' : 'border-gray-200'
+                      }`}
                     />
                     <button
                       onClick={() => setShowCVV(!showCVV)}
@@ -401,6 +623,7 @@ const AddItemModal= ({show, setShow}) => {
                       )}
                     </button>
                   </div>
+                  {errors.cvv && <p className="text-red-500 text-xs mt-1">{errors.cvv}</p>}
                 </div>
               </div>
 
@@ -423,14 +646,22 @@ const AddItemModal= ({show, setShow}) => {
             <>
               {/* Content */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Content</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                  Content <span className="text-red-500">*</span>
+                </label>
                 <textarea
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, content: e.target.value });
+                    if (errors.content) setErrors({ ...errors, content: '' });
+                  }}
                   placeholder="Enter your secure note content..."
                   rows={6}
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all resize-none outline-none placeholder:text-gray-400"
+                  className={`w-full px-3 py-2.5 text-sm bg-gray-50 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all resize-none outline-none placeholder:text-gray-400 ${
+                    errors.content ? 'border-red-500' : 'border-gray-200'
+                  }`}
                 />
+                {errors.content && <p className="text-red-500 text-xs mt-1">{errors.content}</p>}
               </div>
 
               {/* Notes */}
@@ -496,7 +727,7 @@ const AddItemModal= ({show, setShow}) => {
         </div>
       </div>
 
-      {showIcon && <IconPicker showIcon= {showIcon} setShowIcon={setShowIcon} />}
+      {showIcon && <IconPicker showIcon= {showIcon} setShowIcon={setShowIcon} formData={formData} setFormData={setFormData} />}
     </div>
   )
 }
