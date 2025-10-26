@@ -54,3 +54,4 @@ const FilterAddBar = ({ searchQuery, setSearchQuery }) => {
 }
 
 export default FilterAddBar
+

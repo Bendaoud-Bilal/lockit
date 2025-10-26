@@ -1,0 +1,243 @@
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./lockit.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================
+// USERS
+// ============================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String?  @unique
+  
+  // Password & Encryption
+  masterPasswordHash String @map("master_password_hash")
+  salt               String
+  kdfAlgorithm       String @default("argon2id") @map("kdf_algorithm")
+  argon2Iterations   Int    @default(3) @map("argon2_iterations")
+  kdfMemory          Int    @default(65536) @map("kdf_memory") // 64MB in KB
+  kdfParallelism     Int    @default(4) @map("kdf_parallelism")
+  
+  // Vault Encryption Key
+  encryptedVaultKey String @map("encrypted_vault_key")
+  vaultKeyIv        String @map("vault_key_iv")
+  vaultKeyAuthTag   String @map("vault_key_auth_tag")
+  vaultSalt         String @map("vault_salt")
+  masterKeyKdfIterations Int @default(100000) @map("master_key_kdf_iterations")
+  
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  lastLogin DateTime? @map("last_login")
+  
+  // Relations
+  folders       Folder[]
+  credentials   Credential[]
+  sends         Send[]
+  breachAlerts  BreachAlert[]
+  recoveryKeys  RecoveryKey[]
+
+  @@map("users")
+}
+
+// ============================================
+// RECOVERY KEYS
+// ============================================
+
+model RecoveryKey {
+  id     Int    @id @default(autoincrement())
+  userId Int    @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  keyHash       String  @map("key_hash") // Hashed recovery key
+  salt          String  // Salt for hashing recovery key
+  status        String  @default("active") // active, used, revoked
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  usedAt        DateTime? @map("used_at")
+  revokedAt     DateTime? @map("revoked_at")
+
+  @@map("recovery_keys")
+}
+
+// ============================================
+// FOLDERS
+// ============================================
+
+model Folder {
+  id     Int    @id @default(autoincrement())
+  userId Int    @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  credentials Credential[]
+
+  @@unique([userId, name])
+  @@map("folders")
+}
+
+// ============================================
+// CREDENTIALS (Vault Items)
+// ============================================
+
+model Credential {
+  id       Int     @id @default(autoincrement())
+  userId   Int     @map("user_id")
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folderId Int?    @map("folder_id")
+  folder   Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  
+  // Basic Info
+  category String  @default("login") // login, credit_card, secure_note, identity
+  title    String
+  icon     String?
+  favorite Boolean @default(false)
+  
+  // Encrypted Data
+  dataEnc     String @map("data_enc") // Encrypted JSON
+  dataIv      String @map("data_iv")
+  dataAuthTag String @map("data_auth_tag")
+  
+  // Password Analysis
+  hasPassword         Boolean   @default(true) @map("has_password")
+  passwordStrength    Int?      @map("password_strength") // 0-100 or 0-4
+  passwordReused      Boolean   @default(false) @map("password_reused")
+  passwordLastChanged DateTime? @map("password_last_changed")
+  compromised         Boolean   @default(false)
+  
+  // State
+  state String @default("active") // active, deleted (soft delete)
+  has2fa Boolean @default(false) @map("has_2fa")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  totpSecrets TotpSecret[]
+  attachments Attachment[]
+  breachAlerts BreachAlert[]
+
+  @@map("credentials")
+}
+
+// ============================================
+// TOTP SECRETS (Two-Factor Authentication)
+// ============================================
+
+model TotpSecret {
+  id           Int        @id @default(autoincrement())
+  credentialId Int        @map("credential_id")
+  credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  
+  serviceName String @map("service_name")
+  accountName String? @map("account_name")
+  issuer      String?
+  
+  // Encrypted Secret
+  encryptedSecret String @map("encrypted_secret")
+  secretIv        String @map("secret_iv")
+  secretAuthTag   String @map("secret_auth_tag")
+  
+  // TOTP Configuration
+  algorithm String @default("SHA1")
+  digits    Int    @default(6)
+  period    Int    @default(30)
+  
+  // State
+  state String @default("active") // active, archived
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("totp_secrets")
+}
+
+// ============================================
+// ATTACHMENTS
+// ============================================
+
+model Attachment {
+  id           Int        @id @default(autoincrement())
+  credentialId Int        @map("credential_id")
+  credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  
+  filename  String
+  fileSize  Int    @map("file_size")
+  mimeType  String? @map("mime_type")
+  
+  // Encrypted File Data
+  encryptedData String @map("encrypted_data") // Base64 encoded
+  dataIv        String @map("data_iv")
+  dataAuthTag   String @map("data_auth_tag")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("attachments")
+}
+
+// ============================================
+// SENDS (Secure Sharing)
+// ============================================
+
+model Send {
+  id     String @id // UUID
+  userId Int    @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name      String
+  type      String // text, file, credential
+  direction String // sent, received
+  
+  // Encrypted Content
+  encryptedContent String @map("encrypted_content")
+  contentIv        String @map("content_iv")
+  contentAuthTag   String @map("content_auth_tag")
+  
+  // Access Control
+  passwordProtected  Boolean   @default(false) @map("password_protected")
+  maxAccessCount     Int?      @map("max_access_count")
+  currentAccessCount Int       @default(0) @map("current_access_count")
+  expiresAt          DateTime? @map("expires_at")
+  
+  // State
+  isActive  Boolean   @default(true) @map("is_active")
+  deletedAt DateTime? @map("deleted_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("sends")
+}
+
+// ============================================
+// BREACH ALERTS
+// ============================================
+
+model BreachAlert {
+  id           Int         @id @default(autoincrement())
+  userId       Int         @map("user_id")
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId Int?        @map("credential_id")
+  credential   Credential? @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  
+  affectedEmail String  @map("affected_email")
+  breachSource  String  @map("breach_source") // "LinkedIn", "Adobe", etc.
+  breachDate    DateTime? @map("breach_date")
+  affectedData  String?   @map("affected_data") // "emails and passwords"
+  severity      String    // low, medium, high, critical
+  status        String    @default("pending") // pending, resolved, dismissed
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("breach_alerts")
+}
