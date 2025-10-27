@@ -11,7 +11,7 @@ import {
   updateFolder,
   deleteFolder,
   getVaultStats,
-} from '../controllers/Vault.js';
+} from '../controllers/vault.js';
 
 const router = Router();
 
