@@ -4,19 +4,18 @@ import PasswordCard from '../components/vault/PasswordCard'
 import { useState } from 'react'
 
 //hna ndir api t3 get w nb3th les info f cards t3 password card 
-//hna ndir edit card tban ki ndght 3la edit w n3tiha les props mta3 les info
 const Vault = ({activeFilter}) => {
   
 
   const [searchQuery, setSearchQuery] = useState('')
 
-  const passwords = [
+  const [passwords,setPasswords] =useState( [
     { id: 1, title: 'LinkedIn', filter: 'logins' },
     { id: 2, title: 'GitHub', filter: 'credit-cards' },
     { id: 3, title: 'Twitter', filter: 'logins' },
     { id: 4, title: 'Note Sécu', filter: 'secure-notes' },
   
-  ]
+  ])
 
   const filteredPasswords = passwords.filter((item) => {
     const matchFilter =

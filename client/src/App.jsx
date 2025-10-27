@@ -5,6 +5,7 @@ import Sidebar from './components/shared/Sidebar';
 import PasswordGenerator from './components/tools/passwordGenerator';
 import Authenticator from './components/authenticator/authenticator';
 import Vault from './pages/Vault';
+import Archive from './pages/Archive';
 
 
 function App() {
@@ -49,7 +50,7 @@ function App() {
             <Route path="/authenticator" element={<div className="p-8">{<Authenticator />}</div>} />
             <Route path="/send" element={<div className="p-8">Send</div>} />
             <Route path="/folders" element={<div className="p-8">Folders</div>} />
-            <Route path="/archive" element={<div className="p-8">Archive</div>} />
+            <Route path="/archive" element={<Archive />} />
           </Routes>
         </div>
 
