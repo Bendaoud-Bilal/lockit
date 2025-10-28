@@ -12,6 +12,12 @@ import {
   deleteFolder,
   getVaultStats,
 } from '../controllers/vault.js';
+import {
+  addAttachment,
+  getAttachments,
+  getAttachmentById,
+  deleteAttachment,
+} from '../controllers/attachment.js';
 
 const router = Router();
 
@@ -59,6 +65,22 @@ router.delete('/folders/:id', deleteFolder);
 
 // Get vault statistics for a user
 router.get('/stats/:userId', getVaultStats);
+
+// ============================================
+// ATTACHMENT ROUTES
+// ============================================
+
+// Get all attachments for a credential
+router.get('/attachments/credential/:credentialId', getAttachments);
+
+// Get single attachment by ID
+router.get('/attachments/:id', getAttachmentById);
+
+// Create new attachment
+router.post('/attachments', addAttachment);
+
+// Delete attachment
+router.delete('/attachments/:id', deleteAttachment);
 
 // ============================================
 // TEST ROUTE

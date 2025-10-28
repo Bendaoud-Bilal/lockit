@@ -39,6 +39,8 @@ const AddItemModal= ({show, setShow}) => {
   
   const [showIcon, setShowIcon] = useState(false)
   const [errors, setErrors] = useState({})
+  const [savedCredentialId, setSavedCredentialId] = useState(null) // Store saved credential ID
+  const [selectedFiles, setSelectedFiles] = useState([]) // Store files to be uploaded
   const [formData, setFormData] = useState({
     userId: 1,
     title: "",
@@ -204,17 +206,133 @@ const AddItemModal= ({show, setShow}) => {
 
     console.log('decrypted credential :', decryptedCredential)
 
-    const response = await axios.post('http://localhost:5000/api/vault/credentials', {
+    // Save credential first
+    const response = await axios.post(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:5000'}/api/vault/credentials`, {
       encryptedCredential})
 
-    console.log(response.data)
+    console.log('Credential saved:', response.data)
+
+    // Save the credential ID
+    const credentialId = response.data.credential?.id
+    if (credentialId) {
+      setSavedCredentialId(credentialId)
+      
+      // Upload attachments if any were selected
+      if (selectedFiles.length > 0) {
+        console.log(`Uploading ${selectedFiles.length} attachments...`)
+        
+        let successCount = 0
+        let failCount = 0
+        
+        for (const file of selectedFiles) {
+          try {
+            console.log(`Uploading file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`)
+            await uploadAttachment(file, credentialId, vaultKey)
+            successCount++
+            console.log(`✓ Successfully uploaded: ${file.name}`)
+          } catch (attachError) {
+            failCount++
+            console.error(`✗ Error uploading attachment: ${file.name}`, attachError)
+            if (attachError.response) {
+              console.error('Server response:', attachError.response.data)
+              console.error('Status code:', attachError.response.status)
+            }
+          }
+        }
+        
+        // Clear selected files after upload
+        setSelectedFiles([])
+        
+        if (failCount > 0) {
+          alert(`Credential saved! ${successCount} attachment(s) uploaded successfully, ${failCount} failed.`)
+        } else {
+          alert(`Credential and ${successCount} attachment(s) saved successfully!`)
+        }
+      } else {
+        alert('Credential saved successfully!')
+      }
+    }
   
-    }catch (error) {
+    } catch (error) {
       console.error("Error saving item:", error);
+      alert('Failed to save credential. Please try again.')
     }
   
     
    }
+
+  // Function to encrypt and upload a file
+  const uploadAttachment = async (file, credentialId, vaultKey) => {
+    try {
+      console.log(`[Upload] Starting encryption for: ${file.name}`)
+      console.log(`[Upload] Original size: ${(file.size / 1024 / 1024).toFixed(2)} MB`)
+      
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      const data = new Uint8Array(arrayBuffer)
+
+      // Convert base64 vault key to CryptoKey
+      const keyData = Uint8Array.from(atob(vaultKey), c => c.charCodeAt(0))
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'AES-GCM' },
+        false,
+        ['encrypt']
+      )
+
+      // Generate IV
+      const iv = crypto.getRandomValues(new Uint8Array(12))
+
+      // Encrypt
+      const encryptedBuffer = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv, tagLength: 128 },
+        cryptoKey,
+        data
+      )
+
+      // Split encrypted data and auth tag
+      const encryptedArray = new Uint8Array(encryptedBuffer)
+      const ciphertext = encryptedArray.slice(0, -16)
+      const authTag = encryptedArray.slice(-16)
+
+      // Convert to Base64 using chunked approach (avoids call stack overflow)
+      const encryptedData = {
+        encryptedData: arrayBufferToBase64(ciphertext),
+        dataIv: arrayBufferToBase64(iv),
+        dataAuthTag: arrayBufferToBase64(authTag),
+      }
+
+      // Calculate payload size
+      const payloadSize = JSON.stringify({
+        credentialId,
+        filename: file.name,
+        fileSize: file.size,
+        mimeType: file.type || 'application/octet-stream',
+        ...encryptedData,
+      }).length
+      
+      console.log(`[Upload] Encrypted + Base64 size: ${(payloadSize / 1024 / 1024).toFixed(2)} MB`)
+
+      // Upload to server
+      const response = await axios.post('http://localhost:5000/api/vault/attachments', {
+        credentialId,
+        filename: file.name,
+        fileSize: file.size,
+        mimeType: file.type || 'application/octet-stream',
+        ...encryptedData,
+      })
+
+      console.log(`[Upload] Server response:`, response.data)
+      return response.data.attachment
+    } catch (error) {
+      console.error(`[Upload] Error for ${file.name}:`, error)
+      if (error.response?.status === 413) {
+        throw new Error(`File too large: ${file.name}. Try a smaller file.`)
+      }
+      throw error
+    }
+  }
 
   const category = [
     {id : 1, name: "Login"},
@@ -243,6 +361,20 @@ const AddItemModal= ({show, setShow}) => {
 
   const closeModal = () => {
     setShow(false)
+  }
+
+  // Helper function to convert Uint8Array to Base64 efficiently (avoids stack overflow)
+  const arrayBufferToBase64 = (buffer) => {
+    let binary = ''
+    const bytes = new Uint8Array(buffer)
+    const len = bytes.byteLength
+    // Process in chunks to avoid call stack issues
+    const chunkSize = 8192
+    for (let i = 0; i < len; i += chunkSize) {
+      const chunk = bytes.subarray(i, Math.min(i + chunkSize, len))
+      binary += String.fromCharCode.apply(null, chunk)
+    }
+    return btoa(binary)
   }
 
   return (
@@ -702,17 +834,26 @@ const AddItemModal= ({show, setShow}) => {
         }
 
         {activeTab === "attachments" && 
-        // <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-240px)]">
-        //   <p className="text-gray-700">Attachment management will be available here.</p>
-        // </div>
-        <Attachments />
+        <Attachments 
+          credentialId={savedCredentialId} 
+          vaultKey={sessionStorage.getItem('vaultKey')}
+          selectedFiles={selectedFiles}
+          setSelectedFiles={setSelectedFiles}
+        />
         }
 
         {/* Footer Actions */}
         <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-200 bg-gray-50">
-          <button className="px-5 py-2.5 text-sm text-gray-700 font-semibold hover:bg-gray-200 rounded-lg transition-all" onClick={closeModal}>
-            Cancel
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="px-5 py-2.5 text-sm text-gray-700 font-semibold hover:bg-gray-200 rounded-lg transition-all" onClick={closeModal}>
+              Cancel
+            </button>
+            {selectedFiles.length > 0 && (
+              <span className="text-xs text-gray-600 italic">
+                +{selectedFiles.length} attachment{selectedFiles.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <button className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {saveItem()}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -722,7 +863,7 @@ const AddItemModal= ({show, setShow}) => {
                 d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
               />
             </svg>
-            Save Item
+            Save Item{selectedFiles.length > 0 ? ` & Upload ${selectedFiles.length}` : ''}
           </button>
         </div>
       </div>
