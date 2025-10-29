@@ -2,13 +2,11 @@ import React, { useState } from "react";
 import { Plus, X, ScanQrCode } from "lucide-react";
 import AuthenticatorItem from "./AuthenticatorItem";
 import AddTOTP from "./AddTOTP";
+import { mockAccounts } from "../../Data/mockAccounts";
 
 const Authenticator = () => {
   const [showAddTOTP, setShowAddTOTP] = useState(false);
-  const [accounts, setAccounts] = useState([
-    { id: 1, label: "GitHub", email: "user@github.com", secret: "MFRGGZA=" },
-    { id: 2, label: "Google", email: "user@gmail.com", secret: "MFRGG" },
-  ]);
+  const [accounts, setAccounts] = useState(mockAccounts);
 
   const handleOnCancel = () => setShowAddTOTP(false);
 
@@ -52,7 +50,7 @@ const Authenticator = () => {
       </div>
 
       {/* Accounts list */}
-      <div className="grid gap-4 sm:gap-5">
+      <div className="grid gap-2 sm:gap-2">
         {accounts.map((account) => (
           <AuthenticatorItem
             key={account.id}
@@ -79,7 +77,7 @@ const Authenticator = () => {
               <X size={20} />
             </button>
 
-            <div className="bg-white rounded-lg p-6 w-fullshadow-lg">
+            <div className="bg-white rounded-lg p-6 w-full shadow-lg">
               <h2 className="text-2xl font-bold mb-4">
                 Add Two-Factor Authentication
               </h2>

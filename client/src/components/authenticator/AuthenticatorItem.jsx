@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Shield, Copy, Check, X } from "lucide-react";
 import { useTotpGenerator } from "../../hooks/useTotpGenerator";
-import OtpProgress from "./otpProgress";
+import OtpProgress from "./OtpProgress";
 
 const AuthenticatorItem = ({ label, email, secret, onDelete }) => {
   const { totp, timeLeft } = useTotpGenerator(secret);
@@ -32,7 +32,7 @@ const AuthenticatorItem = ({ label, email, secret, onDelete }) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between">
           <div className="flex flex-col items-center justify-center w-20 ">
             <span className="text-xl w-full font-mono text-gray-800">{totp}</span>
             <div className="w-full">

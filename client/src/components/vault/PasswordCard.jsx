@@ -3,6 +3,7 @@ import { RefreshCcw,Paperclip, Globe, Shield, Star, Folder, Eye, EyeOff, Copy, E
 import toast from 'react-hot-toast'
 import Show2FA from './Show2FA'
 import { useLocation } from 'react-router-dom'
+import AuthenticatorItem from '../authenticator/AuthenticatorItem'
 
 const PasswordCard = ({ title, category }) => {
   const [showPassword, setShowPassword] = useState(false)
@@ -10,7 +11,7 @@ const PasswordCard = ({ title, category }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [password] = useState('password')
   const [isActive2FA, setIsActive2FA] = useState(true)
-  const [isShow2FA, setIsShow2FA] = useState(true)
+  const [isShow2FA, setIsShow2FA] = useState(false)
   const [isArchived, setIsArchived] = useState(false)
   const menuRef = useRef(null)
   const location = useLocation()
@@ -92,7 +93,12 @@ const PasswordCard = ({ title, category }) => {
                 }
               >
                 {isActive2FA && !isArchived && (
-                  <button className="w-full text-left text-sm text-gray-700 hover:bg-black rounded-t-lg pl-2 hover:text-white flex gap-x-2 py-1.5 items-center">
+                  <button className="w-full text-left text-sm text-gray-700 hover:bg-black rounded-t-lg pl-2 hover:text-white flex gap-x-2 py-1.5 items-center"
+                  onClick={()=>{
+                    setIsShow2FA(true)
+                    setIsMenuOpen(false)
+                  }}
+                  >
                     <Shield className="w-4" strokeWidth={2} />
                     <div>Show 2FA Code</div>
                   </button>
@@ -149,6 +155,16 @@ const PasswordCard = ({ title, category }) => {
           <Copy className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={handleCopy} />
         </div>
       </div>
+
+      {isShow2FA &&(
+        <Show2FA
+        label={title}
+        onHide={()=>{
+          setIsShow2FA(false)
+        }}
+        />
+        
+      )}
     </div>
   )
 }
