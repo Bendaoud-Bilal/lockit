@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Shield,
@@ -15,7 +15,10 @@ import {
   Key,
   Edit3,
   Lock,
+  Menu,
+  X,
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const Sidebar = ({
   onOpenPasswordGenerator,
@@ -26,6 +29,25 @@ const Sidebar = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileMenuOpen]);
 
   const mainNavItems = [
     { id: "my-vault", icon: Shield, label: "My Vault", path: "/my-vault" },
@@ -57,27 +79,23 @@ const Sidebar = ({
 
   const handleMainNavClick = (path) => {
     navigate(path);
-    // Reset filter when navigating to My Vault
     if (path === "/my-vault" && onFilterChange) {
       onFilterChange("all-items");
     }
   };
 
   const handleCategoryClick = (categoryId) => {
-    // Only trigger filter change, don't navigate
     if (onFilterChange) {
       onFilterChange(categoryId);
     }
   };
 
   const handleLockVault = () => {
-    // TODO: Clear auth state/session storage
-    navigate("/unlock");
+    logout("User manually locked vault");
   };
 
   const isInVaultSection = location.pathname === "/my-vault";
 
-  // Determine active section based on current path
   const getActiveSection = () => {
     if (location.pathname === "/my-vault") return "my-vault";
     if (location.pathname === "/security-dashboard")
@@ -91,8 +109,8 @@ const Sidebar = ({
 
   const activeSection = getActiveSection();
 
-  return (
-    <div className="w-64 lg:w-56 xl:w-64 h-screen bg-white flex flex-col border-r border-gray-100">
+  const SidebarContent = () => (
+    <>
       {/* Header */}
       <div className="px-5 py-4 flex items-center gap-3 flex-shrink-0">
         <div className="w-9 h-9 bg-[#5B6EF5] rounded-lg flex items-center justify-center flex-shrink-0">
@@ -106,6 +124,14 @@ const Sidebar = ({
             Password Manager
           </p>
         </div>
+        {/* Close button for mobile */}
+        <button
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="ml-auto lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Close menu"
+        >
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
       </div>
 
       {/* Main Navigation */}
@@ -134,7 +160,7 @@ const Sidebar = ({
           })}
         </div>
 
-        {/* Vault Categories - Only show when My Vault is active (these are filters, not routes) */}
+        {/* Vault Categories */}
         {isInVaultSection && (
           <div className="mt-4 space-y-0.5">
             {vaultCategories.map((category) => {
@@ -219,7 +245,42 @@ const Sidebar = ({
           <span className="truncate">Lock Vault</span>
         </button>
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+        aria-label="Open menu"
+      >
+        <Menu className="w-6 h-6 text-gray-700" />
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Mobile Drawer */}
+      <div
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white flex flex-col border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <SidebarContent />
+      </div>
+
+      {/* Sidebar - Desktop */}
+      <div className="hidden lg:flex w-56 xl:w-64 h-screen bg-white flex-col border-r border-gray-100">
+        <SidebarContent />
+      </div>
+    </>
   );
 };
 

@@ -1,6 +1,6 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield } from 'lucide-react';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Shield } from "lucide-react";
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -26,14 +26,14 @@ const Welcome = () => {
         {/* Buttons */}
         <div className="space-y-3">
           <button
-            onClick={() => navigate('/unlock')}
+            onClick={() => navigate("/unlock")}
             className="w-full h-12 bg-[#5B6EF5] hover:bg-[#4A5FE5] text-white font-medium rounded-lg transition-colors duration-150"
           >
             Unlock Vault
           </button>
-          
+
           <button
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate("/signup")}
             className="w-full h-12 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors duration-150"
           >
             Sign Up

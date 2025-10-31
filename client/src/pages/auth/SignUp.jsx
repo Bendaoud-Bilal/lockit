@@ -12,9 +12,11 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const { signup, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -30,20 +32,25 @@ const SignUp = () => {
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Generate recovery key
-  const generateRecoveryKey = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Avoid confusing characters
-    let key = "";
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        key += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      if (i < 3) key += "-";
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/my-vault");
     }
+  }, [isAuthenticated, navigate]);
+
+  const generateRecoveryKey = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let key = "";
+    const randomBytes = new Uint8Array(16);
+    window.crypto.getRandomValues(randomBytes);
+    for (let i = 0; i < 16; i++) {
+    key += chars[randomBytes[i] % chars.length];
+    if (i % 4 === 3 && i < 15) key += "-";
+  }
     return key;
   };
 
-  // Password requirements checker
   const passwordRequirements = useMemo(() => {
     const password = formData.masterPassword;
     return {
@@ -64,8 +71,14 @@ const SignUp = () => {
     return formData.masterPassword === formData.confirmPassword;
   }, [formData.masterPassword, formData.confirmPassword]);
 
+  const isValidUsername = useMemo(() => {
+    if (!formData.username) return true;
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+    return usernameRegex.test(formData.username);
+  }, [formData.username]);
+
   const isValidEmail = useMemo(() => {
-    if (!formData.email) return true; // Don't show error if empty
+    if (!formData.email) return true;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(formData.email);
   }, [formData.email]);
@@ -73,6 +86,7 @@ const SignUp = () => {
   const isFormValid = useMemo(() => {
     return (
       formData.username.trim() !== "" &&
+      isValidUsername &&
       formData.email.trim() !== "" &&
       isValidEmail &&
       isPasswordStrong &&
@@ -97,7 +111,6 @@ const SignUp = () => {
 
     setLoading(true);
 
-    // Simulate processing delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     const key = generateRecoveryKey();
@@ -203,15 +216,26 @@ Generated on: ${new Date().toLocaleString()}
 
     try {
       setLoading(true);
-      // TODO: Actually save user data and recovery key to backend
-      // TODO: Store auth state in context
-      toast.success("Account setup complete! Redirecting...");
 
-      setTimeout(() => {
-        navigate("/my-vault"); // Now they're authenticated
-      }, 1000);
+      const result = await signup(
+        formData.username,
+        formData.email,
+        formData.masterPassword,
+        recoveryKey
+      );
+
+      if (result.success) {
+        toast.success("Account setup complete! Redirecting...");
+        setTimeout(() => {
+          navigate("/my-vault");
+        }, 1000);
+      } else {
+        toast.error(result.error || "Failed to create account");
+        setStep(1); // Go back to form
+      }
     } catch (error) {
-      toast.error("Failed to create account");
+      toast.error("An unexpected error occurred");
+      setStep(1);
     } finally {
       setLoading(false);
     }
@@ -270,6 +294,12 @@ Generated on: ${new Date().toLocaleString()}
                 placeholder="Enter your username"
                 className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B6EF5] focus:border-transparent transition-all"
               />
+              {formData.username && !isValidUsername && (
+                <p className="text-xs text-red-600 mt-2">
+                  Username must be 3-20 characters, letters, numbers, underscore
+                  or dash only
+                </p>
+              )}
             </div>
 
             <div>
@@ -524,16 +554,23 @@ Generated on: ${new Date().toLocaleString()}
         {/* Continue Button */}
         <button
           onClick={finishSetup}
-          disabled={!hasDownloaded}
+          disabled={!hasDownloaded || loading}
           className={`w-full h-12 font-medium rounded-lg transition-all duration-200 ${
-            hasDownloaded
+            hasDownloaded && !loading
               ? "bg-gray-500 hover:bg-gray-600 text-white"
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
         >
-          {hasDownloaded
-            ? "Continue to Vault"
-            : "Please Save Your Recovery Key"}
+          {loading ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Setting up...
+            </div>
+          ) : hasDownloaded ? (
+            "Continue to Vault"
+          ) : (
+            "Please Save Your Recovery Key"
+          )}
         </button>
       </div>
     </div>

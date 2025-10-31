@@ -1,23 +1,35 @@
 import React, { useState } from "react";
-import { X, Copy, Download, Printer, Key, AlertTriangle } from "lucide-react";
+import {
+  X,
+  Copy,
+  Download,
+  Printer,
+  Key,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
 
 const RecoveryKeyModal = ({ isOpen, onClose }) => {
+  const { generateRecoveryKey, resetInactivityTimer } = useAuth();
   const [step, setStep] = useState(1); // 1: confirm, 2: show key
   const [masterPassword, setMasterPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [recoveryKey, setRecoveryKey] = useState("");
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const generateRecoveryKey = () => {
+  const generateKey = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let key = "";
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        key += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      if (i < 3) key += "-";
-    }
+    const randomBytes = new Uint8Array(16);
+    window.crypto.getRandomValues(randomBytes);
+    for (let i = 0; i < 16; i++) {
+    key += chars[randomBytes[i] % chars.length];
+    if (i % 4 === 3 && i < 15) key += "-";
+  }
     return key;
   };
 
@@ -29,15 +41,22 @@ const RecoveryKeyModal = ({ isOpen, onClose }) => {
 
     setLoading(true);
     try {
-      // TODO: Verify password with backend
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Generate new recovery key
+      const newKey = generateKey();
 
-      const newKey = generateRecoveryKey();
-      setRecoveryKey(newKey);
-      setStep(2);
-      toast.success("Password verified!");
+      // Send to backend to store hash
+      const result = await generateRecoveryKey(masterPassword, newKey);
+
+      if (result.success) {
+        setRecoveryKey(newKey);
+        setStep(2);
+        toast.success("Password verified! New recovery key generated.");
+        resetInactivityTimer();
+      } else {
+        toast.error(result.error || "Invalid master password");
+      }
     } catch (error) {
-      toast.error("Invalid master password");
+      toast.error("Failed to generate recovery key");
     } finally {
       setLoading(false);
     }
@@ -130,6 +149,7 @@ Generated on: ${new Date().toLocaleString()}
     setMasterPassword("");
     setRecoveryKey("");
     setHasDownloaded(false);
+    setShowPassword(false);
     onClose();
     toast.success("Recovery key generated successfully!");
   };
@@ -149,6 +169,7 @@ Generated on: ${new Date().toLocaleString()}
     setMasterPassword("");
     setRecoveryKey("");
     setHasDownloaded(false);
+    setShowPassword(false);
     onClose();
   };
 
@@ -202,14 +223,29 @@ Generated on: ${new Date().toLocaleString()}
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Master Password
                 </label>
-                <input
-                  type="password"
-                  value={masterPassword}
-                  onChange={(e) => setMasterPassword(e.target.value)}
-                  placeholder="Enter your master password"
-                  className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B6EF5] focus:border-transparent"
-                  onKeyDown={(e) => e.key === "Enter" && handleVerifyPassword()}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={masterPassword}
+                    onChange={(e) => setMasterPassword(e.target.value)}
+                    placeholder="Enter your master password"
+                    className="w-full h-12 px-4 pr-12 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B6EF5] focus:border-transparent"
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleVerifyPassword()
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <button
@@ -221,7 +257,14 @@ Generated on: ${new Date().toLocaleString()}
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
-                {loading ? "Verifying..." : "Generate New Recovery Key"}
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Verifying...
+                  </div>
+                ) : (
+                  "Generate New Recovery Key"
+                )}
               </button>
             </>
           ) : (

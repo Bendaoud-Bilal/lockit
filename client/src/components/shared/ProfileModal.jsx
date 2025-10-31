@@ -1,44 +1,104 @@
-import React, { useState, useMemo } from 'react';
-import { X, Eye, EyeOff, RotateCw, Save } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import React, { useState, useMemo, useEffect } from "react";
+import { X, Eye, EyeOff, RotateCw, Save } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
+import cryptoService from '../../services/cryptoService.js';
 
 const ProfileModal = ({ isOpen, onClose }) => {
+  const { user, updateProfile, changeMasterPassword, resetInactivityTimer } =
+    useAuth();
+
   const [formData, setFormData] = useState({
-    username: 'john.doe', // TODO: Get from auth context
-    email: 'john.doe@gmail.com', // TODO: Get from auth context
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    username: "",
+    email: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
-  
+
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
-    confirm: false
+    confirm: false,
   });
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({
+    username: false,
+    email: false,
+  });
 
-  // Password strength calculation
-  const passwordStrength = useMemo(() => {
-    if (!formData.newPassword) return { level: '', color: '', text: '' };
+  // Validation logic
+  const validation = useMemo(() => {
+    const errors = {};
     
+    // Username validation
+    const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,20}$/;
+    if (!formData.username.trim()) {
+      errors.username = "Username is required";
+    } else if (!USERNAME_REGEX.test(formData.username)) {
+      errors.username = "Username must be 3-20 characters (letters, numbers, underscore, dash only)";
+    }
+
+    // Email validation
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!EMAIL_REGEX.test(formData.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    return {
+      errors,
+      isValid: Object.keys(errors).length === 0
+    };
+  }, [formData.username, formData.email]);
+
+
+  // Load user data when modal opens
+  useEffect(() => {
+    if (isOpen && user) {
+      setFormData((prev) => ({
+        ...prev,
+        username: user.username || "",
+        email: user.email || "",
+      }));
+    }
+  }, [isOpen, user]);
+
+  // Reset activity timer on any interaction
+  useEffect(() => {
+    if (isOpen) {
+      resetInactivityTimer();
+    }
+  }, [isOpen, resetInactivityTimer]);
+
+  const passwordStrength = useMemo(() => {
+    if (!formData.newPassword) return { level: "", color: "", text: "" };
+
     const password = formData.newPassword;
     let strength = 0;
-    
+
     if (password.length >= 16) strength += 2;
     else if (password.length >= 12) strength += 1;
-    
+
     if (/[A-Z]/.test(password)) strength += 1;
     if (/[a-z]/.test(password)) strength += 1;
     if (/[0-9]/.test(password)) strength += 1;
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 1;
-    
-    if (strength <= 2) return { level: 'Weak', color: 'text-red-500', bars: 'bg-red-500' };
-    if (strength <= 4) return { level: 'Medium', color: 'text-yellow-500', bars: 'bg-yellow-500' };
-    if (strength <= 5) return { level: 'Good', color: 'text-green-500', bars: 'bg-green-500' };
-    return { level: 'Strong', color: 'text-green-600', bars: 'bg-green-600' };
+
+    if (strength <= 2)
+      return { level: "Weak", color: "text-red-500", bars: "bg-red-500" };
+    if (strength <= 4)
+      return {
+        level: "Medium",
+        color: "text-yellow-500",
+        bars: "bg-yellow-500",
+      };
+    if (strength <= 5)
+      return { level: "Good", color: "text-green-500", bars: "bg-green-500" };
+    return { level: "Strong", color: "text-green-600", bars: "bg-green-600" };
   }, [formData.newPassword]);
 
   const passwordsMatch = useMemo(() => {
@@ -49,72 +109,102 @@ const ProfileModal = ({ isOpen, onClose }) => {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
+    });
+  };
+
+   const handleBlur = (field) => {
+    setTouched({
+      ...touched,
+      [field]: true,
     });
   };
 
   const generatePassword = () => {
-    const length = 20;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "";
-    
-    // Ensure at least one of each type
-    password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)];
-    password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)];
-    password += "0123456789"[Math.floor(Math.random() * 10)];
-    password += "!@#$%^&*"[Math.floor(Math.random() * 8)];
-    
-    // Fill the rest
-    for (let i = password.length; i < length; i++) {
-      password += charset[Math.floor(Math.random() * charset.length)];
-    }
-    
-    // Shuffle
-    password = password.split('').sort(() => Math.random() - 0.5).join('');
-    
+    const password = cryptoService.generatePassword(20);
+
     setFormData({
       ...formData,
       newPassword: password,
-      confirmPassword: ''
+      confirmPassword: "",
     });
-    
-    toast.success('Password generated!');
+
+    toast.success("Password generated!");
   };
 
   const handleSave = async () => {
-    // Validation
+    // Mark all fields as touched to show errors
+    setTouched({
+      username: true,
+      email: true,
+    });
+
+    // Validate before proceeding
+    if (!validation.isValid) {
+      alert("Please fix validation errors before saving");
+      return;
+    }
+
     if (!formData.currentPassword) {
-      toast.error('Please enter your current password');
+      alert("Please enter your current password");
+      return;
+    }
+    if (!formData.currentPassword) {
+      toast.error("Please enter your current password");
       return;
     }
 
     if (formData.newPassword && !passwordsMatch) {
-      toast.error('New passwords do not match');
+      toast.error("New passwords do not match");
       return;
     }
 
-    if (formData.newPassword && passwordStrength.level === 'Weak') {
-      toast.error('Please use a stronger password');
+    if (formData.newPassword && passwordStrength.level === "Weak") {
+      toast.error("Please use a stronger password");
       return;
     }
 
     setLoading(true);
     try {
-      // TODO: API call to update profile
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Profile updated successfully!');
+      // Update basic profile info if changed
+      if (
+        formData.username !== user.username ||
+        formData.email !== user.email
+      ) {
+        const profileResult = await updateProfile({
+          username: formData.username,
+          email: formData.email,
+        });
+
+        if (!profileResult.success) {
+          throw new Error(profileResult.error || "Failed to update profile");
+        }
+      }
+
+      // Change password if new password provided
+      if (formData.newPassword) {
+        const passwordResult = await changeMasterPassword(
+          formData.currentPassword,
+          formData.newPassword
+        );
+
+        if (!passwordResult.success) {
+          throw new Error(passwordResult.error || "Failed to change password");
+        }
+      }
+
+      toast.success("Profile updated successfully!");
       setIsEditing(false);
-      
+
       // Clear password fields
       setFormData({
         ...formData,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
     } catch (error) {
-      toast.error('Failed to update profile');
+      toast.error(error.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -122,11 +212,11 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
   const handleCancel = () => {
     setFormData({
-      username: 'john.doe',
-      email: 'john.doe@gmail.com',
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
+      username: user?.username || "",
+      email: user?.email || "",
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     });
     setIsEditing(false);
   };
@@ -138,7 +228,9 @@ const ProfileModal = ({ isOpen, onClose }) => {
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">View / Edit Profile</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            View / Edit Profile
+          </h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
@@ -160,9 +252,19 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
+                onBlur={() => handleBlur('username')}
                 disabled={!isEditing}
-                className="w-full h-12 px-4 bg-gray-50 border-0 rounded-lg text-gray-900 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#5B6EF5]"
+                className={`w-full h-12 px-4 bg-gray-50 border-0 rounded-lg text-gray-900 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 transition-all ${
+                  touched.username && validation.errors.username
+                    ? 'focus:ring-red-500 ring-2 ring-red-500'
+                    : 'focus:ring-[#5B6EF5]'
+                }`}
               />
+              {touched.username && validation.errors.username && (
+                <p className="text-xs text-red-600 mt-1.5">
+                  {validation.errors.username}
+                </p>
+              )}
             </div>
 
             <div>
@@ -174,9 +276,19 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                 onBlur={() => handleBlur('email')}
                 disabled={!isEditing}
-                className="w-full h-12 px-4 bg-gray-50 border-0 rounded-lg text-gray-900 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#5B6EF5]"
+                className={`w-full h-12 px-4 bg-gray-50 border-0 rounded-lg text-gray-900 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 transition-all ${
+                  touched.email && validation.errors.email
+                    ? 'focus:ring-red-500 ring-2 ring-red-500'
+                    : 'focus:ring-[#5B6EF5]'
+                }`}
               />
+              {touched.email && validation.errors.email && (
+                <p className="text-xs text-red-600 mt-1.5">
+                  {validation.errors.email}
+                </p>
+              )}
             </div>
           </div>
 
@@ -195,7 +307,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
                   </label>
                   <div className="relative">
                     <input
-                      type={showPasswords.current ? 'text' : 'password'}
+                      type={showPasswords.current ? "text" : "password"}
                       name="currentPassword"
                       value={formData.currentPassword}
                       onChange={handleChange}
@@ -204,10 +316,19 @@ const ProfileModal = ({ isOpen, onClose }) => {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                      onClick={() =>
+                        setShowPasswords({
+                          ...showPasswords,
+                          current: !showPasswords.current,
+                        })
+                      }
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPasswords.current ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -215,11 +336,11 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 {/* New Password */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-900 mb-2">
-                    New Password
+                    New Password (Optional)
                   </label>
                   <div className="relative">
                     <input
-                      type={showPasswords.new ? 'text' : 'password'}
+                      type={showPasswords.new ? "text" : "password"}
                       name="newPassword"
                       value={formData.newPassword}
                       onChange={handleChange}
@@ -229,10 +350,19 @@ const ProfileModal = ({ isOpen, onClose }) => {
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                        onClick={() =>
+                          setShowPasswords({
+                            ...showPasswords,
+                            new: !showPasswords.new,
+                          })
+                        }
                         className="text-gray-400 hover:text-gray-600"
                       >
-                        {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        {showPasswords.new ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
                       </button>
                       <button
                         type="button"
@@ -250,7 +380,9 @@ const ProfileModal = ({ isOpen, onClose }) => {
                     <div className="mt-3">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-gray-600">Strength:</span>
-                        <span className={`text-xs font-semibold ${passwordStrength.color}`}>
+                        <span
+                          className={`text-xs font-semibold ${passwordStrength.color}`}
+                        >
                           {passwordStrength.level}
                         </span>
                       </div>
@@ -259,9 +391,16 @@ const ProfileModal = ({ isOpen, onClose }) => {
                           <div
                             key={bar}
                             className={`h-1 flex-1 rounded-full ${
-                              bar <= (passwordStrength.level === 'Weak' ? 1 : passwordStrength.level === 'Medium' ? 2 : passwordStrength.level === 'Good' ? 4 : 5)
+                              bar <=
+                              (passwordStrength.level === "Weak"
+                                ? 1
+                                : passwordStrength.level === "Medium"
+                                ? 2
+                                : passwordStrength.level === "Good"
+                                ? 4
+                                : 5)
                                 ? passwordStrength.bars
-                                : 'bg-gray-200'
+                                : "bg-gray-200"
                             }`}
                           />
                         ))}
@@ -271,35 +410,52 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Confirm Password */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Confirm New Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPasswords.confirm ? 'text' : 'password'}
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      placeholder="Confirm new password"
-                      className="w-full h-12 px-4 pr-12 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B6EF5]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
+                {formData.newPassword && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.confirm ? "text" : "password"}
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        placeholder="Confirm new password"
+                        className="w-full h-12 px-4 pr-12 bg-gray-50 border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B6EF5]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPasswords({
+                            ...showPasswords,
+                            confirm: !showPasswords.confirm,
+                          })
+                        }
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPasswords.confirm ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
 
-                  {/* Password Match Indicator */}
-                  {formData.confirmPassword && (
-                    <p className={`text-xs mt-2 ${passwordsMatch ? 'text-green-600' : 'text-red-600'}`}>
-                      {passwordsMatch ? "Passwords match" : "Passwords don't match"}
-                    </p>
-                  )}
-                </div>
+                    {/* Password Match Indicator */}
+                    {formData.confirmPassword && (
+                      <p
+                        className={`text-xs mt-2 ${
+                          passwordsMatch ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {passwordsMatch
+                          ? "Passwords match"
+                          : "Passwords don't match"}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}
