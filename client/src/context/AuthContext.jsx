@@ -11,6 +11,8 @@ import InactivityWarning from "../components/shared/InactivityWarning";
 
 const AuthContext = createContext(null);
 
+
+// Storage keys
 const STORAGE_KEYS = {
   TOKEN: 'lockit_session_token',
   USER: 'lockit_user_data',
@@ -28,6 +30,8 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
+
+  // Initialize state from sessionStorage
   const [user, setUser] = useState(() => {
     const stored = sessionStorage.getItem(STORAGE_KEYS.USER);
     return stored ? JSON.parse(stored) : null;
@@ -41,8 +45,18 @@ export const AuthProvider = ({ children }) => {
     return sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === 'true';
   });
 
+  // Vault key stays in memory only (never persisted)
   const [vaultKey, setVaultKey] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // FIX: Initialize isAuthenticated based on existing session
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const hasToken = !!sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+    const hasUser = !!sessionStorage.getItem(STORAGE_KEYS.USER);
+    const locked = sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === 'true';
+    // Only authenticated if we have token, user, and NOT locked
+    return hasToken && hasUser && !locked;
+  });
+  
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
 
   const inactivityTimerRef = useRef(null);
@@ -51,9 +65,50 @@ export const AuthProvider = ({ children }) => {
   const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
   const WARNING_BEFORE_LOCK = 60 * 1000; // 60 seconds
 
+  // Sync state to sessionStorage
+  useEffect(() => {
+    if (user) {
+      sessionStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.USER);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (token) {
+      sessionStorage.setItem(STORAGE_KEYS.TOKEN, token);
+      apiService.setToken(token);
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+      apiService.clearToken();
+    }
+  }, [token]);
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEYS.IS_LOCKED, isLocked.toString());
+  }, [isLocked]);
+
+  // On mount, restore session if token exists
+  useEffect(() => {
+    const storedToken = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+    const storedUser = sessionStorage.getItem(STORAGE_KEYS.USER);
+    const wasLocked = sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === 'true';
+
+    if (storedToken && storedUser) {
+      apiService.setToken(storedToken);
+      
+      // Always redirect to unlock if there's no vault key in memory
+      // (This handles page refresh or initial load)
+      if (!vaultKey || wasLocked) {
+        setIsLocked(true);
+        setIsAuthenticated(false);
+        navigate("/unlock", { replace: true });
+      }
+    }
+  }, [navigate]); // Removed vaultKey from deps to prevent loops
+
   // Reset inactivity timer
   const resetInactivityTimer = () => {
-    // Clear existing timers
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
@@ -61,16 +116,12 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(warningTimerRef.current);
     }
 
-    // Hide warning if showing
     setShowInactivityWarning(false);
 
-    // Only start timer if authenticated and not locked
     if (isAuthenticated && !isLocked) {
-      // Start countdown to warning
       inactivityTimerRef.current = setTimeout(() => {
         setShowInactivityWarning(true);
         
-        // Start countdown to lock
         warningTimerRef.current = setTimeout(() => {
           lockVault("Session expired due to inactivity");
         }, WARNING_BEFORE_LOCK);
@@ -85,18 +136,15 @@ export const AuthProvider = ({ children }) => {
     const events = ["mousedown", "keydown", "scroll", "touchstart", "mousemove"];
 
     const handleActivity = () => {
-      resetInactivityTimer(); // Simple: just reset on any activity
+      resetInactivityTimer();
     };
 
-    // Attach listeners
     events.forEach((event) => {
       window.addEventListener(event, handleActivity);
     });
 
-    // Start initial timer
     resetInactivityTimer();
 
-    // Cleanup
     return () => {
       events.forEach((event) => {
         window.removeEventListener(event, handleActivity);
@@ -116,8 +164,6 @@ export const AuthProvider = ({ children }) => {
       const data = await apiService.login(usernameOrEmail, masterPassword);
 
       setToken(data.token);
-      apiService.setToken(data.token);
-
       setUser({
         id: data.user.id,
         username: data.user.username,
@@ -125,8 +171,8 @@ export const AuthProvider = ({ children }) => {
       });
 
       setVaultKey(data.vaultKey);
-      setIsAuthenticated(true);
       setIsLocked(false);
+      setIsAuthenticated(true);
 
       await apiService.updateLastLogin(data.user.id);
 
@@ -148,16 +194,14 @@ export const AuthProvider = ({ children }) => {
       );
 
       setToken(data.token);
-      apiService.setToken(data.token);
-
       setUser({
         id: data.user.id,
         username: data.user.username,
         email: data.user.email,
       });
       setVaultKey(data.vaultKey);
-      setIsAuthenticated(true);
       setIsLocked(false);
+      setIsAuthenticated(true);
 
       return { success: true };
     } catch (error) {
@@ -170,6 +214,7 @@ export const AuthProvider = ({ children }) => {
   const lockVault = (reason = "Vault locked") => {
     console.log("Lock reason:", reason);
 
+    // Clear vault key from memory
     setVaultKey(null);
     setIsLocked(true);
     setIsAuthenticated(false);
@@ -182,6 +227,7 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(warningTimerRef.current);
     }
 
+    // Keep token and user data for quick unlock
     navigate("/unlock");
   };
 
@@ -195,7 +241,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout API error:", error);
     }
 
-    // Always clear state
+    // Clear everything
     apiService.clearToken();
     setToken(null);
     setUser(null);
@@ -203,6 +249,11 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     setIsLocked(false);
     setShowInactivityWarning(false);
+
+    // Clear sessionStorage
+    sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+    sessionStorage.removeItem(STORAGE_KEYS.USER);
+    sessionStorage.removeItem(STORAGE_KEYS.IS_LOCKED);
 
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
@@ -237,9 +288,9 @@ export const AuthProvider = ({ children }) => {
   // Update profile
   const updateProfile = async (updates) => {
     try {
-       if (!user) {
-      throw new Error("No user session found");
-    }
+      if (!user) {
+        throw new Error("No user session found");
+      }
       const data = await apiService.updateUser(user.id, updates);
       setUser((prev) => ({ ...prev, ...data.user }));
       return { success: true };

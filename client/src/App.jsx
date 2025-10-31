@@ -1,14 +1,15 @@
-import { BrowserRouter ,Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState,useEffect } from 'react';
-import Sidebar from './components/shared/Sidebar';
-import Vault from './pages/Vault';
-import Archive from './pages/Archive';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Toaster } from "react-hot-toast";
+import Sidebar from "./components/shared/Sidebar";
 import ProfileModal from "./components/shared/ProfileModal";
 import RecoveryKeyModal from "./components/shared/RecoveryKeyModal";
 import Welcome from "./pages/auth/Welcome";
 import Unlock from "./pages/auth/Unlock";
 import SignUp from "./pages/auth/SignUp";
 import ResetPassword from "./pages/auth/ResetPassword";
+import Vault from './pages/Vault';
+import Archive from './pages/Archive';
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
@@ -17,6 +18,7 @@ function MainLayout({
   activeFilter,
   setActiveFilter,
   showPasswordGenerator,
+  vaultItems,
   setShowPasswordGenerator,
   showProfileModal,
   setShowProfileModal,
@@ -29,6 +31,7 @@ function MainLayout({
       <Sidebar
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
+        vaultItems={vaultItems}
         onOpenPasswordGenerator={() => setShowPasswordGenerator(true)}
         onOpenProfile={() => setShowProfileModal(true)}
         onOpenRecoveryKey={() => setShowRecoveryKeyModal(true)}
@@ -91,6 +94,7 @@ function MainLayout({
 }
 
 function App() {
+  const [vaultItems, setVaultItems] = useState([]);
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showRecoveryKeyModal, setShowRecoveryKeyModal] = useState(false);
@@ -105,6 +109,22 @@ function App() {
   useEffect(() => {
     localStorage.setItem("activeFilter", activeFilter);
   }, [activeFilter]);
+
+  useEffect(() => {
+       const loadCredentials = async () => {
+         try {
+           const user = JSON.parse(localStorage.getItem("user"));
+           if (user?.id) {
+             const response = await apiService.getCredentials(user.id);
+             setVaultItems(response.credentials || []);
+           }
+         } catch (error) {
+           console.error("Failed to load credentials:", error);
+         }
+       };
+
+       loadCredentials();
+     }, []);
 
   return (
     <BrowserRouter>
@@ -126,6 +146,7 @@ function App() {
                   activeFilter={activeFilter}
                   setActiveFilter={setActiveFilter}
                   showPasswordGenerator={showPasswordGenerator}
+                  vaultItems={vaultItems}
                   setShowPasswordGenerator={setShowPasswordGenerator}
                   showProfileModal={showProfileModal}
                   setShowProfileModal={setShowProfileModal}

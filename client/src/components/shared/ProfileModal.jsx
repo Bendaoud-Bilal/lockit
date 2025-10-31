@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { X, Eye, EyeOff, RotateCw, Save } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
-import cryptoService from '../../services/cryptoService.js';
+import cryptoService from "../../services/cryptoService.js";
 
 const ProfileModal = ({ isOpen, onClose }) => {
   const { user, updateProfile, changeMasterPassword, resetInactivityTimer } =
@@ -32,13 +32,14 @@ const ProfileModal = ({ isOpen, onClose }) => {
   // Validation logic
   const validation = useMemo(() => {
     const errors = {};
-    
+
     // Username validation
     const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,20}$/;
     if (!formData.username.trim()) {
       errors.username = "Username is required";
     } else if (!USERNAME_REGEX.test(formData.username)) {
-      errors.username = "Username must be 3-20 characters (letters, numbers, underscore, dash only)";
+      errors.username =
+        "Username must be 3-20 characters (letters, numbers, underscore, dash only)";
     }
 
     // Email validation
@@ -51,10 +52,9 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
     return {
       errors,
-      isValid: Object.keys(errors).length === 0
+      isValid: Object.keys(errors).length === 0,
     };
   }, [formData.username, formData.email]);
-
 
   // Load user data when modal opens
   useEffect(() => {
@@ -113,7 +113,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
     });
   };
 
-   const handleBlur = (field) => {
+  const handleBlur = (field) => {
     setTouched({
       ...touched,
       [field]: true,
@@ -141,14 +141,10 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
     // Validate before proceeding
     if (!validation.isValid) {
-      alert("Please fix validation errors before saving");
+      toast.error("Please fix validation errors before saving");
       return;
     }
 
-    if (!formData.currentPassword) {
-      alert("Please enter your current password");
-      return;
-    }
     if (!formData.currentPassword) {
       toast.error("Please enter your current password");
       return;
@@ -166,11 +162,33 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
     setLoading(true);
     try {
+      if (formData.newPassword) {
+      const passwordResult = await changeMasterPassword(
+        formData.currentPassword,
+        formData.newPassword
+      );
+
+      if (!passwordResult.success) {
+        throw new Error(passwordResult.error || "Failed to change password");
+      }
+    } else {
+
+      const verifyResult = await changeMasterPassword(
+        formData.currentPassword,
+        formData.currentPassword // Pass same password to verify only
+      );
+
+      if (!verifyResult.success) {
+        throw new Error("Current password is incorrect");
+      }
+    }
+
       // Update basic profile info if changed
       if (
         formData.username !== user.username ||
         formData.email !== user.email
       ) {
+
         const profileResult = await updateProfile({
           username: formData.username,
           email: formData.email,
@@ -178,18 +196,6 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
         if (!profileResult.success) {
           throw new Error(profileResult.error || "Failed to update profile");
-        }
-      }
-
-      // Change password if new password provided
-      if (formData.newPassword) {
-        const passwordResult = await changeMasterPassword(
-          formData.currentPassword,
-          formData.newPassword
-        );
-
-        if (!passwordResult.success) {
-          throw new Error(passwordResult.error || "Failed to change password");
         }
       }
 
@@ -252,12 +258,12 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                onBlur={() => handleBlur('username')}
+                onBlur={() => handleBlur("username")}
                 disabled={!isEditing}
                 className={`w-full h-12 px-4 bg-gray-50 border-0 rounded-lg text-gray-900 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 transition-all ${
                   touched.username && validation.errors.username
-                    ? 'focus:ring-red-500 ring-2 ring-red-500'
-                    : 'focus:ring-[#5B6EF5]'
+                    ? "focus:ring-red-500 ring-2 ring-red-500"
+                    : "focus:ring-[#5B6EF5]"
                 }`}
               />
               {touched.username && validation.errors.username && (
@@ -276,12 +282,12 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                 onBlur={() => handleBlur('email')}
+                onBlur={() => handleBlur("email")}
                 disabled={!isEditing}
                 className={`w-full h-12 px-4 bg-gray-50 border-0 rounded-lg text-gray-900 disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 transition-all ${
                   touched.email && validation.errors.email
-                    ? 'focus:ring-red-500 ring-2 ring-red-500'
-                    : 'focus:ring-[#5B6EF5]'
+                    ? "focus:ring-red-500 ring-2 ring-red-500"
+                    : "focus:ring-[#5B6EF5]"
                 }`}
               />
               {touched.email && validation.errors.email && (
@@ -309,6 +315,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
                     <input
                       type={showPasswords.current ? "text" : "password"}
                       name="currentPassword"
+                      autoComplete="off"
                       value={formData.currentPassword}
                       onChange={handleChange}
                       placeholder="Enter current password"
@@ -342,6 +349,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
                     <input
                       type={showPasswords.new ? "text" : "password"}
                       name="newPassword"
+                      autoComplete="off"
                       value={formData.newPassword}
                       onChange={handleChange}
                       placeholder="Enter new password"
@@ -419,6 +427,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
                       <input
                         type={showPasswords.confirm ? "text" : "password"}
                         name="confirmPassword"
+                        autoComplete="off"
                         value={formData.confirmPassword}
                         onChange={handleChange}
                         placeholder="Confirm new password"

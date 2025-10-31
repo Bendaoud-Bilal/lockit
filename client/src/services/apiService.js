@@ -28,11 +28,8 @@ class ApiService {
       (error) => {
         if (error.response) {
           // Server responded with error status
-          throw new Error(
-            error.response.data.error ||
-              error.response.data.message ||
-              `Error: ${error.response.status}`
-          );
+          const friendlyMessage = this.formatErrorMessage(error.response);
+          throw new Error(friendlyMessage);
         } else if (error.request) {
           // Request made but no response (server down)
           throw new Error(
@@ -46,6 +43,69 @@ class ApiService {
     );
 
     this.token = null;
+  }
+
+  formatErrorMessage(response) {
+    const errorData = response.data;
+    const status = response.status;
+
+    // Use the error message from the backend if it's user-friendly
+    let message = errorData.error || errorData.message;
+
+    // Check for Prisma-specific errors and replace with user-friendly messages
+    if (message && typeof message === 'string') {
+      // Unique constraint violations
+      if (message.includes('Unique constraint') || message.includes('unique constraint')) {
+        if (message.toLowerCase().includes('username')) {
+          return "This username is already taken. Please choose a different one.";
+        }
+        if (message.toLowerCase().includes('email')) {
+          return "This email is already registered. Please use a different one.";
+        }
+        return "This value is already in use. Please choose a different one.";
+      }
+
+      // Foreign key constraint violations
+      if (message.includes('Foreign key constraint')) {
+        return "Unable to complete this action due to related data.";
+      }
+
+      // Record not found
+      if (message.includes('Record to update not found') || message.includes('No ')) {
+        return "The requested item could not be found.";
+      }
+
+      // If the message doesn't contain technical jargon, return it as-is
+      if (!message.includes('Prisma') && 
+          !message.includes('prisma') && 
+          !message.includes('PrismaClient') &&
+          !message.includes('constraint') &&
+          !message.includes('relation')) {
+        return message;
+      }
+    }
+
+    // Fallback error messages based on status code
+    switch (status) {
+      case 400:
+        return "Invalid request. Please check your input and try again.";
+      case 401:
+        return "Authentication failed. Please check your credentials.";
+      case 403:
+        return "You don't have permission to perform this action.";
+      case 404:
+        return "The requested resource was not found.";
+      case 409:
+        return "This item already exists. Please use a different value.";
+      case 422:
+        return "Invalid data provided. Please check your input.";
+      case 500:
+        return "Server error. Please try again later.";
+      case 503:
+        return "Service temporarily unavailable. Please try again later.";
+      default:
+        return `An error occurred (${status}). Please try again.`;
+    }
   }
 
   setToken(token) {
@@ -138,6 +198,24 @@ class ApiService {
   async getArchiveCredentials(userId, config = {}) {
     return this.client.get(`/api/vault/archive-credentials/user/${userId}`, config);
   }
+  async getCredentials(userId, filters = {}) {
+     const params = new URLSearchParams();
+     
+     if (filters.folderId) params.append('folderId', filters.folderId);
+     if (filters.category) params.append('category', filters.category);
+     if (filters.favorite !== undefined) params.append('favorite', filters.favorite);
+     if (filters.state) params.append('state', filters.state);
+     
+     const queryString = params.toString();
+     const url = `/api/credentials/${userId}${queryString ? `?${queryString}` : ''}`;
+     
+     return this.client.get(url);
+   }
+
+  get axiosInstance() {
+    return this.client;
+  }
+
 }
 
 export default new ApiService();
