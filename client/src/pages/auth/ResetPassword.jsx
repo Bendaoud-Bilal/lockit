@@ -229,6 +229,7 @@ const ResetPassword = () => {
               <input
                 type="text"
                 name="recoveryKey"
+                autoComplete="off"
                 value={formData.recoveryKey}
                 onChange={handleChange}
                 placeholder="XXXX-XXXX-XXXX-XXXX"
@@ -290,6 +291,7 @@ const ResetPassword = () => {
               <input
                 type={showPasswords.new ? "text" : "password"}
                 name="newPassword"
+                autoComplete="off"
                 value={formData.newPassword}
                 onChange={handleChange}
                 placeholder="Enter your new master password"

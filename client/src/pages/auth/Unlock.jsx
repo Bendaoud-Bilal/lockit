@@ -211,6 +211,7 @@ const Unlock = () => {
                   <input
                     type={showPassword ? "text" : "password"}
                     name="masterPassword"
+                    autoComplete="off"
                     value={formData.masterPassword}
                     onChange={handleChange}
                     placeholder="Enter your master password"

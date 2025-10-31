@@ -45,9 +45,9 @@ const SignUp = () => {
     const randomBytes = new Uint8Array(16);
     window.crypto.getRandomValues(randomBytes);
     for (let i = 0; i < 16; i++) {
-    key += chars[randomBytes[i] % chars.length];
-    if (i % 4 === 3 && i < 15) key += "-";
-  }
+      key += chars[randomBytes[i] % chars.length];
+      if (i % 4 === 3 && i < 15) key += "-";
+    }
     return key;
   };
 
@@ -329,6 +329,7 @@ Generated on: ${new Date().toLocaleString()}
                 <input
                   type={showPasswords.master ? "text" : "password"}
                   name="masterPassword"
+                  autoComplete="off"
                   value={formData.masterPassword}
                   onChange={handleChange}
                   placeholder="Enter your master password"
@@ -389,6 +390,7 @@ Generated on: ${new Date().toLocaleString()}
                 <input
                   type={showPasswords.confirm ? "text" : "password"}
                   name="confirmPassword"
+                  autoComplete="off"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   placeholder="Confirm your master password"

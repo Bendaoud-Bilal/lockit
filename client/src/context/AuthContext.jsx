@@ -11,6 +11,12 @@ import InactivityWarning from "../components/shared/InactivityWarning";
 
 const AuthContext = createContext(null);
 
+const STORAGE_KEYS = {
+  TOKEN: 'lockit_session_token',
+  USER: 'lockit_user_data',
+  IS_LOCKED: 'lockit_is_locked'
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -22,11 +28,21 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const stored = sessionStorage.getItem(STORAGE_KEYS.USER);
+    return stored ? JSON.parse(stored) : null;
+  });
+  
+  const [token, setToken] = useState(() => {
+    return sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+  });
+  
+  const [isLocked, setIsLocked] = useState(() => {
+    return sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === 'true';
+  });
+
   const [vaultKey, setVaultKey] = useState(null);
-  const [token, setToken] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
 
   const inactivityTimerRef = useRef(null);

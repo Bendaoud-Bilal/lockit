@@ -27,9 +27,9 @@ const RecoveryKeyModal = ({ isOpen, onClose }) => {
     const randomBytes = new Uint8Array(16);
     window.crypto.getRandomValues(randomBytes);
     for (let i = 0; i < 16; i++) {
-    key += chars[randomBytes[i] % chars.length];
-    if (i % 4 === 3 && i < 15) key += "-";
-  }
+      key += chars[randomBytes[i] % chars.length];
+      if (i % 4 === 3 && i < 15) key += "-";
+    }
     return key;
   };
 
@@ -227,6 +227,7 @@ Generated on: ${new Date().toLocaleString()}
                   <input
                     type={showPassword ? "text" : "password"}
                     value={masterPassword}
+                    autoComplete="off"
                     onChange={(e) => setMasterPassword(e.target.value)}
                     placeholder="Enter your master password"
                     className="w-full h-12 px-4 pr-12 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B6EF5] focus:border-transparent"

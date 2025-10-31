@@ -1,9 +1,25 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, session } = require('electron')
 const path = require('path')
 
 let mainWindow
 
 function createWindow() {
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "connect-src 'self' http://localhost:5173 http://localhost:3000; " +
+          "img-src 'self' data: https:;"
+        ]
+      }
+    });
+  });
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -12,14 +28,24 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: true,
       preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, '../client/public/icons/icon.png')
   })
 
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const allowed = ['http://localhost:5173 http://localhost:3000', 'file://'];
+    if (!allowed.some(origin => url.startsWith(origin))) {
+      event.preventDefault();
+    }
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   // En développement
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:3000')
+    mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools()
   } else {
     // En production
