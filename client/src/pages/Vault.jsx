@@ -17,34 +17,33 @@ const Vault = ({ activeFilter }) => {
   const userId = user?.id;
   console.log('Vault component userId:', userId);
 
+  // Define fetchCredentials OUTSIDE of useEffect so it can be reused
+  const fetchCredentials = async () => {
+    if (!userId) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const res = await ApiService.getUserCredentials(userId);
+      const creds = res.credentials || [];
+      setPasswords(creds);
+    } catch (err) {
+      console.error('Axios error', err);
+      setError(err.response?.data?.error || err.message || 'Network error');
+      setPasswords([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Single useEffect to fetch on mount/userId change
   useEffect(() => {
     if (!userId) return;
-    console.log('active filter changed:', activeFilter);
-    const source = axios.CancelToken.source();
     
-    const fetchCredentials = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const res = await ApiService.getUserCredentials(userId);
-         const creds = res.credentials || [];
-        setPasswords(creds);
-      } catch (err) {
-        if (axios.isCancel(err)) return;
-        
-        console.error('Axios error', err);
-        setError(err.response?.data?.error || err.message || 'Network error');
-        setPasswords([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    console.log('active filter changed:', activeFilter);
     fetchCredentials();
-
-    return () => source.cancel('component unmount');
-  }, [userId]);
+  }, [userId]); // Only depend on userId, not activeFilter
 
   const filteredPasswords = passwords.filter((item) => {
     const itemFilter = item.filter || item.category || 'all-items';
@@ -82,7 +81,7 @@ const Vault = ({ activeFilter }) => {
           </h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={fetchCredentials}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
           >
             Retry
@@ -97,6 +96,7 @@ const Vault = ({ activeFilter }) => {
       <FilterAddBar 
         searchQuery={searchQuery} 
         setSearchQuery={setSearchQuery} 
+        onCredentialAdded={fetchCredentials} // Now accessible!
       />
       
       <div className="w-full flex-1 overflow-y-scroll flex flex-col items-center mb-5 gap-y-4 mt-10">

@@ -34,7 +34,7 @@ import axios from "axios"
 import { useAuth } from '../../context/AuthContext';
 
 
-const AddItemModal= ({show, setShow}) => {
+const AddItemModal= ({show, setShow, onCredentialAdded}) => {
   const [activeTab, setActiveTab] = useState("general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
@@ -253,8 +253,13 @@ const AddItemModal= ({show, setShow}) => {
           alert(`Credential and ${successCount} attachment(s) saved successfully!`)
         }
       } else {
+
         alert('Credential saved successfully!')
       }
+      setShow(false);
+        if (onCredentialAdded) {
+          onCredentialAdded(); // Trigger refetch in Vault
+        }
     }
   
     } catch (error) {

@@ -3,7 +3,7 @@ import { Search, Plus, Trash } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import AddItemModal from './AddItemModal.jsx'
 
-const FilterAddBar = ({ searchQuery, setSearchQuery }) => {
+const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded }) => {
   const location = useLocation()
   const [wideSearch, setWideSearch] = useState(false)
   const [archiveNotEmpty, setArchiveNotEmpty] = useState(false)
@@ -47,7 +47,7 @@ const FilterAddBar = ({ searchQuery, setSearchQuery }) => {
             <Plus className='w-4' strokeWidth={1} />
             <span className='hidden sm:inline'>Add item</span>
           </button>
-          {show && <AddItemModal show={show} setShow={setShow} />}
+          {show && <AddItemModal show={show} setShow={setShow} onCredentialAdded={onCredentialAdded}/>}
         </>
       )}
 
