@@ -41,9 +41,7 @@ const Unlock = () => {
 
         if (result.success) {
           toast.success("Vault unlocked!");
-          setTimeout(() => {
-            navigate("/my-vault");
-          }, 500);
+          navigate("/my-vault", { replace: true });
         } else {
           toast.error(result.error || "Invalid password");
         }
@@ -132,6 +130,7 @@ const Unlock = () => {
                   <input
                     type={showPassword ? "text" : "password"}
                     name="masterPassword"
+                    autoComplete="off"
                     value={formData.masterPassword}
                     onChange={handleChange}
                     placeholder="Enter your master password"

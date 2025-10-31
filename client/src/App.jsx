@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/shared/Sidebar";
 import ProfileModal from "./components/shared/ProfileModal";
@@ -15,6 +15,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 function MainLayout({
   activeFilter,
   setActiveFilter,
+  vaultItems,
   setShowPasswordGenerator,
   setShowProfileModal,
   setShowRecoveryKeyModal,
@@ -24,6 +25,7 @@ function MainLayout({
       <Sidebar
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
+        vaultItems={vaultItems}
         onOpenPasswordGenerator={() => setShowPasswordGenerator(true)}
         onOpenProfile={() => setShowProfileModal(true)}
         onOpenRecoveryKey={() => setShowRecoveryKeyModal(true)}
@@ -66,9 +68,26 @@ function MainLayout({
 
 function App() {
   const [activeFilter, setActiveFilter] = useState("all-items");
+  const [vaultItems, setVaultItems] = useState([]);
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showRecoveryKeyModal, setShowRecoveryKeyModal] = useState(false);
+
+  useEffect(() => {
+       const loadCredentials = async () => {
+         try {
+           const user = JSON.parse(localStorage.getItem("user"));
+           if (user?.id) {
+             const response = await apiService.getCredentials(user.id);
+             setVaultItems(response.credentials || []);
+           }
+         } catch (error) {
+           console.error("Failed to load credentials:", error);
+         }
+       };
+
+       loadCredentials();
+     }, []);
 
   return (
     <BrowserRouter>
@@ -89,6 +108,7 @@ function App() {
                 <MainLayout
                   activeFilter={activeFilter}
                   setActiveFilter={setActiveFilter}
+                  vaultItems={vaultItems}
                   setShowPasswordGenerator={setShowPasswordGenerator}
                   setShowProfileModal={setShowProfileModal}
                   setShowRecoveryKeyModal={setShowRecoveryKeyModal}
