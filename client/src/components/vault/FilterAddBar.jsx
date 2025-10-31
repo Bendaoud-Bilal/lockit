@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { Search, Plus, Trash } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
+import AddItemModal from './AddItemModal.jsx'
 
 const FilterAddBar = ({ searchQuery, setSearchQuery }) => {
   const location = useLocation()
   const [wideSearch, setWideSearch] = useState(false)
   const [archiveNotEmpty, setArchiveNotEmpty] = useState(false)
   const archiveCount = localStorage.getItem('archiveCount');
+  const [show, setShow] = useState(false)
+
 
   useEffect(() => {
     if(location.pathname === '/archive')
@@ -19,6 +22,8 @@ const FilterAddBar = ({ searchQuery, setSearchQuery }) => {
     }}, [archiveCount]);
   
   
+
+
 
   return (
     <div className='w-full flex items-center gap-3 h-16 bg-white border-b border-gray-100 px-4'>
@@ -37,10 +42,13 @@ const FilterAddBar = ({ searchQuery, setSearchQuery }) => {
       </div>
 
       {location.pathname !== '/archive' && (
-        <button className='flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2'>
-          <Plus className='w-4' strokeWidth={1} />
-          <span className='hidden sm:inline'>Add item</span>
-        </button>
+        <>
+          <button className='flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2' onClick={() => setShow(true)}>
+            <Plus className='w-4' strokeWidth={1} />
+            <span className='hidden sm:inline'>Add item</span>
+          </button>
+          {show && <AddItemModal show={show} setShow={setShow} />}
+        </>
       )}
 
       {archiveNotEmpty && location.pathname === '/archive' && (

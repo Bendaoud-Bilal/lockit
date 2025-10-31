@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "start" : "cd ../server && npm run dev & cd ../client && npm run dev",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
