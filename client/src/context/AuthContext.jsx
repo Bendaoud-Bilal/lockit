@@ -22,11 +22,28 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
-  const [vaultKey, setVaultKey] = useState(null);
-  const [token, setToken] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+  // ✅ Initialiser depuis sessionStorage
+  const [user, setUser] = useState(() => {
+    const saved = sessionStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [vaultKey, setVaultKey] = useState(() => {
+    return sessionStorage.getItem("vaultKey") || null;
+  });
+
+  const [token, setToken] = useState(() => {
+    return sessionStorage.getItem("token") || null;
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem("isAuthenticated") === "true";
+  });
+
+  const [isLocked, setIsLocked] = useState(() => {
+    return sessionStorage.getItem("isLocked") === "true";
+  });
+
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
 
   const inactivityTimerRef = useRef(null);
@@ -35,9 +52,42 @@ export const AuthProvider = ({ children }) => {
   const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
   const WARNING_BEFORE_LOCK = 60 * 1000; // 60 seconds
 
+  // ✅ Synchroniser avec sessionStorage
+  useEffect(() => {
+    if (user) {
+      sessionStorage.setItem("user", JSON.stringify(user));
+    } else {
+      sessionStorage.removeItem("user");
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (vaultKey) {
+      sessionStorage.setItem("vaultKey", vaultKey);
+    } else {
+      sessionStorage.removeItem("vaultKey");
+    }
+  }, [vaultKey]);
+
+  useEffect(() => {
+    if (token) {
+      sessionStorage.setItem("token", token);
+      apiService.setToken(token);
+    } else {
+      sessionStorage.removeItem("token");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    sessionStorage.setItem("isAuthenticated", isAuthenticated.toString());
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    sessionStorage.setItem("isLocked", isLocked.toString());
+  }, [isLocked]);
+
   // Reset inactivity timer
   const resetInactivityTimer = () => {
-    // Clear existing timers
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
@@ -45,16 +95,12 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(warningTimerRef.current);
     }
 
-    // Hide warning if showing
     setShowInactivityWarning(false);
 
-    // Only start timer if authenticated and not locked
     if (isAuthenticated && !isLocked) {
-      // Start countdown to warning
       inactivityTimerRef.current = setTimeout(() => {
         setShowInactivityWarning(true);
         
-        // Start countdown to lock
         warningTimerRef.current = setTimeout(() => {
           lockVault("Session expired due to inactivity");
         }, WARNING_BEFORE_LOCK);
@@ -69,18 +115,15 @@ export const AuthProvider = ({ children }) => {
     const events = ["mousedown", "keydown", "scroll", "touchstart", "mousemove"];
 
     const handleActivity = () => {
-      resetInactivityTimer(); // Simple: just reset on any activity
+      resetInactivityTimer();
     };
 
-    // Attach listeners
     events.forEach((event) => {
       window.addEventListener(event, handleActivity);
     });
 
-    // Start initial timer
     resetInactivityTimer();
 
-    // Cleanup
     return () => {
       events.forEach((event) => {
         window.removeEventListener(event, handleActivity);
@@ -179,8 +222,10 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout API error:", error);
     }
 
-    // Always clear state
+    // ✅ Clear sessionStorage
     apiService.clearToken();
+    sessionStorage.clear();
+
     setToken(null);
     setUser(null);
     setVaultKey(null);
@@ -221,9 +266,9 @@ export const AuthProvider = ({ children }) => {
   // Update profile
   const updateProfile = async (updates) => {
     try {
-       if (!user) {
-      throw new Error("No user session found");
-    }
+      if (!user) {
+        throw new Error("No user session found");
+      }
       const data = await apiService.updateUser(user.id, updates);
       setUser((prev) => ({ ...prev, ...data.user }));
       return { success: true };

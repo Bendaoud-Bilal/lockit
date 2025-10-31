@@ -1,21 +1,16 @@
 import dotenv from "dotenv";
-import rateLimit from "express-rate-limit";
 import app from "./app.js";
 
+// Load environment variables
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+// Server configuration
+const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || "localhost";
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-});
-app.use("/api/", limiter);
 
 // Start server
 app.listen(PORT, HOST, () => {
-  console.log(`Lockit Server running on http://${HOST}:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`🚀 Lockit Server running on http://${HOST}:${PORT}`);
+  console.log(`📦 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`🔗 Client URL: ${process.env.CLIENT_URL || "http://localhost:3000"}`);
 });

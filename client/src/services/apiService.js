@@ -119,6 +119,25 @@ class ApiService {
   async getRecoveryKeys(userId) {
     return this.client.get(`/api/users/${userId}/recovery-keys`);
   }
+
+  // Vault endpoints
+  async getUserCredentials(userId, config = {}) {
+    return this.client.get(`/api/vault/credentials/user/${userId}`, config);
+  }
+
+  async toggleFavorite(ownerId, credentialId) {
+    return this.client.patch(`/api/vault/credentials/${ownerId}/${credentialId}/favorite`);
+  }
+  
+  async deleteCredential(ownerId, credentialId, state) {
+    return this.client.delete(`/api/vault/delete-password/${ownerId}/${credentialId}`, {
+      params: { state },
+    });
+  }
+
+  async getArchiveCredentials(userId, config = {}) {
+    return this.client.get(`/api/vault/archive-credentials/user/${userId}`, config);
+  }
 }
 
 export default new ApiService();

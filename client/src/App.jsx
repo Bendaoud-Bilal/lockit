@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { Toaster } from "react-hot-toast";
-import Sidebar from "./components/shared/Sidebar";
+import { BrowserRouter ,Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState,useEffect } from 'react';
+import Sidebar from './components/shared/Sidebar';
+import Vault from './pages/Vault';
+import Archive from './pages/Archive';
 import ProfileModal from "./components/shared/ProfileModal";
 import RecoveryKeyModal from "./components/shared/RecoveryKeyModal";
 import Welcome from "./pages/auth/Welcome";
@@ -12,8 +13,8 @@ import Vault from "./pages/Vault";
 import Archive from "./pages/Archive";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { Toaster } from "react-hot-toast";
 
-// Layout component for authenticated pages with sidebar
 function MainLayout({
   activeFilter,
   setActiveFilter,
@@ -35,8 +36,8 @@ function MainLayout({
         onOpenRecoveryKey={() => setShowRecoveryKeyModal(true)}
       />
 
-      {/* Main content area */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1">
+      
         <Routes>
           {/* My Vault - passes activeFilter to Vault component */}
           <Route
@@ -92,14 +93,15 @@ function MainLayout({
 }
 
 function App() {
-  // Initialize from localStorage with fallback
-  const [activeFilter, setActiveFilter] = useState(() => {
-    return localStorage.getItem("activeFilter") || "all-items";
-  });
-  
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showRecoveryKeyModal, setShowRecoveryKeyModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState(
+    localStorage.getItem('activeFilter') || 'all-items'
+  );
+   useEffect(() => {
+    localStorage.setItem('activeFilter', activeFilter);
+  }, [activeFilter]);
 
   // Persist activeFilter to localStorage whenever it changes
   useEffect(() => {

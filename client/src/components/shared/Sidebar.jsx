@@ -71,9 +71,9 @@ const Sidebar = ({
   const vaultCategories = [
     { id: "all-items", icon: Shield, label: "All Items", count: 6 },
     { id: "favorites", icon: Star, label: "Favorites", count: 1 },
-    { id: "logins", icon: Globe, label: "Logins", count: 4 },
-    { id: "credit-cards", icon: CreditCard, label: "Credit Cards", count: 1 },
-    { id: "secure-notes", icon: FileText, label: "Secure Notes", count: 1 },
+    { id: "login", icon: Globe, label: "Logins", count: 4 },
+    { id: "credit_card", icon: CreditCard, label: "Credit Cards", count: 1 },
+    { id: "note", icon: FileText, label: "Secure Notes", count: 1 },
     { id: "identities", icon: UserCircle, label: "Identities", count: 0 },
   ];
 
@@ -83,6 +83,9 @@ const Sidebar = ({
       onFilterChange("all-items");
     }
   };
+
+
+
   const handleLockVault = () => {
     logout("User manually locked vault");
   };
@@ -108,7 +111,6 @@ const Sidebar = ({
       localStorage.setItem('activeFilter', filterId);
     }
   };
-
   const SidebarContent = () => (
     <>
       {/* Header */}

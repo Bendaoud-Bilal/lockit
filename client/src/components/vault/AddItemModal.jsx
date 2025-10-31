@@ -31,18 +31,22 @@ import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
 import axios from "axios"
+import { useAuth } from '../../context/AuthContext';
+
 
 const AddItemModal= ({show, setShow}) => {
   const [activeTab, setActiveTab] = useState("general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
+  const { user } = useAuth();
+  const userId = user?.id;
   
   const [showIcon, setShowIcon] = useState(false)
   const [errors, setErrors] = useState({})
   const [savedCredentialId, setSavedCredentialId] = useState(null) // Store saved credential ID
   const [selectedFiles, setSelectedFiles] = useState([]) // Store files to be uploaded
   const [formData, setFormData] = useState({
-    userId: 1,
+    userId,
     title: "",
     category: "Login",
     folder: "Work",
