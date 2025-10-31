@@ -383,7 +383,7 @@ const AddItemModal= ({show, setShow}) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 ">
           <h2 className="text-2xl font-bold text-gray-900">Add New Item</h2>
-          <button className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-all" onClick={closeModal}>
+          <button type="button" className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-all" onClick={closeModal}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -393,6 +393,7 @@ const AddItemModal= ({show, setShow}) => {
           <div className="flex gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
             <button
               onClick={() => setActiveTab("general")}
+              type="button"
               className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-all ${
                 activeTab === "general" 
                   ? "bg-black text-white shadow-md" 
@@ -401,7 +402,7 @@ const AddItemModal= ({show, setShow}) => {
             >
               General
             </button>
-            <button
+            <button type="button"
             disabled={formData.category !== 'Login'}
               onClick={() => setActiveTab("security")}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-all ${
@@ -412,7 +413,7 @@ const AddItemModal= ({show, setShow}) => {
             >
               Security
             </button>
-            <button
+            <button type="button"
               onClick={() => setActiveTab("attachments")}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-all ${
                 activeTab === "attachments" 
@@ -466,7 +467,7 @@ const AddItemModal= ({show, setShow}) => {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Icon</label>
-              <button className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 font-medium text-gray-700"
+              <button type="button" className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 font-medium text-gray-700"
                 onClick={() => setShowIcon(!showIcon)}  >
                 <CurrentIcon className="w-4 h-4" />
                 Change Icon
@@ -845,7 +846,7 @@ const AddItemModal= ({show, setShow}) => {
         {/* Footer Actions */}
         <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center gap-2">
-            <button className="px-5 py-2.5 text-sm text-gray-700 font-semibold hover:bg-gray-200 rounded-lg transition-all" onClick={closeModal}>
+            <button type="button" className="px-5 py-2.5 text-sm text-gray-700 font-semibold hover:bg-gray-200 rounded-lg transition-all" onClick={closeModal}>
               Cancel
             </button>
             {selectedFiles.length > 0 && (
@@ -854,7 +855,7 @@ const AddItemModal= ({show, setShow}) => {
               </span>
             )}
           </div>
-          <button className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {saveItem()}}>
+          <button type="button" className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {saveItem()}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
