@@ -9,8 +9,6 @@ import Welcome from "./pages/auth/Welcome";
 import Unlock from "./pages/auth/Unlock";
 import SignUp from "./pages/auth/SignUp";
 import ResetPassword from "./pages/auth/ResetPassword";
-import Vault from "./pages/Vault";
-import Archive from "./pages/Archive";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { Toaster } from "react-hot-toast";

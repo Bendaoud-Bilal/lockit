@@ -859,7 +859,7 @@ const AddItemModal= ({show, setShow}) => {
               </span>
             )}
           </div>
-          <button type="button" className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {saveItem()}}>
+          <button type="submit" className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {saveItem()}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
