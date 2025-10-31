@@ -31,18 +31,22 @@ import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
 import axios from "axios"
+import { useAuth } from '../../context/AuthContext';
+
 
 const AddItemModal= ({show, setShow}) => {
   const [activeTab, setActiveTab] = useState("general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
+  const { user } = useAuth();
+  const userId = user?.id;
   
   const [showIcon, setShowIcon] = useState(false)
   const [errors, setErrors] = useState({})
   const [savedCredentialId, setSavedCredentialId] = useState(null) // Store saved credential ID
   const [selectedFiles, setSelectedFiles] = useState([]) // Store files to be uploaded
   const [formData, setFormData] = useState({
-    userId: 1,
+    userId,
     title: "",
     category: "Login",
     folder: "Work",
@@ -854,7 +858,7 @@ const AddItemModal= ({show, setShow}) => {
               </span>
             )}
           </div>
-          <button className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {saveItem()}}>
+          <button type="button" className="px-5 py-2.5 text-sm bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2 shadow-md hover:shadow-lg" onClick={() => {saveItem()}}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"

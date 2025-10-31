@@ -117,6 +117,72 @@ export const getCredentials = async (req, res) => {
   }
 };
 
+export const getArchiveCredentials = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { folderId, category, favorite, state } = req.query;
+
+    const where = {
+      userId: parseInt(userId),
+      state: state || 'deleted',
+    };
+
+    if (folderId) where.folderId = parseInt(folderId);
+    if (category) where.category = category;
+    if (favorite !== undefined) where.favorite = favorite === 'true';
+
+    const credentials = await prisma.credential.findMany({
+      where,
+      select: {
+        // ✅ Tous les champs nécessaires pour decryptCredentialForClient
+        id: true,
+        userId: true, // ✅ Ajouté
+        title: true,
+        category: true,
+        icon: true, // ✅ Ajouté
+        // Données chiffrées
+        dataEnc: true,
+        dataIv: true,
+        dataAuthTag: true,
+        // Métadonnées
+        folder: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        folderId: true, // ✅ Ajouté
+        hasPassword: true,
+        passwordStrength: true, // ✅ Ajouté
+        passwordReused: true, // ✅ Ajouté
+        passwordLastChanged: true, // ✅ Ajouté
+        favorite: true,
+        has2fa: true,
+        compromised: true, // ✅ Ajouté
+        state: true, // ✅ Ajouté
+        createdAt: true, // ✅ Ajouté
+        updatedAt: true, // ✅ Ajouté
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            fileSize: true,
+            mimeType: true,
+          }
+        }
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      }
+    });
+
+    res.status(200).json({ credentials });
+  } catch (error) {
+    console.error('Error fetching credentials:', error);
+    res.status(500).json({ error: 'Failed to fetch credentials', details: error.message });
+  }
+};
+
 // ============================================
 // GET SINGLE CREDENTIAL
 // ============================================
@@ -217,55 +283,86 @@ export const updateCredential = async (req, res) => {
 // ============================================
 // DELETE CREDENTIAL (Soft Delete)
 // ============================================
-export const deleteCredential = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { userId, permanent } = req.query;
+// export const deleteCredential = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { userId, permanent } = req.query;
 
-    // Verify ownership
-    const existing = await prisma.credential.findFirst({
-      where: {
-        id: parseInt(id),
-        userId: parseInt(userId),
-      }
-    });
+//     // Verify ownership
+//     const existing = await prisma.credential.findFirst({
+//       where: {
+//         id: parseInt(id),
+//         userId: parseInt(userId),
+//       }
+//     });
 
-    if (!existing) {
-      return res.status(404).json({ error: 'Credential not found or unauthorized' });
+//     if (!existing) {
+//       return res.status(404).json({ error: 'Credential not found or unauthorized' });
+//     }
+
+//     if (permanent === 'true') {
+//       // Permanent delete
+//       await prisma.credential.delete({
+//         where: { id: parseInt(id) }
+//       });
+//       res.status(200).json({ message: 'Credential permanently deleted' });
+//     } else {
+//       // Soft delete
+//       await prisma.credential.update({
+//         where: { id: parseInt(id) },
+//         data: { state: 'deleted' }
+//       });
+//       res.status(200).json({ message: 'Credential moved to trash' });
+//     }
+//   } catch (error) {
+//     console.error('Error deleting credential:', error);
+//     res.status(500).json({ error: 'Failed to delete credential', details: error.message });
+//   }
+// };
+export const deletePass = async (req, res) =>{
+    const { userId, id } = req.params;
+    const {state} = req.query;
+
+    if (!id || !userId) {
+        return res.status(400).json({ message: "Both userId and id are required" });
     }
 
-    if (permanent === 'true') {
-      // Permanent delete
-      await prisma.credential.delete({
-        where: { id: parseInt(id) }
-      });
-      res.status(200).json({ message: 'Credential permanently deleted' });
-    } else {
-      // Soft delete
-      await prisma.credential.update({
-        where: { id: parseInt(id) },
-        data: { state: 'deleted' }
-      });
-      res.status(200).json({ message: 'Credential moved to trash' });
-    }
-  } catch (error) {
-    console.error('Error deleting credential:', error);
-    res.status(500).json({ error: 'Failed to delete credential', details: error.message });
-  }
-};
+    try {
+      if (state === 'deleted') {
+        const deletedPass = await prisma.credential.delete({
+            where: { 
+                id: parseInt(id),
+                userId: parseInt(userId)
+            },
+        });
+        return res.status(200).json(deletedPass);}
+        else{
+          const softDeletedPass = await prisma.credential.update({
+              where: { 
+                  id: parseInt(id),
+                  userId: parseInt(userId)
+              },
+              data: { state: 'deleted' },
+          });
+          return res.status(200).json(softDeletedPass); 
+        }
+    } catch (error) {
+        return res.status(500).json({ message: "Error deleting password", error });
+    }   
+
+}
 
 // ============================================
 // TOGGLE FAVORITE
 // ============================================
 export const toggleFavorite = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { userId } = req.body;
+    const { userID,id} = req.params;
 
     const credential = await prisma.credential.findFirst({
       where: {
         id: parseInt(id),
-        userId: parseInt(userId),
+        userId: parseInt(userID),
       }
     });
 
@@ -493,11 +590,12 @@ export default {
   getCredentials,
   getCredentialById,
   updateCredential,
-  deleteCredential,
+  deletePass,
   toggleFavorite,
   createFolder,
   getFolders,
   updateFolder,
   deleteFolder,
   getVaultStats,
+  getArchiveCredentials
 };
