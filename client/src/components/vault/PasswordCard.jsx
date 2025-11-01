@@ -9,7 +9,7 @@ import axios from 'axios'
 import ApiService from '../../services/apiService'
 
 
-const PasswordCard = ({ credential }) => {
+const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [decryptedData, setDecryptedData] = useState(null)
@@ -23,7 +23,7 @@ const PasswordCard = ({ credential }) => {
   const location = useLocation()
   const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
   const { user } = useAuth();
-  const API_BASE_URL = 'http://localhost:5000/api';
+  const API_BASE_URL = 'http://localhost:3000/api';
 
   
 
@@ -45,6 +45,9 @@ const PasswordCard = ({ credential }) => {
     try {
       await ApiService.toggleFavorite(ownerToUse, idToUse);
       toast.success(newState ? 'Added to favorites' : 'Removed from favorites');
+       if (onCredentialUpdated) {
+        onCredentialUpdated();
+      }
     } catch (error) {
       console.error('Failed to toggle favorite status:', error);
       // revert
@@ -115,7 +118,10 @@ const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
   try {
     await ApiService.deleteCredential(ownerToUse, idToUse, state);
     toast.success(state==='deleted' ? 'Password permanently deleted' : 'Password moved to archive');
-    window.location.reload();
+
+    if (onCredentialDeleted) {
+      onCredentialDeleted();
+    }
   } catch (error) {
     console.error('Error deleting password:', error);
     toast.error('Failed to delete password');

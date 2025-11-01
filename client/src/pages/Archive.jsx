@@ -6,26 +6,29 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import ApiService from '../services/apiService';
 
-function Archive() {
+function Archive({onCredentialsChange}) {
   const [passwords, setPasswords] = useState([]);
   const [isEmpty, setIsEmpty] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { user } = useAuth();
   const userId = user?.id;
 
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchDeletedPasswords = async () => {
+  const fetchDeletedPasswords = async () => {
       try {
         const res = await ApiService.getArchiveCredentials(userId);
         setPasswords(res.credentials);
+
+        if (onCredentialsChange) {
+        onCredentialsChange();
+      }
       } catch (error) {
         console.error('Erreur lors du chargement des archives:', error);
         setPasswords([]);
       }
     };
 
+  useEffect(() => {
+    if (!userId) return;
     fetchDeletedPasswords();
   }, [userId]);
 
@@ -59,7 +62,7 @@ function Archive() {
           <div className="w-full flex flex-col items-center gap-y-4 mt-10 max-h-[calc(100vh-12rem)]">
             {filteredPasswords.map((p) => (
               <div key={p.id} className="w-[70%]">
-                <PasswordCard credential={p} />
+                <PasswordCard credential={p} onCredentialDeleted={fetchDeletedPasswords} onCredentialUpdated={fetchDeletedPasswords}/>
               </div>
             ))}
           </div>

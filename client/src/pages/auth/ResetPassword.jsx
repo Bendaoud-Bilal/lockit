@@ -103,7 +103,7 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      // Verify recovery key with backend (not full reset yet)
+      // Verify recovery key with backend
       await apiService.verifyRecoveryKey(
         formData.usernameOrEmail,
         formData.recoveryKey

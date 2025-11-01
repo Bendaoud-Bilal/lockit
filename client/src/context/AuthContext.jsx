@@ -11,12 +11,11 @@ import InactivityWarning from "../components/shared/InactivityWarning";
 
 const AuthContext = createContext(null);
 
-
 // Storage keys
 const STORAGE_KEYS = {
-  TOKEN: 'lockit_session_token',
-  USER: 'lockit_user_data',
-  IS_LOCKED: 'lockit_is_locked'
+  TOKEN: "lockit_session_token",
+  USER: "lockit_user_data",
+  IS_LOCKED: "lockit_is_locked",
 };
 
 export const useAuth = () => {
@@ -30,33 +29,29 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
-
   // Initialize state from sessionStorage
   const [user, setUser] = useState(() => {
     const stored = sessionStorage.getItem(STORAGE_KEYS.USER);
     return stored ? JSON.parse(stored) : null;
   });
-  
+
   const [token, setToken] = useState(() => {
     return sessionStorage.getItem(STORAGE_KEYS.TOKEN);
   });
-  
+
   const [isLocked, setIsLocked] = useState(() => {
-    return sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === 'true';
+    return sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === "true";
   });
 
-  // Vault key stays in memory only (never persisted)
   const [vaultKey, setVaultKey] = useState(null);
-  
-  // FIX: Initialize isAuthenticated based on existing session
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const hasToken = !!sessionStorage.getItem(STORAGE_KEYS.TOKEN);
     const hasUser = !!sessionStorage.getItem(STORAGE_KEYS.USER);
-    const locked = sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === 'true';
-    // Only authenticated if we have token, user, and NOT locked
+    const locked = sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === "true";
     return hasToken && hasUser && !locked;
   });
-  
+
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
 
   const inactivityTimerRef = useRef(null);
@@ -92,13 +87,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedToken = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
     const storedUser = sessionStorage.getItem(STORAGE_KEYS.USER);
-    const wasLocked = sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === 'true';
+    const wasLocked = sessionStorage.getItem(STORAGE_KEYS.IS_LOCKED) === "true";
 
     if (storedToken && storedUser) {
       apiService.setToken(storedToken);
-      
+
       // Always redirect to unlock if there's no vault key in memory
-      // (This handles page refresh or initial load)
       if (!vaultKey || wasLocked) {
         setIsLocked(true);
         setIsAuthenticated(false);
@@ -121,7 +115,7 @@ export const AuthProvider = ({ children }) => {
     if (isAuthenticated && !isLocked) {
       inactivityTimerRef.current = setTimeout(() => {
         setShowInactivityWarning(true);
-        
+
         warningTimerRef.current = setTimeout(() => {
           lockVault("Session expired due to inactivity");
         }, WARNING_BEFORE_LOCK);
@@ -133,7 +127,13 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (!isAuthenticated || isLocked) return;
 
-    const events = ["mousedown", "keydown", "scroll", "touchstart", "mousemove"];
+    const events = [
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "mousemove",
+    ];
 
     const handleActivity = () => {
       resetInactivityTimer();
@@ -212,7 +212,6 @@ export const AuthProvider = ({ children }) => {
 
   // Lock vault
   const lockVault = (reason = "Vault locked") => {
-    console.log("Lock reason:", reason);
 
     // Clear vault key from memory
     setVaultKey(null);
@@ -233,7 +232,6 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = async (reason = "User logged out") => {
-    console.log("Logout reason:", reason);
 
     try {
       await apiService.logout();

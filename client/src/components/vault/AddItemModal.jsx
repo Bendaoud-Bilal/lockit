@@ -25,7 +25,6 @@ import {
   Folder,
   Trash2,
 } from "lucide-react"
-import icon from "../../assets/icons/Icon.svg"
 import Security from "./Security"
 import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
@@ -203,18 +202,12 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
   
     // Encrypt and prepare for API
     const encryptedCredential = await prepareCredentialForStorage(formData, vaultKey);
-    
-    console.log('Encrypted credential ready for API:', encryptedCredential);
 
     const decryptedCredential = await decryptCredentialForClient(encryptedCredential, vaultKey);
 
-    console.log('decrypted credential :', decryptedCredential)
-
     // Save credential first
-    const response = await axios.post(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:5000'}/api/vault/credentials`, {
+    const response = await axios.post(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/api/vault/credentials`, {
       encryptedCredential})
-
-    console.log('Credential saved:', response.data)
 
     // Save the credential ID
     const credentialId = response.data.credential?.id
@@ -223,17 +216,14 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
       
       // Upload attachments if any were selected
       if (selectedFiles.length > 0) {
-        console.log(`Uploading ${selectedFiles.length} attachments...`)
         
         let successCount = 0
         let failCount = 0
         
         for (const file of selectedFiles) {
           try {
-            console.log(`Uploading file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`)
             await uploadAttachment(file, credentialId, vaultKey)
             successCount++
-            console.log(`✓ Successfully uploaded: ${file.name}`)
           } catch (attachError) {
             failCount++
             console.error(`✗ Error uploading attachment: ${file.name}`, attachError)
@@ -273,8 +263,6 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
   // Function to encrypt and upload a file
   const uploadAttachment = async (file, credentialId, vaultKey) => {
     try {
-      console.log(`[Upload] Starting encryption for: ${file.name}`)
-      console.log(`[Upload] Original size: ${(file.size / 1024 / 1024).toFixed(2)} MB`)
       
       // Read file as ArrayBuffer
       const arrayBuffer = await file.arrayBuffer()
@@ -320,19 +308,16 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
         mimeType: file.type || 'application/octet-stream',
         ...encryptedData,
       }).length
-      
-      console.log(`[Upload] Encrypted + Base64 size: ${(payloadSize / 1024 / 1024).toFixed(2)} MB`)
 
       // Upload to server
-      const response = await axios.post('http://localhost:5000/api/vault/attachments', {
+      const response = await axios.post('http://localhost:3000/api/vault/attachments', {
         credentialId,
         filename: file.name,
         fileSize: file.size,
         mimeType: file.type || 'application/octet-stream',
         ...encryptedData,
       })
-
-      console.log(`[Upload] Server response:`, response.data)
+      
       return response.data.attachment
     } catch (error) {
       console.error(`[Upload] Error for ${file.name}:`, error)

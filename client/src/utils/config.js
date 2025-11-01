@@ -1,7 +1,7 @@
 // Application Configuration
 export const APP_CONFIG = {
   // API Configuration
-  API_BASE_URL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  API_BASE_URL: import.meta.env.VITE_API_URL || "http://localhost:3000",
   API_TIMEOUT: 30000, // 30 seconds
 
   // Security Configuration

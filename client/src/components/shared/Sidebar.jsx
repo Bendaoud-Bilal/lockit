@@ -51,17 +51,20 @@ const Sidebar = ({
   }, [isMobileMenuOpen]);
 
   const getCategoryCounts = () => {
-     return {
-       'all-items': vaultItems.length,
-       'favorites': vaultItems.filter(item => item.favorite).length,
-       'logins': vaultItems.filter(item => item.category === 'login').length,
-       'credit-cards': vaultItems.filter(item => item.category === 'card').length,
-       'secure-notes': vaultItems.filter(item => item.category === 'note').length,
-       'identities': vaultItems.filter(item => item.category === 'identity').length,
-     };
-   };
-   
-   const counts = getCategoryCounts();
+    return {
+      "all-items": vaultItems.length,
+      favorites: vaultItems.filter((item) => item.favorite).length,
+      logins: vaultItems.filter((item) => item.category === "login").length,
+      "credit-cards": vaultItems.filter((item) => item.category === "card")
+        .length,
+      "secure-notes": vaultItems.filter((item) => item.category === "note")
+        .length,
+      identities: vaultItems.filter((item) => item.category === "identity")
+        .length,
+    };
+  };
+
+  const counts = getCategoryCounts();
 
   const mainNavItems = [
     { id: "my-vault", icon: Shield, label: "My Vault", path: "/my-vault" },
@@ -83,13 +86,38 @@ const Sidebar = ({
   ];
 
   const vaultCategories = [
-     { id: "all-items", icon: Shield, label: "All Items", count: counts['all-items'] },
-     { id: "favorites", icon: Star, label: "Favorites", count: counts['favorites'] },
-     { id: "logins", icon: Globe, label: "Logins", count: counts['logins'] },
-     { id: "credit-cards", icon: CreditCard, label: "Credit Cards", count: counts['credit-cards'] },
-     { id: "secure-notes", icon: FileText, label: "Secure Notes", count: counts['secure-notes'] },
-     { id: "identities", icon: UserCircle, label: "Identities", count: counts['identities'] },
-   ];
+    {
+      id: "all-items",
+      icon: Shield,
+      label: "All Items",
+      count: counts["all-items"],
+    },
+    {
+      id: "favorites",
+      icon: Star,
+      label: "Favorites",
+      count: counts["favorites"],
+    },
+    { id: "logins", icon: Globe, label: "Logins", count: counts["logins"] },
+    {
+      id: "credit-cards",
+      icon: CreditCard,
+      label: "Credit Cards",
+      count: counts["credit-cards"],
+    },
+    {
+      id: "secure-notes",
+      icon: FileText,
+      label: "Secure Notes",
+      count: counts["secure-notes"],
+    },
+    {
+      id: "identities",
+      icon: UserCircle,
+      label: "Identities",
+      count: counts["identities"],
+    },
+  ];
 
   const handleMainNavClick = (path) => {
     navigate(path);
@@ -97,8 +125,6 @@ const Sidebar = ({
       onFilterChange("all-items");
     }
   };
-
-
 
   const handleLockVault = () => {
     logout("User manually locked vault");
@@ -119,10 +145,10 @@ const Sidebar = ({
 
   const activeSection = getActiveSection();
 
-   const handleCategoryClick = (filterId) => {
+  const handleCategoryClick = (filterId) => {
     if (onFilterChange) {
       onFilterChange(filterId);
-      localStorage.setItem('activeFilter', filterId);
+      localStorage.setItem("activeFilter", filterId);
     }
   };
   const SidebarContent = () => (

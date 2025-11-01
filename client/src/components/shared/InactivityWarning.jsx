@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 
-const InactivityWarning = ({
-  isOpen,
-  remainingSeconds
-}) => {
+const InactivityWarning = ({ isOpen, remainingSeconds }) => {
   const [countdown, setCountdown] = useState(remainingSeconds);
 
   useEffect(() => {

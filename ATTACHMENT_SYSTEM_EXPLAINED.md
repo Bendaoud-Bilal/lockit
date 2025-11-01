@@ -435,7 +435,7 @@ const uploadAttachment = async (file, credentialId, vaultKey) => {
     // ========================================
     // STEP 8: SEND TO SERVER
     // ========================================
-    const response = await axios.post('http://localhost:5000/api/vault/attachments', {
+    const response = await axios.post('http://localhost:3000/api/vault/attachments', {
       credentialId,           // Which credential this belongs to
       filename: file.name,    // Original filename
       fileSize: file.size,    // Original size (bytes)

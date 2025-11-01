@@ -179,7 +179,7 @@ Total: 61.5 MB ✅ (< 100MB)
 # Server must be restarted after changing index.js
 cd server
 npm run dev
-# Look for: "Server running on http://localhost:5000"
+# Look for: "Server running on http://localhost:3000"
 ```
 
 **Solution 1: Increase limit to 150MB**

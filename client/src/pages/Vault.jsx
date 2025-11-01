@@ -5,8 +5,8 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import ApiService from '../services/apiService';
 
-const Vault = ({ activeFilter }) => {
-  const API_BASE_URL = 'http://localhost:5000/api';
+const Vault = ({ activeFilter, onCredentialsChange }) => {
+  const API_BASE_URL = 'http://localhost:3000/api';
   const { user } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,50 +15,70 @@ const Vault = ({ activeFilter }) => {
   const [error, setError] = useState(null);
 
   const userId = user?.id;
-  console.log('Vault component userId:', userId);
 
-  // Define fetchCredentials OUTSIDE of useEffect so it can be reused
-  const fetchCredentials = async () => {
-    if (!userId) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const res = await ApiService.getUserCredentials(userId);
-      const creds = res.credentials || [];
-      setPasswords(creds);
-    } catch (err) {
-      console.error('Axios error', err);
-      setError(err.response?.data?.error || err.message || 'Network error');
-      setPasswords([]);
-    } finally {
-      setLoading(false);
+ // In Vault.jsx - separate initial load from updates
+const fetchCredentials = async (notifyParent = false) => {
+  if (!userId) return;
+  
+  setLoading(true);
+  setError(null);
+  
+  try {
+    const res = await ApiService.getUserCredentials(userId);
+    const creds = res.credentials || [];
+    setPasswords(creds);
+
+    // Only notify parent when explicitly requested (after add/edit/delete)
+    if (notifyParent && onCredentialsChange) {
+      onCredentialsChange();
     }
-  };
+  } catch (err) {
+    console.error('Axios error', err);
+    setError(err.response?.data?.error || err.message || 'Network error');
+    setPasswords([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // Single useEffect to fetch on mount/userId change
-  useEffect(() => {
-    if (!userId) return;
-    
-    console.log('active filter changed:', activeFilter);
-    fetchCredentials();
-  }, [userId]); // Only depend on userId, not activeFilter
+// Initial load - don't notify parent
+useEffect(() => {
+  if (!userId) return;
+  fetchCredentials(false); // Don't notify on mount
+}, [userId]);
 
   const filteredPasswords = passwords.filter((item) => {
-    const itemFilter = item.filter || item.category || 'all-items';
-    const itemTitle = item.title || item.name || '';
+  // Map activeFilter to actual category values
+  const categoryMap = {
+    'all-items': null, // Show all
+    'favorites': null, // Handle separately
+    'logins': 'login',
+    'credit-cards': 'card',
+    'secure-notes': 'note',
+    'identities': 'identity',
+  };
 
-    const matchFilter =
-      activeFilter === 'all-items' ||
-      itemFilter.toLowerCase() === activeFilter.toLowerCase();
+  // Search filter
+  const itemTitle = item.title || item.name || '';
+  const matchSearch = itemTitle
+    .toLowerCase()
+    .includes(searchQuery.toLowerCase());
 
-    const matchSearch = itemTitle
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+  // Category filter
+  let matchFilter = true;
+  
+  if (activeFilter === 'all-items') {
+    matchFilter = true; // Show all items
+  } else if (activeFilter === 'favorites') {
+    matchFilter = item.favorite === true; // Only show favorites
+  } else {
+    // Match by category
+    const expectedCategory = categoryMap[activeFilter];
+    matchFilter = item.category === expectedCategory;
+  }
 
-    return matchFilter && matchSearch;
-  });
+  return matchFilter && matchSearch;
+});
 
   if (loading) {
     return (
@@ -96,7 +116,7 @@ const Vault = ({ activeFilter }) => {
       <FilterAddBar 
         searchQuery={searchQuery} 
         setSearchQuery={setSearchQuery} 
-        onCredentialAdded={fetchCredentials} // Now accessible!
+        onCredentialAdded={() => fetchCredentials(true)}
       />
       
       <div className="w-full flex-1 overflow-y-scroll flex flex-col items-center mb-5 gap-y-4 mt-10">
@@ -111,7 +131,7 @@ const Vault = ({ activeFilter }) => {
         ) : (
           filteredPasswords.map((p) => (
             <div key={p.id} className="w-[70%]">
-              <PasswordCard credential={p} />
+              <PasswordCard credential={p} onCredentialDeleted={() => fetchCredentials(true)} onCredentialUpdated={() => fetchCredentials(true)}/>
             </div>
           ))
         )}

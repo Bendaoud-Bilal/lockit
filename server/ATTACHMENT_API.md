@@ -7,7 +7,7 @@ The Attachment API provides secure encrypted file storage for vault credentials.
 ## Base URL
 
 ```
-http://localhost:5000/api/vault
+http://localhost:3000/api/vault
 ```
 
 ---
@@ -266,7 +266,7 @@ model Attachment {
 ### Test Upload
 
 ```bash
-curl -X POST http://localhost:5000/api/vault/attachments \
+curl -X POST http://localhost:3000/api/vault/attachments \
   -H "Content-Type: application/json" \
   -d '{
     "credentialId": 1,
@@ -282,11 +282,11 @@ curl -X POST http://localhost:5000/api/vault/attachments \
 ### Test Get Attachments
 
 ```bash
-curl http://localhost:5000/api/vault/attachments/credential/1
+curl http://localhost:3000/api/vault/attachments/credential/1
 ```
 
 ### Test Delete
 
 ```bash
-curl -X DELETE http://localhost:5000/api/vault/attachments/1
+curl -X DELETE http://localhost:3000/api/vault/attachments/1
 ```

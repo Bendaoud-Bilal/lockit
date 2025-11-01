@@ -19,7 +19,7 @@ const Attachments = ({ credentialId, vaultKey, selectedFiles, setSelectedFiles }
 
     try {
       setIsLoading(true)
-      const response = await axios.get(`http://localhost:5000/api/vault/attachments/credential/${credentialId}`)
+      const response = await axios.get(`http://localhost:3000/api/vault/attachments/credential/${credentialId}`)
       setSavedAttachments(response.data.attachments || [])
     } catch (error) {
       console.error('Error fetching attachments:', error)
@@ -36,7 +36,7 @@ const Attachments = ({ credentialId, vaultKey, selectedFiles, setSelectedFiles }
 
     try {
       setIsLoading(true)
-      await axios.delete(`http://localhost:5000/api/vault/attachments/${attachmentId}`)
+      await axios.delete(`http://localhost:3000/api/vault/attachments/${attachmentId}`)
       
       // Refresh list
       await fetchAttachments()
@@ -110,7 +110,6 @@ const Attachments = ({ credentialId, vaultKey, selectedFiles, setSelectedFiles }
     setSelectedFiles(prevFiles => {
       const combined = [...prevFiles, ...validFiles]
       const limited = combined.slice(0, 5)
-      console.log('Selected files:', limited)
       return limited
     })
     
@@ -128,7 +127,6 @@ const Attachments = ({ credentialId, vaultKey, selectedFiles, setSelectedFiles }
     setSelectedFiles(prevFiles => {
       const combined = [...prevFiles, ...validFiles]
       const limited = combined.slice(0, 5)
-      console.log('Dropped files:', limited)
       return limited
     })
   }

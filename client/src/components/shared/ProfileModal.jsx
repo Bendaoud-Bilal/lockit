@@ -163,32 +163,30 @@ const ProfileModal = ({ isOpen, onClose }) => {
     setLoading(true);
     try {
       if (formData.newPassword) {
-      const passwordResult = await changeMasterPassword(
-        formData.currentPassword,
-        formData.newPassword
-      );
+        const passwordResult = await changeMasterPassword(
+          formData.currentPassword,
+          formData.newPassword
+        );
 
-      if (!passwordResult.success) {
-        throw new Error(passwordResult.error || "Failed to change password");
+        if (!passwordResult.success) {
+          throw new Error(passwordResult.error || "Failed to change password");
+        }
+      } else {
+        const verifyResult = await changeMasterPassword(
+          formData.currentPassword,
+          formData.currentPassword // Pass same password to verify only
+        );
+
+        if (!verifyResult.success) {
+          throw new Error("Current password is incorrect");
+        }
       }
-    } else {
-
-      const verifyResult = await changeMasterPassword(
-        formData.currentPassword,
-        formData.currentPassword // Pass same password to verify only
-      );
-
-      if (!verifyResult.success) {
-        throw new Error("Current password is incorrect");
-      }
-    }
 
       // Update basic profile info if changed
       if (
         formData.username !== user.username ||
         formData.email !== user.email
       ) {
-
         const profileResult = await updateProfile({
           username: formData.username,
           email: formData.email,

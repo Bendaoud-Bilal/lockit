@@ -10,15 +10,16 @@ import SignUp from "./pages/auth/SignUp";
 import ResetPassword from "./pages/auth/ResetPassword";
 import Vault from './pages/Vault';
 import Archive from './pages/Archive';
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-import { Toaster } from "react-hot-toast";
+import apiService from './services/apiService';
 
 function MainLayout({
   activeFilter,
   setActiveFilter,
   showPasswordGenerator,
   vaultItems,
+  onCredentialsChange,
   setShowPasswordGenerator,
   showProfileModal,
   setShowProfileModal,
@@ -27,7 +28,7 @@ function MainLayout({
 }) {
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar stays outside Routes - won't remount on navigation */}
+      {/* Sidebar */}
       <Sidebar
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
@@ -38,12 +39,16 @@ function MainLayout({
       />
 
       <div className="flex-1">
-      
         <Routes>
-          {/* My Vault - passes activeFilter to Vault component */}
+          {/* My Vault */}
           <Route
             path="/my-vault"
-            element={<Vault activeFilter={activeFilter} />}
+            element={
+              <Vault 
+                activeFilter={activeFilter}
+                onCredentialsChange={onCredentialsChange}
+              />
+            }
           />
 
           {/* Other Main Routes */}
@@ -57,7 +62,7 @@ function MainLayout({
           />
           <Route path="/send" element={<div className="p-8">Send</div>} />
           <Route path="/folders" element={<div className="p-8">Folders</div>} />
-          <Route path="/archive" element={<Archive />} />
+          <Route path="/archive" element={<Archive onCredentialsChange={onCredentialsChange}/>} />
 
           {/* Catch all - redirect to my vault */}
           <Route path="*" element={<Navigate to="/my-vault" replace />} />
@@ -93,7 +98,9 @@ function MainLayout({
   );
 }
 
-function App() {
+// AppContent
+function AppContent() {
+  const { user, isAuthenticated } = useAuth();
   const [vaultItems, setVaultItems] = useState([]);
   const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -101,65 +108,83 @@ function App() {
   const [activeFilter, setActiveFilter] = useState(
     localStorage.getItem('activeFilter') || 'all-items'
   );
-   useEffect(() => {
+
+  // Persist activeFilter to localStorage
+  useEffect(() => {
     localStorage.setItem('activeFilter', activeFilter);
   }, [activeFilter]);
 
-  // Persist activeFilter to localStorage whenever it changes
+  // Function to load credentials from API
+  const loadCredentials = async () => {
+    
+    // Only load if user is authenticated
+    if (!user?.id || !isAuthenticated) {
+      setVaultItems([]);
+      return;
+    }
+    
+    try {
+      const response = await apiService.getUserCredentials(user.id);
+      
+      const credentials = response.credentials || [];
+      setVaultItems(credentials);
+    } catch (error) {
+      console.error("Failed to load credentials:", error);
+      setVaultItems([]);
+    }
+  };
+
+  // Load credentials when user becomes authenticated
   useEffect(() => {
-    localStorage.setItem("activeFilter", activeFilter);
-  }, [activeFilter]);
+    if (user?.id && isAuthenticated) {
+      loadCredentials();
+    } else {
+      setVaultItems([]);
+    }
+  }, [user?.id, isAuthenticated]);
 
-  useEffect(() => {
-       const loadCredentials = async () => {
-         try {
-           const user = JSON.parse(localStorage.getItem("user"));
-           if (user?.id) {
-             const response = await apiService.getCredentials(user.id);
-             setVaultItems(response.credentials || []);
-           }
-         } catch (error) {
-           console.error("Failed to load credentials:", error);
-         }
-       };
+  return (
+    <Routes>
+      {/* Authentication Routes - No Sidebar */}
+      <Route path="/welcome" element={<Welcome />} />
+      <Route path="/signup" element={<SignUp />} />
+      <Route path="/unlock" element={<Unlock />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
-       loadCredentials();
-     }, []);
+      {/* Main App Routes - With Sidebar and Protection */}
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <MainLayout
+              activeFilter={activeFilter}
+              onCredentialsChange={loadCredentials}
+              setActiveFilter={setActiveFilter}
+              showPasswordGenerator={showPasswordGenerator}
+              vaultItems={vaultItems}
+              setShowPasswordGenerator={setShowPasswordGenerator}
+              showProfileModal={showProfileModal}
+              setShowProfileModal={setShowProfileModal}
+              showRecoveryKeyModal={showRecoveryKeyModal}
+              setShowRecoveryKeyModal={setShowRecoveryKeyModal}
+            />
+          </ProtectedRoute>
+        }
+      />
 
+      {/* Root redirect - to welcome for unauthenticated */}
+      <Route path="/" element={<Navigate to="/welcome" replace />} />
+    </Routes>
+  );
+}
+
+// Main App component - wraps everything with providers
+function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Toaster position="top-center" />
-        <Routes>
-          {/* Authentication Routes - No Sidebar */}
-          <Route path="/welcome" element={<Welcome />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/unlock" element={<Unlock />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-
-          {/* Main App Routes - With Sidebar and Protection */}
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <MainLayout
-                  activeFilter={activeFilter}
-                  setActiveFilter={setActiveFilter}
-                  showPasswordGenerator={showPasswordGenerator}
-                  vaultItems={vaultItems}
-                  setShowPasswordGenerator={setShowPasswordGenerator}
-                  showProfileModal={showProfileModal}
-                  setShowProfileModal={setShowProfileModal}
-                  showRecoveryKeyModal={showRecoveryKeyModal}
-                  setShowRecoveryKeyModal={setShowRecoveryKeyModal}
-                />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Root redirect - to welcome for unauthenticated, ProtectedRoute will handle redirect for authenticated */}
-          <Route path="/" element={<Navigate to="/welcome" replace />} />
-        </Routes>
+        <AppContent />
       </AuthProvider>
     </BrowserRouter>
   );

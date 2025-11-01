@@ -1,6 +1,6 @@
 # Lockit Vault API Documentation
 
-Base URL: `http://localhost:5000/api/vault`
+Base URL: `http://localhost:3000/api/vault`
 
 ---
 
@@ -445,7 +445,7 @@ const encrypted = await encryptCredential(formData, vaultKey);
 **Step 2: Send to API**
 
 ```javascript
-const response = await fetch("http://localhost:5000/api/vault/credentials", {
+const response = await fetch("http://localhost:3000/api/vault/credentials", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -473,7 +473,7 @@ console.log(result.credential);
 ```javascript
 // Get credential
 const response = await fetch(
-  "http://localhost:5000/api/vault/credentials/1?userId=1"
+  "http://localhost:3000/api/vault/credentials/1?userId=1"
 );
 const { credential } = await response.json();
 
