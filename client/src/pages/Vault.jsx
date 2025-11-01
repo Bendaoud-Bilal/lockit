@@ -130,7 +130,7 @@ useEffect(() => {
           </div>
         ) : (
           filteredPasswords.map((p) => (
-            <div key={p.id} className="w-[70%]">
+            <div key={p.id} className="w-[70%] ">
               <PasswordCard credential={p} onCredentialDeleted={() => fetchCredentials(true)} onCredentialUpdated={() => fetchCredentials(true)}/>
             </div>
           ))

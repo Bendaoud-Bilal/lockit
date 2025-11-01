@@ -51,7 +51,7 @@ function Archive({onCredentialsChange}) {
       <div className="w-full flex justify-center mt-5 flex-1 overflow-y-auto">
         {isEmpty ? (
           <div className="w-full flex justify-center mt-8">
-            <div className="w-[70%] bg-white border-2 border-gray-200 rounded-lg px-3 py-8 flex flex-col h-44">
+            <div className="w-[70%] bg-white border-2 border-gray-200 rounded-lg px-3 py-8 flex flex-col h-40">
               <div className="flex justify-center items-center flex-col gap-y-4">
                 <ArchiveIcon className="w-36" strokeWidth={2} />
                 <span className="text-lg">No archived passwords found</span>

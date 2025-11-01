@@ -5,166 +5,141 @@ import Show2FA from './Show2FA'
 import { useLocation } from 'react-router-dom'
 import { decryptCredentialForClient } from '../../utils/credentialHelpers';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios'
 import ApiService from '../../services/apiService'
-
 
 const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) => {
   const [showPassword, setShowPassword] = useState(false)
+  const [showCardNumber, setShowCardNumber] = useState(false)
+  const [showCvv, setShowCvv] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [decryptedData, setDecryptedData] = useState(null)
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [isShow2FA, setIsShow2FA] = useState(false)
-  const [isFavorite, setIsFavorite] = useState(credential.favorite);
-  const credId = credential.id;
-  const ownerIdFromCredential = credential.userId;
-  const [passwordLength, setPasswordLength] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(credential.favorite)
+  const credId = credential.id
+  const ownerIdFromCredential = credential.userId
+  const [passwordLength, setPasswordLength] = useState(0)
   const menuRef = useRef(null)
   const location = useLocation()
-  const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
-  const { user } = useAuth();
-  const API_BASE_URL = 'http://localhost:3000/api';
-
-  
-
-  const isArchived = location.pathname === '/archive';
-  const hasFolder = credential.folder?.name && credential.folder.name.trim() !== '';
-  const userId = user?.id;
-
-
+  const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs='
+  const { user } = useAuth()
+  const isArchived = location.pathname === '/archive'
+  const hasFolder = credential.folder?.name && credential.folder.name.trim() !== ''
+  const userId = user?.id
 
   const handleToggleFavorite = async (idParam, ownerIdParam) => {
-    const idToUse = idParam ?? credId;
-    const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential;
-    if (!idToUse || !ownerToUse) return;
-
-    const previous = isFavorite;
-    const newState = !previous;
-    setIsFavorite(newState);
-
+    const idToUse = idParam ?? credId
+    const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
+    if (!idToUse || !ownerToUse) return
+    const previous = isFavorite
+    const newState = !previous
+    setIsFavorite(newState)
     try {
-      await ApiService.toggleFavorite(ownerToUse, idToUse);
-      toast.success(newState ? 'Added to favorites' : 'Removed from favorites');
-       if (onCredentialUpdated) {
-        onCredentialUpdated();
-      }
-    } catch (error) {
-      console.error('Failed to toggle favorite status:', error);
-      // revert
-      setIsFavorite(previous);
-      toast.error('Failed to update favorite');
+      await ApiService.toggleFavorite(ownerToUse, idToUse)
+      toast.success(newState ? 'Added to favorites' : 'Removed from favorites')
+      if (onCredentialUpdated) onCredentialUpdated()
+    } catch {
+      setIsFavorite(previous)
+      toast.error('Failed to update favorite')
     }
-  };
+  }
 
   useEffect(() => {
     const decryptData = async () => {
-      if (!credential.dataEnc || !credential.dataIv || !credential.dataAuthTag || !vaultKey) {
-        console.warn('Missing encryption data or vault key');
-        return;
-      }
-
-      setIsDecrypting(true);
-      
+      if (!credential.dataEnc || !credential.dataIv || !credential.dataAuthTag || !vaultKey) return
+      setIsDecrypting(true)
       try {
-        const decrypted = await decryptCredentialForClient(credential, vaultKey);
-        
-    
-  setDecryptedData(decrypted);
-  setPasswordLength(decrypted?.password?.length ?? 0);
-        
-      } catch (error) {
-        console.error('Failed to decrypt credential data:', error);
-        toast.error('Impossible de déchiffrer les données');
-        setDecryptedData(null);
+        const decrypted = await decryptCredentialForClient(credential, vaultKey)
+        setDecryptedData(decrypted)
+        setPasswordLength(decrypted?.password?.length ?? 0)
+      } catch {
+        setDecryptedData(null)
+        toast.error('Impossible de déchiffrer les données')
       } finally {
-        setIsDecrypting(false);
+        setIsDecrypting(false)
       }
-    };
-
-    decryptData();
-  }, [credential, vaultKey]);
+    }
+    decryptData()
+  }, [credential, vaultKey])
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isMenuOpen && menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMenuOpen(false)
-      }
+      if (isMenuOpen && menuRef.current && !menuRef.current.contains(event.target)) setIsMenuOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isMenuOpen])
 
-  const handleCopy = () => {
-    if (decryptedData?.password) {
+  const handleCopy = (field) => {
+    if (!decryptedData) return
+    if (field === 'content' && decryptedData.content) {
+      navigator.clipboard.writeText(decryptedData.content)
+      toast.success('Content copied')
+      return
+    }
+    if (field === 'password' && decryptedData.password) {
       navigator.clipboard.writeText(decryptedData.password)
       toast.success('Password copied')
-    } else {
-      toast.error('No password available')
+      return
+    }
+    if (field === 'cardNumber' && decryptedData.cardNumber) {
+      navigator.clipboard.writeText(decryptedData.cardNumber)
+      toast.success('Card Number copied')
+      return
+    }
+    if (field === 'cvv' && decryptedData.cvv) {
+      navigator.clipboard.writeText(decryptedData.cvv)
+      toast.success('Cvv copied')
+      return
     }
   }
 
-  const handleToggle2FA = () => {
-    setIsShow2FA(!isShow2FA)
-  }
+  const handleToggle2FA = () => setIsShow2FA(!isShow2FA)
 
-
-const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
-  const idToUse = idParam ?? credId;
-  const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential;
-
-  if (!idToUse || !ownerToUse) return;
-
-
-  try {
-    await ApiService.deleteCredential(ownerToUse, idToUse, state);
-    toast.success(state==='deleted' ? 'Password permanently deleted' : 'Password moved to archive');
-
-    if (onCredentialDeleted) {
-      onCredentialDeleted();
+  const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
+    const idToUse = idParam ?? credId
+    const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
+    if (!idToUse || !ownerToUse) return
+    try {
+      await ApiService.deleteCredential(ownerToUse, idToUse, state)
+      toast.success(state === 'deleted' ? 'Item permanently deleted' : 'Item moved to archive')
+      if (onCredentialDeleted) onCredentialDeleted()
+    } catch {
+      toast.error('Failed to delete password')
     }
-  } catch (error) {
-    console.error('Error deleting password:', error);
-    toast.error('Failed to delete password');
   }
-};
 
-  
-
-  if (isDecrypting) {
+  if (isDecrypting)
     return (
-      <div className="w-full bg-white hover:shadow-lg border border-gray-200 rounded-lg px-3 sm:px-4 py-4 flex items-center justify-center">
+      <div className="w-full bg-white border border-gray-200 rounded-lg px-3 py-4 flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-xs text-gray-500">Décryptage...</p>
         </div>
       </div>
-    );
-  }
-  if (!decryptedData && !isDecrypting) {
+    )
+
+  if (!decryptedData && !isDecrypting)
     return (
-      <div className="w-full bg-red-50 border border-red-200 rounded-lg px-3 sm:px-4 py-4">
+      <div className="w-full bg-red-50 border border-red-200 rounded-lg px-3 py-4">
         <p className="text-red-600 text-sm">⚠️ Impossible de déchiffrer cette credential</p>
       </div>
-    );
-  }
-
+    )
 
   return (
     <>
       {isShow2FA && <Show2FA onClose={handleToggle2FA} />}
-      
-      <div className="w-full bg-white hover:shadow-lg border border-gray-200 rounded-lg px-3 sm:px-4 py-4 flex flex-col transition-shadow">
+      <div className="w-full bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col">
         <div className="flex flex-col md:flex-row md:justify-between gap-3">
           <div className="flex gap-x-3 items-start sm:items-center flex-1">
-            <Globe className="w-5 flex-shrink-0" strokeWidth={1} />
+            <Globe className="w-5" strokeWidth={1} />
             <div className="flex flex-col gap-y-2 min-w-0 flex-1">
-              
               <div className="flex flex-wrap gap-x-2 gap-y-1.5 items-center">
                 <span className="font-medium text-sm sm:text-base break-words">{credential.title}</span>
                 <Star
-                  className={`w-4 flex-shrink-0 cursor-pointer ${isFavorite ? 'fill-yellow-400 stroke-yellow-400' : 'stroke-yellow-400'}`}
+                  className={`w-4 cursor-pointer ${isFavorite ? 'fill-yellow-400 stroke-yellow-400' : 'stroke-yellow-400'}`}
                   strokeWidth={2}
-                  onClick={()=>handleToggleFavorite(credential.id, credential.userId)}
+                  onClick={() => handleToggleFavorite(credential.id, credential.userId)}
                 />
                 {credential.has2fa && (
                   <div 
@@ -175,45 +150,32 @@ const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
                     <span className="mt-[1px]">2FA</span>
                   </div>
                 )}
-                {passwordLength < 6 && (
+                {passwordLength < 6 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-red-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-red-600">Weak</span>
                   </div>
                 )}
-                 { passwordLength < 10 && passwordLength >=6 && (
+                {passwordLength < 10 && passwordLength >=6 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-orange-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-orange-600">medium</span>
                   </div>
                 )}
-                 {passwordLength >=10 && (
+                {passwordLength >=10 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-green-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-green-600">strong</span>
                   </div>
                 )}
               </div>
-              
               <div className="flex flex-wrap gap-2 items-center">
                 {hasFolder && (
-                  <div className="flex justify-center items-center text-xs bg-gray-100 rounded-lg px-2 sm:px-3 gap-x-1">
+                  <div className="flex items-center text-xs bg-gray-100 rounded-lg px-2 py-1">
                     <Folder className="w-3" strokeWidth={1} />
                     <span>{credential.folder.name}</span>
                   </div>
                 )}
-                <div className="flex justify-center items-center text-xs bg-gray-100 rounded-lg px-2 sm:px-3 py-1">
+                <div className="flex items-center text-xs bg-gray-100 rounded-lg px-2 py-1">
                   <span>{credential.category}</span>
                 </div>
-                {decryptedData?.website && (
-                  <div className="flex justify-center items-center text-xs px-1 sm:px-2">
-                    <a 
-                      href={decryptedData.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-gray-500 hover:text-blue-600 cursor-pointer truncate max-w-[150px] sm:max-w-none"
-                    >
-                      {decryptedData.website}
-                    </a>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -249,8 +211,8 @@ const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
                         <div>Restore</div>
                       </button>
                       <button
-                      onClick={() => handleDelete(credId, userId, 'deleted')}
-                      className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2">
+                        onClick={() => handleDelete(credId, userId, 'deleted')}
+                        className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2">
                         <p className="text-red-600">Delete</p>
                       </button>
                     </div>
@@ -272,8 +234,8 @@ const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
 
                   {!isArchived && (
                     <button 
-                    onClick={() => handleDelete(credId, userId)}
-                    className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2">
+                      onClick={() => handleDelete(credId, userId)}
+                      className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2">
                       <p className="text-red-600">Archive</p>
                     </button>
                   )}
@@ -285,27 +247,79 @@ const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
 
         <div className="flex flex-wrap sm:flex-nowrap text-sm gap-x-3 gap-y-2 mt-3 text-gray-500 items-center">
           <div className="flex items-center gap-x-2 sm:gap-x-3 flex-wrap sm:flex-nowrap">
-            <span>Password:</span>
-            <span className="text-sm font-mono">
-              {showPassword ? (decryptedData?.password || 'N/A') : '••••••••'}
-            </span>
-          </div>
-          <div className="flex gap-x-2 sm:gap-x-3">
-            {showPassword ? (
-              <EyeOff 
-                className="w-4 cursor-pointer hover:text-gray-700 transition-colors" 
-                onClick={() => setShowPassword(false)} 
-              />
-            ) : (
-              <Eye 
-                className="w-4 cursor-pointer hover:text-gray-700 transition-colors" 
-                onClick={() => setShowPassword(true)} 
-              />
+            {credential.category === 'login' && (
+              <>
+                <span>Password:</span>
+                <span className="text-sm font-mono">
+                  {showPassword ? (decryptedData?.password || 'N/A') : '••••••••'}
+                </span>
+              </>
             )}
-            <Copy 
-              className="w-4 cursor-pointer hover:text-gray-700 transition-colors" 
-              onClick={handleCopy} 
-            />
+
+            {credential.category === 'credit_card' && (
+              <>
+                <div className="flex items-center gap-x-2">
+                  <span>Card Number :</span>
+                  <span className="text-sm font-mono">
+                    {showCardNumber ? (decryptedData?.cardNumber || 'N/A') : '••••••••'}
+                  </span>
+                  {showCardNumber ? (
+                    <EyeOff className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => setShowCardNumber(false)} />
+                  ) : (
+                    <Eye className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => setShowCardNumber(true)} />
+                  )}
+                  <Copy className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => handleCopy('cardNumber')} />
+                </div>
+
+                <div className="flex items-center gap-x-2 ml-3">
+                  <span>Cvv :</span>
+                  <span className="text-sm font-mono">
+                    {showCvv ? (decryptedData?.cvv || 'N/A') : '••••'}
+                  </span>
+                  {showCvv ? (
+                    <EyeOff className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => setShowCvv(false)} />
+                  ) : (
+                    <Eye className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => setShowCvv(true)} />
+                  )}
+                  <Copy className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => handleCopy('cvv')} />
+                </div>
+              </>
+            )}
+
+            {credential.category === 'note' && (
+              <>
+              <div className={showPassword ? 'flex flex-col' : 'flex gap-x-2'}>
+                <span className=''>Content :</span>
+                <span className="text-sm font-mono">
+                  {showPassword ? (decryptedData?.content || 'N/A') : '••••••••'}
+                </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-x-2 sm:gap-x-3">
+            {credential.category === 'login' && (
+              <>
+                {showPassword ? (
+                  <EyeOff className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => setShowPassword(false)} />
+                ) : (
+                  <Eye className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => setShowPassword(true)} />
+                )}
+                <Copy className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => handleCopy('password')} />
+              </>
+            )}
+
+            {credential.category === 'note' && (
+              <>
+                {showPassword ? (
+                  <EyeOff className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => setShowPassword(false)} />
+                ) : (
+                  <Eye className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => setShowPassword(true)} />
+                )}
+                <Copy className="w-4 cursor-pointer hover:text-gray-700 transition-colors" onClick={() => handleCopy('content')} />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -313,4 +327,4 @@ const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
   )
 }
 
-export default PasswordCard;
+export default PasswordCard
