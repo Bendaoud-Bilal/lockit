@@ -16,7 +16,6 @@ const Vault = ({ activeFilter, onCredentialsChange }) => {
 
   const userId = user?.id;
 
- // In Vault.jsx - separate initial load from updates
 const fetchCredentials = async (notifyParent = false) => {
   if (!userId) return;
   
@@ -28,7 +27,6 @@ const fetchCredentials = async (notifyParent = false) => {
     const creds = res.credentials || [];
     setPasswords(creds);
 
-    // Only notify parent when explicitly requested (after add/edit/delete)
     if (notifyParent && onCredentialsChange) {
       onCredentialsChange();
     }

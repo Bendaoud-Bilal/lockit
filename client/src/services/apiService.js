@@ -212,6 +212,16 @@ class ApiService {
      return this.client.get(url);
    }
 
+  async deleteAllCredentials(userId, state) {
+    const response = await this.client.delete(`/api/vault/delete-all-passwords/${userId}`, {
+      params: { state },
+    });
+    return response;
+  }
+   async restoreCredential(ownerId,credentialId){
+    return this.client.patch(`/api/vault/credentials/${ownerId}/${credentialId}/restore`)
+
+   }
   get axiosInstance() {
     return this.client;
   }

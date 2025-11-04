@@ -31,6 +31,7 @@ import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
 import axios from "axios"
 import { useAuth } from '../../context/AuthContext';
+import toast from "react-hot-toast"
 
 
 const AddItemModal= ({show, setShow, onCredentialAdded}) => {
@@ -238,13 +239,13 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
         setSelectedFiles([])
         
         if (failCount > 0) {
-          alert(`Credential saved! ${successCount} attachment(s) uploaded successfully, ${failCount} failed.`)
+          toast.success(`Credential saved! ${successCount} attachment(s) uploaded successfully, ${failCount} failed.`)
         } else {
-          alert(`Credential and ${successCount} attachment(s) saved successfully!`)
+          toast.success(`Credential and ${successCount} attachment(s) saved successfully!`)
         }
       } else {
 
-        alert('Credential saved successfully!')
+        toast.success('Credential saved successfully!')
       }
       setShow(false);
         if (onCredentialAdded) {

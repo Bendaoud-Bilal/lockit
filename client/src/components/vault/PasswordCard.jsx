@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { RefreshCcw, Paperclip, Globe, Shield, Star, Folder, Eye, EyeOff, Copy, Ellipsis, SquarePen, Archive } from 'lucide-react'
+import { RefreshCcw, Paperclip, Globe, Shield, Star, Folder, Eye, EyeOff, Copy, Ellipsis, SquarePen, Archive, Mail, Lock, Wrench, Database, Layers, Cloud, GitBranch, Target, Wallet, Camera, Music, Video, ImageIcon, FileText, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Show2FA from './Show2FA'
 import { useLocation } from 'react-router-dom'
 import { decryptCredentialForClient } from '../../utils/credentialHelpers';
 import { useAuth } from '../../context/AuthContext';
 import ApiService from '../../services/apiService'
+
 
 const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) => {
   const [showPassword, setShowPassword] = useState(false)
@@ -16,6 +17,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [isShow2FA, setIsShow2FA] = useState(false)
   const [isFavorite, setIsFavorite] = useState(credential.favorite)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const credId = credential.id
   const ownerIdFromCredential = credential.userId
   const [passwordLength, setPasswordLength] = useState(0)
@@ -27,6 +29,29 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
   const hasFolder = credential.folder?.name && credential.folder.name.trim() !== ''
   const userId = user?.id
 
+  const iconMap = {
+    globe: Globe,
+    mail: Mail,
+    lock: Lock,
+    shield: Shield,
+    wrench: Wrench,
+    database: Database,
+    layers: Layers,
+    cloud: Cloud,
+    gitbranch: GitBranch,
+    target: Target,
+    wallet: Wallet,
+    camera: Camera,
+    music: Music,
+    video: Video,
+    image: ImageIcon,
+    filetext: FileText,
+    folder: Folder,
+    trash: Trash2,
+  }
+
+  const Icon = iconMap[credential.icon] || Globe
+
   const handleToggleFavorite = async (idParam, ownerIdParam) => {
     const idToUse = idParam ?? credId
     const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
@@ -36,11 +61,24 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
     setIsFavorite(newState)
     try {
       await ApiService.toggleFavorite(ownerToUse, idToUse)
-      toast.success(newState ? 'Added to favorites' : 'Removed from favorites')
       if (onCredentialUpdated) onCredentialUpdated()
     } catch {
       setIsFavorite(previous)
       toast.error('Failed to update favorite')
+    }
+  }
+
+  const handleRestore = async (idParam, ownerIdParam) => {
+    const idToUse = idParam ?? credId
+    const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
+    if (!idToUse || !ownerToUse) return
+    try {
+      await ApiService.restoreCredential(ownerToUse, idToUse)
+      toast.success('credential restored')
+      if (onCredentialUpdated) onCredentialUpdated()
+    } catch {
+      
+      toast.error('Failed to restore')
     }
   }
 
@@ -96,16 +134,20 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 
   const handleToggle2FA = () => setIsShow2FA(!isShow2FA)
 
-  const handleDelete = async (idParam, ownerIdParam, state = 'soft') => {
-    const idToUse = idParam ?? credId
-    const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
-    if (!idToUse || !ownerToUse) return
+  const handleDelete = async (state = 'soft') => {
     try {
-      await ApiService.deleteCredential(ownerToUse, idToUse, state)
-      toast.success(state === 'deleted' ? 'Item permanently deleted' : 'Item moved to archive')
+      await ApiService.deleteCredential(userId, credId, state)
+      toast.success(state === 'deleted' ? 'Item deleted' : 'Item moved to archive', {
+        position: 'top-center'
+      })
       if (onCredentialDeleted) onCredentialDeleted()
-    } catch {
-      toast.error('Failed to delete password')
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete password', {
+        position: 'top-center'
+      })
+    } finally {
+      setShowDeleteConfirm(false)
+      setIsMenuOpen(false)
     }
   }
 
@@ -132,7 +174,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
       <div className="w-full bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col">
         <div className="flex flex-col md:flex-row md:justify-between gap-3">
           <div className="flex gap-x-3 items-start sm:items-center flex-1">
-            <Globe className="w-5" strokeWidth={1} />
+            <Icon className="w-5" strokeWidth={1} />
             <div className="flex flex-col gap-y-2 min-w-0 flex-1">
               <div className="flex flex-wrap gap-x-2 gap-y-1.5 items-center">
                 <span className="font-medium text-sm sm:text-base break-words">{credential.title}</span>
@@ -206,12 +248,12 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 
                   {isArchived && (
                     <div className="absolute bg-white left-full top-0 ml-2 sm:left-auto sm:right-0 sm:top-auto sm:mt-2 border border-gray-200 shadow-lg w-36 rounded-lg z-50">
-                      <button className="w-full text-left text-sm text-gray-700 hover:bg-black rounded-t-lg pl-2 hover:text-white flex gap-x-2 py-1.5 items-center">
+                      <button onClick={()=>handleRestore(credential.id, user?.id)} className="w-full text-left text-sm text-gray-700 hover:bg-black rounded-t-lg pl-2 hover:text-white flex gap-x-2 py-1.5 items-center">
                         <RefreshCcw className="w-4" strokeWidth={2} />
                         <div>Restore</div>
                       </button>
                       <button
-                        onClick={() => handleDelete(credId, userId, 'deleted')}
+                        onClick={() => setShowDeleteConfirm(true)}
                         className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2">
                         <p className="text-red-600">Delete</p>
                       </button>
@@ -234,7 +276,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 
                   {!isArchived && (
                     <button 
-                      onClick={() => handleDelete(credId, userId)}
+                      onClick={() => handleDelete('soft')}
                       className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2">
                       <p className="text-red-600">Archive</p>
                     </button>
@@ -323,6 +365,45 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
           </div>
         </div>
       </div>
+
+      {showDeleteConfirm && isArchived && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded-lg shadow-xl mx-4 max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <Archive className="h-6 w-6 text-red-600" aria-hidden="true" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-medium text-gray-900">Delete Permanently</h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      Are you sure you want to permanently delete this item? This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-x-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  onClick={() => handleDelete('deleted')}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

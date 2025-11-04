@@ -13,6 +13,8 @@ function Archive({onCredentialsChange}) {
   const { user } = useAuth();
   const userId = user?.id;
 
+  
+
   const fetchDeletedPasswords = async () => {
       try {
         const res = await ApiService.getArchiveCredentials(userId);
@@ -46,7 +48,11 @@ function Archive({onCredentialsChange}) {
 
   return (
     <div className="w-full h-screen bg-white flex flex-col">
-      <FilterAddBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <FilterAddBar 
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery}
+        onDeleteAll={fetchDeletedPasswords}
+      />
 
       <div className="w-full flex justify-center mt-5 flex-1 overflow-y-auto">
         {isEmpty ? (
