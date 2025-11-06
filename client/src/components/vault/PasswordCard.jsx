@@ -23,8 +23,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
   const [passwordLength, setPasswordLength] = useState(0)
   const menuRef = useRef(null)
   const location = useLocation()
-  const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs='
-  const { user } = useAuth()
+  const { user, vaultKey } = useAuth()
   const isArchived = location.pathname === '/archive'
   const hasFolder = credential.folder?.name && credential.folder.name.trim() !== ''
   const userId = user?.id

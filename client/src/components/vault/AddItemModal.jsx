@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useContext } from "react"
 import { 
   X, 
   Globe, 
@@ -38,9 +38,14 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
   const [activeTab, setActiveTab] = useState("general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
-  const { user } = useAuth();
+  const [vKey, setVKey] = useState(null);
+  const { user, vaultKey } = useAuth();
   const userId = user?.id;
   
+  useEffect(() => {
+    setVKey(vaultKey);
+    console.log(vaultKey)
+  }, );
   const [showIcon, setShowIcon] = useState(false)
   const [errors, setErrors] = useState({})
   const [savedCredentialId, setSavedCredentialId] = useState(null) // Store saved credential ID
@@ -178,22 +183,22 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
   };
 
   const saveItem = async () => { 
+    // console.log('hehe:' vKey)
     try {
       // Validate form before saving
       if (!validateForm()) {
         // alert('Please fix the errors in the form');
         return;
       }
-
       // Clear old invalid keys from sessionStorage
       sessionStorage.removeItem('vaultKey');
     
       // Use a properly generated 256-bit key (32 bytes = 256 bits)
       // Generated using: crypto.randomBytes(32).toString('base64')
-      const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
+      // const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
     
       // Store it for future use
-      sessionStorage.setItem('vaultKey', vaultKey);
+      sessionStorage.setItem('vaultKey', vKey);
     
       if (!vaultKey) {
         throw new Error('No vault key found. Please login first.');
@@ -202,9 +207,9 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
     
   
     // Encrypt and prepare for API
-    const encryptedCredential = await prepareCredentialForStorage(formData, vaultKey);
+    const encryptedCredential = await prepareCredentialForStorage(formData, vKey);
 
-    const decryptedCredential = await decryptCredentialForClient(encryptedCredential, vaultKey);
+    const decryptedCredential = await decryptCredentialForClient(encryptedCredential, vKey);
 
     // Save credential first
     const response = await axios.post(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/api/vault/credentials`, {
@@ -223,7 +228,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
         
         for (const file of selectedFiles) {
           try {
-            await uploadAttachment(file, credentialId, vaultKey)
+            await uploadAttachment(file, credentialId, vKey)
             successCount++
           } catch (attachError) {
             failCount++
