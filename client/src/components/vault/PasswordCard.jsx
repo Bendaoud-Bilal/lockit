@@ -171,7 +171,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
   return (
     <>
       {isShow2FA && <Show2FA onClose={handleToggle2FA} />}
-      <div className="w-full bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col">
+      <div className="w-full bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col hover:shadow-lg hover:transition-all duration-200">
         <div className="flex flex-col md:flex-row md:justify-between gap-3">
           <div className="flex gap-x-3 items-start sm:items-center flex-1">
             <Icon className="w-5" strokeWidth={1} />
