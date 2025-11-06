@@ -532,6 +532,173 @@ body {
   color:var(--color-yellow);
 }
 
+
+
+
+
+
+/* Breach Alert Item Actions */
+.breach-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* Custom Checkbox Styling */
+.breach-checkbox-label {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+
+.breach-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.breach-checkbox-custom {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-grey-border);
+  border-radius: 4px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.breach-checkbox:checked ~ .breach-checkbox-custom {
+  background: var(--color-light-green);
+  border-color: var(--color-light-green);
+}
+
+.breach-checkbox:checked ~ .breach-checkbox-custom::after {
+  content: '✓';
+  position: absolute;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.breach-checkbox:disabled ~ .breach-checkbox-custom {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.breach-checkbox-label:hover .breach-checkbox:not(:disabled) ~ .breach-checkbox-custom {
+  border-color: var(--color-light-green);
+}
+
+/* Dismiss Button */
+.breach-dismiss-button {
+  padding: 6px 12px;
+  border: 2px solid var(--color-grey-border);
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.breach-dismiss-button.dismiss:hover {
+  background: #fff0f0;
+  border-color: var(--color-red);
+}
+
+.breach-dismiss-button.undismiss {
+  background: #f0f0f0;
+  border-color: var(--color-grey-border);
+}
+
+.breach-dismiss-button.undismiss:hover {
+  background: #e8f7ed;
+  border-color: var(--color-light-green);
+}
+
+/* Status-based styling for breach items */
+.breach-alert-item.dismissed {
+  opacity: 0.6;
+  background: #f9f9f9;
+}
+
+.breach-alert-item.dismissed .breach-item-content {
+  text-decoration: line-through;
+  color: var(--color-grey-writing);
+}
+
+.breach-alert-item.resolved .breach-icon-circle {
+  background: #e8f7ed;
+  border-color: var(--color-light-green);
+}
+
+.breach-alert-item.pending .breach-icon-circle {
+  background: #fff0f0;
+  border-color: var(--color-red);
+}
+
+.breach-alert-item.dismissed .breach-icon-circle {
+  background: #f0f0f0;
+  border-color: var(--color-grey-border);
+}
+
+/* Badge variants */
+.badge.dismissed {
+  background: #f0f0f0;
+  color: var(--color-grey-writing);
+}
+
+.badge.resolved {
+  background: #e8f7ed;
+  color: var(--color-light-green);
+}
+
+.badge.action-required {
+  background: #fff0f0;
+  color: var(--color-red);
+}
+
+/* Emoji icon styling */
+.breach-emoji-icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Empty state */
+.breach-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--color-grey-writing);
+}
+
+.breach-empty-state p {
+  font-size: 16px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 .score-sub{
   display:flex;align-items:center;gap:0.6rem;color:var(--color-grey-writing);font-size:0.82rem;
 }
@@ -629,6 +796,9 @@ body {
 
 .breach-description{color:var(--color-grey-writing);font-size:0.9rem;margin-top:0.5rem}
 .breach-details{color:var(--color-grey-writing);font-size:0.82rem;margin-top:0.4rem}
+
+
+
 
 /* Responsive adjustments */
 @media (max-width:1150px){

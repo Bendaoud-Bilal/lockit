@@ -1,4 +1,3 @@
-// client/src/components/Dashboard.jsx
 import '../style/dashboard.css';
 import React, { useEffect, useState } from 'react';
 import SecurityScoreCard from './SecurityScoreCard';
@@ -10,101 +9,154 @@ export default function Dashboard() {
   const [security, setSecurity] = useState(null);
   const [cardsData, setCardsData] = useState(null);
   const [breachAlerts, setBreachAlerts] = useState([]);
-  
-  // --- NEW STATE for List View Modal ---
   const [selectedCardItems, setSelectedCardItems] = useState(null);
-  const [modalTitle, setModalTitle] = useState(null);
-  // --- END NEW STATE ---
-  
-  // The old state for single item is now obsolete for this flow, but kept for clarity
-  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [modalTitle, setModalTitle] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
-  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // For development, use userId = 1
   const userId = sessionStorage.getItem('userId') || '1';
 
   useEffect(() => {
-    // Set userId in sessionStorage if not exists
     if (!sessionStorage.getItem('userId')) {
       sessionStorage.setItem('userId', '1');
     }
+    loadDashboardData();
+  }, [userId]);
 
-    async function load() {
-      try {
-        setLoading(true);
-        const headers = { 'x-user-id': userId };
+  async function loadDashboardData() {
+    try {
+      setLoading(true);
+      const headers = { 'x-user-id': userId };
 
-        const [scoreRes, cardsRes, alertsRes] = await Promise.all([
-          fetch(`http://localhost:4000/api/users/${userId}/security-score`, { headers }),
-          fetch(`http://localhost:4000/api/users/${userId}/password-cards`, { headers }),
-          fetch(`http://localhost:4000/api/users/${userId}/breach-alerts`, { headers }),
-        ]);
+      const [scoreRes, cardsRes, alertsRes] = await Promise.all([
+        fetch(`http://localhost:4000/api/users/${userId}/security-score`, { headers }),
+        fetch(`http://localhost:4000/api/users/${userId}/password-cards`, { headers }),
+        fetch(`http://localhost:4000/api/users/${userId}/breach-alerts`, { headers }),
+      ]);
 
-        if (scoreRes.ok) {
-          const scoreData = await scoreRes.json();
-          setSecurity(scoreData);
-        } // ... (error handling omitted for brevity)
+      if (scoreRes.ok) {
+        const scoreData = await scoreRes.json();
+        setSecurity(scoreData);
+      }
+      
+      if (cardsRes.ok) {
+        const cardsDataRes = await cardsRes.json();
+        setCardsData(cardsDataRes);
+      }
+      
+      if (alertsRes.ok) {
+        const alerts = await alertsRes.json();
+        setBreachAlerts(alerts);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  }
+
+  async function handleCheckBreaches() {
+    try {
+      const response = await fetch(`http://localhost:4000/api/users/${userId}/check-breaches`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Breach check complete! Found ${result.newBreaches} new breaches.`);
         
-        if (cardsRes.ok) {
-          const cardsDataRes = await cardsRes.json();
-          setCardsData(cardsDataRes);
-        } // ... (error handling omitted for brevity)
+        // Reload breach alerts
+        const alertsRes = await fetch(`http://localhost:4000/api/users/${userId}/breach-alerts`, {
+          headers: { 'x-user-id': userId },
+        });
         
         if (alertsRes.ok) {
           const alerts = await alertsRes.json();
           setBreachAlerts(alerts);
-        } // ... (error handling omitted for brevity)
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('Error loading dashboard data:', err);
-        setError(err.message);
-        setLoading(false);
+        }
+      } else {
+        alert('Failed to check for breaches. Please try again.');
       }
+    } catch (error) {
+      console.error('Error checking breaches:', error);
+      alert('Error checking breaches. Please try again.');
     }
-    load();
-  }, [userId]);
-
-  /**
-   * Opens the CardDetails modal with a list of credentials and a classification title.
-   * @param {string} title - The classification title (e.g., "Weak Passwords").
-   * @param {Array<Object>} itemsList - The array of credential objects.
-   */
-  function openDetails(title, itemsList) {
-    setModalTitle(title);
-    setSelectedCardItems(itemsList);
-    // Setting selectedItemId to the first item's ID for potential CardDetails compatibility, if needed.
-    setSelectedItemId(itemsList?.[0]?.id || null); 
-    setDetailsOpen(true);
   }
 
-  /**
-   * Handler for when a Password Card is clicked. Fetches the detailed list 
-   * of credentials for that classification.
-   * @param {string} cardId - The ID of the card (e.g., 'weak', 'reused', 'exposed', 'old').
-   */
-  function onOpenCardHandler(cardId) {
-    // 1. Find the title of the clicked card (the classification)
-    const clickedCard = cardsData?.cards.find(card => card.id === cardId);
-    const title = clickedCard?.title || 'Credential Details';
+  async function handleToggleBreachResolved(breachId) {
+    try {
+      const response = await fetch(`http://localhost:4000/api/breach-alerts/${breachId}/toggle-resolved`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId,
+        },
+      });
 
-    // 2. Fetch the detailed list of credentials for this card/classification
+      if (response.ok) {
+        const updatedBreach = await response.json();
+        
+        // Update local state
+        setBreachAlerts(prev => 
+          prev.map(b => b.id === breachId ? { ...b, status: updatedBreach.status } : b)
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling breach resolved:', error);
+    }
+  }
+
+  async function handleToggleBreachDismissed(breachId) {
+    try {
+      const response = await fetch(`http://localhost:4000/api/breach-alerts/${breachId}/toggle-dismissed`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId,
+        },
+      });
+
+      if (response.ok) {
+        const updatedBreach = await response.json();
+        
+        // Update local state
+        setBreachAlerts(prev => 
+          prev.map(b => b.id === breachId ? { ...b, status: updatedBreach.status } : b)
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling breach dismissed:', error);
+    }
+  }
+
+  function onOpenCardHandler(cardId) {
     fetch(`http://localhost:4000/api/password-cards/${cardId}/details`, {
       headers: { 'x-user-id': userId },
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data && data.items) { // data.items is the array of credentials
-          // 3. Open the modal with the classification title and the list of items
-          openDetails(title, data.items);
+        if (data && data.items) {
+          const cardTitles = {
+            weak: 'Weak Passwords',
+            reused: 'Reused Passwords',
+            exposed: 'Exposed Passwords',
+            old: 'Old Passwords',
+          };
+          setSelectedCardItems(data.items);
+          setModalTitle(cardTitles[cardId] || 'Credentials');
+          setDetailsOpen(true);
         }
       })
       .catch(console.error);
   }
-  
+
   if (loading) {
     return (
       <div className="container">
@@ -116,7 +168,15 @@ export default function Dashboard() {
   }
 
   if (error) {
-    // ... (error JSX omitted for brevity)
+    return (
+      <div className="container">
+        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-red)' }}>
+          <h2>Error loading dashboard</h2>
+          <p>{error}</p>
+          <button onClick={loadDashboardData}>Retry</button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -125,17 +185,21 @@ export default function Dashboard() {
       
       <PasswordCards
         items={cardsData?.cards || []}
-        onOpenCard={onOpenCardHandler} // Use the new handler
+        onOpenCard={onOpenCardHandler}
       />
 
-      <BreachAlerts items={breachAlerts} />
+      <BreachAlerts 
+        items={breachAlerts} 
+        onCheckBreaches={handleCheckBreaches}
+        onToggleResolved={handleToggleBreachResolved}
+        onToggleDismissed={handleToggleBreachDismissed}
+      />
 
       <CardDetails
         isOpen={detailsOpen}
         onClose={() => setDetailsOpen(false)}
-        listItems={selectedCardItems} // NEW PROP: Pass the list of items
-        modalTitle={modalTitle}       // NEW PROP: Pass the classification title
-        itemId={selectedItemId}       // Old prop, kept for compatibility
+        listItems={selectedCardItems}
+        title={modalTitle}
       />
     </div>
   );

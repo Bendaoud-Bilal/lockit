@@ -21,7 +21,7 @@ export async function listBreachAlertsForUser(userId) {
     take: 200,
   });
 
-  // Transform to match frontend expectations
+
   return alerts.map(alert => ({
     id: alert.id,
     service: alert.breachSource,

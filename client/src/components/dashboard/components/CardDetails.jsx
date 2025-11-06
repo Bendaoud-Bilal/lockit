@@ -36,7 +36,7 @@ function resolveEncFields(itemObj) {
 
 
 // --- COMPONENT NOW ACCEPTS LIST PROPS ---
-export default function CardDetails({ isOpen, onClose, listItems, modalTitle }) {
+export default function CardDetails({ isOpen, onClose, listItems, title }) {
   
   // State to track which passwords have been revealed and their decrypted content
   const [revealedIds, setRevealedIds] = useState({}); // { itemId: true/false }
@@ -143,10 +143,10 @@ export default function CardDetails({ isOpen, onClose, listItems, modalTitle }) 
       {/* Set max width and enable flex column for header/content separation */}
       <div className="card-details-container" style={{ maxWidth: '600px', height: '80%', display: 'flex', flexDirection: 'column' }}> 
         
-        {/* Header: Must be the classification/modalTitle */}
+  {/* Header shows the selected classification title */}
         <div className="card-details-header"> 
           <div className="details-title">
-            <h2>{modalTitle || 'Credential Details'}</h2>
+            <h2>{title || 'Credential Details'}</h2>
           </div>
           <button className="close-button" onClick={onClose} aria-label="Close details">
             &times;

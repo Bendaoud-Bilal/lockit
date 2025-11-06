@@ -1,35 +1,74 @@
-// server/routes/users.js
-// Example Express router to return user's encryption salt.
-// Adjust DB access according to your project (this is a minimal example).
+// server/routes/users.js - ES6 VERSION
+import express from 'express';
+import requireAuth from '../middleware/auth.js';
+import prisma from '../prisma/client.js'; // Use centralized client
 
-const express = require('express');
 const router = express.Router();
 
-// Example using sqlite3 (async) or better-sqlite3 (sync).
-// Replace the db code below with your existing DB access layer.
-
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./data/database.sqlite'); // adjust path
-
 // GET /api/users/:id/salt
-router.get('/:id/salt', (req, res) => {
-  const userId = req.params.id;
-  // Basic check: ensure caller is allowed to read this salt
-  const requesterId = req.header('x-user-id');
-  if (!requesterId || requesterId !== userId) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-
-  const sql = `SELECT salt_enc FROM users WHERE id = ? LIMIT 1`;
-  db.get(sql, [userId], (err, row) => {
-    if (err) {
-      console.error('DB error fetching salt:', err);
-      return res.status(500).json({ error: 'Internal server error' });
+router.get('/:id/salt', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    
+    // Security check: ensure user can only access their own salt
+    if (userId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
-    if (!row) return res.status(404).json({ error: 'User not found' });
-    // salt_enc should already be stored as base64 on registration
-    return res.json({ saltEnc: row.salt_enc });
-  });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        salt: true,
+        vaultSalt: true, // If you use separate vault salt
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Return the salt (already base64 encoded in DB)
+    res.json({ 
+      saltEnc: user.salt || user.vaultSalt // Adjust based on schema
+    });
+
+  } catch (err) {
+    console.error('Error fetching user salt:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-module.exports = router;
+// GET /api/users/:id/profile
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    
+    if (userId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        createdAt: true,
+        lastLogin: true,
+        // Don't select sensitive fields like masterPasswordHash, salt, etc.
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+
+  } catch (err) {
+    console.error('Error fetching user profile:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
