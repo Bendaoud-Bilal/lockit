@@ -6,8 +6,6 @@ import { TOTP } from 'otpauth';
  * @returns {string} Le code TOTP à 6 chiffres
  */
 
-
-
 export const generateTOTP = (secret) => {
  const isBase32 = (str) => /^[A-Z2-7]+=*$/.test(str.replace(/\s+/g, '').toUpperCase());
 

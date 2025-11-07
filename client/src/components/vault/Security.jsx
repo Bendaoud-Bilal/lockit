@@ -1,6 +1,6 @@
 import React from 'react'
 import { Plus } from 'lucide-react'
-import icon from '../../assets/icons/Icon.svg'
+import icon from '../../assets/icons/icon.svg'
 
 const Security = () => {
   return (

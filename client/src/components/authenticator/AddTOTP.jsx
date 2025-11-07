@@ -1,7 +1,7 @@
-// Description:
+// Description: 
 // Form component used to manually add a new TOTP (Time-based One-Time Password)
 // configuration. It allows users to enter service details, account name,
-// and secret key for 2FA setup.
+// and secret key for 2FA setup, and link it to an existing credential.
 
 import React, { useState } from "react";
 
@@ -28,17 +28,23 @@ function FormField({ label, id, placeholder, type = "text", HandleChange, value,
   );
 }
 
-export default function AddTOTP({ onAddTOTP , onCancel}) {
+export default function AddTOTP({ onAddTOTP, onCancel, credentials=[]}) {
   const [service, setService] = useState("");
   const [account, setAccount] = useState("");
   const [secret, setSecret] = useState("");
+  const [credentialId, setCredentialId] = useState(""); 
 
-  const handleCancel=()=>{
+  const handleCancel = () => {
     onCancel();
+    resetForm();
+  };
+
+  const resetForm = () => {
     setService("");
     setAccount("");
     setSecret("");
-  }
+    setCredentialId("");
+  };
 
   const handleAdd = () => {
     if (!service.trim() || !account.trim() || !secret.trim()) {
@@ -47,18 +53,14 @@ export default function AddTOTP({ onAddTOTP , onCancel}) {
     }
 
     onAddTOTP({
-      id: Date.now(),
-      label: service,
-      email: account,
+      serviceName: service,
+      accountName: account,
       secret: secret,
+      credentialId: credentialId || null,
     });
 
-    // Reset form
-    setService("");
-    setAccount("");
-    setSecret("");
+    resetForm();
   };
-
   return (
     <form className="space-y-4">
       <FormField
@@ -85,6 +87,26 @@ export default function AddTOTP({ onAddTOTP , onCancel}) {
         value={secret}
         helper='Usually found as "Secret" or "Manual Entry Key" when setting up 2FA'
       />
+
+      <div className="flex flex-col space-y-1">
+        <label className="text-sm font-semibold text-gray-800">
+          Link to Credential (optional)
+        </label>
+
+
+        <select
+          value={credentialId}
+          onChange={(e) => setCredentialId(e.target.value)}
+          className="w-full px-3 py-2 rounded-md bg-gray-100 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+        >
+          <option value="">None </option>
+          {credentials.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.title}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2 mt-5">
         <button

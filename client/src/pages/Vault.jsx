@@ -1,43 +1,143 @@
-import React from 'react'
-import FilterAddBar from '../components/vault/FilterAddBar'
-import PasswordCard from '../components/vault/PasswordCard'
-import { useState } from 'react'
+import React, { useEffect, useState } from 'react';
+import FilterAddBar from '../components/vault/FilterAddBar';
+import PasswordCard from '../components/vault/PasswordCard';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import ApiService from '../services/apiService';
 
-//hna ndir api t3 get w nb3th les info f cards t3 password card 
-//hna ndir edit card tban ki ndght 3la edit w n3tiha les props mta3 les info
-const Vault = ({activeFilter}) => {
+const Vault = ({ activeFilter, onCredentialsChange }) => {
+  const API_BASE_URL = 'http://localhost:3000/api';
+  const { user } = useAuth();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [passwords, setPasswords] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const userId = user?.id;
+
+ // In Vault.jsx - separate initial load from updates
+const fetchCredentials = async (notifyParent = false) => {
+  if (!userId) return;
   
-
-  const [searchQuery, setSearchQuery] = useState('')
-
-  const passwords = [
-    { id: 1, title: 'LinkedIn', filter: 'logins' },
-    { id: 2, title: 'GitHub', filter: 'credit-cards' },
-    { id: 3, title: 'Twitter', filter: 'logins' },
-    { id: 4, title: 'Note Sécu', filter: 'secure-notes' },
+  setLoading(true);
+  setError(null);
   
-  ]
+  try {
+    const res = await ApiService.getUserCredentials(userId);
+    const creds = res.credentials || [];
+    setPasswords(creds);
+
+    // Only notify parent when explicitly requested (after add/edit/delete)
+    if (notifyParent && onCredentialsChange) {
+      onCredentialsChange();
+    }
+  } catch (err) {
+    console.error('Axios error', err);
+    setError(err.response?.data?.error || err.message || 'Network error');
+    setPasswords([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Initial load - don't notify parent
+useEffect(() => {
+  if (!userId) return;
+  fetchCredentials(false); // Don't notify on mount
+}, [userId]);
 
   const filteredPasswords = passwords.filter((item) => {
-    const matchFilter =
-      activeFilter === 'all-items' ||
-      item.filter.toLowerCase() === activeFilter.toLowerCase();
-    const matchSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchFilter && matchSearch;
-  });
-  return (
-    <div className="w-full h-screen flex flex-col  bg-white ">
-         <FilterAddBar searchQuery={searchQuery} setSearchQuery={setSearchQuery}   />
-        <div className='w-full flex-1 overflow-y-scroll flex flex-col items-center mb-5 gap-y-4 mt-10'>
-         {filteredPasswords.map((p) => (
-          <div key={p.id} className='w-[70%]'><PasswordCard title={p.title} category={p.filter} /></div>       
-         ))}   
+  // Map activeFilter to actual category values
+  const categoryMap = {
+    'all-items': null, // Show all
+    'favorites': null, // Handle separately
+    'logins': 'login',
+    'credit-cards': 'card',
+    'secure-notes': 'note',
+    'identities': 'identity',
+  };
+
+  // Search filter
+  const itemTitle = item.title || item.name || '';
+  const matchSearch = itemTitle
+    .toLowerCase()
+    .includes(searchQuery.toLowerCase());
+
+  // Category filter
+  let matchFilter = true;
+  
+  if (activeFilter === 'all-items') {
+    matchFilter = true; // Show all items
+  } else if (activeFilter === 'favorites') {
+    matchFilter = item.favorite === true; // Only show favorites
+  } else {
+    // Match by category
+    const expectedCategory = categoryMap[activeFilter];
+    matchFilter = item.category === expectedCategory;
+  }
+
+  return matchFilter && matchSearch;
+});
+
+  if (loading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your vault...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-white">
+        <div className="text-center max-w-md">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+            Error Loading Vault
+          </h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchCredentials}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-screen flex flex-col bg-white">
+      <FilterAddBar 
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery} 
+        onCredentialAdded={() => fetchCredentials(true)}
+      />
       
+      <div className="w-full flex-1 overflow-y-scroll flex flex-col items-center mb-5 gap-y-4 mt-10">
+        {filteredPasswords.length === 0 ? (
+          <div className="text-center mt-20">
+            <p className="text-gray-500 text-lg">
+              {searchQuery || activeFilter !== 'all-items'
+                ? 'no results!'
+                : 'Your vault is empty. Add your first password!'}
+            </p>
+          </div>
+        ) : (
+          filteredPasswords.map((p) => (
+            <div key={p.id} className="w-[70%]">
+              <PasswordCard credential={p} onCredentialDeleted={() => fetchCredentials(true)} onCredentialUpdated={() => fetchCredentials(true)}/>
+            </div>
+          ))
+        )}
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default Vault
-
-
+export default Vault;

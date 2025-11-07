@@ -1,30 +1,126 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Plus, X, ScanQrCode } from "lucide-react";
 import AuthenticatorItem from "./AuthenticatorItem";
 import AddTOTP from "./AddTOTP";
+import {STORAGE_KEYS} from "../../context/AuthContext";
+
 
 const Authenticator = () => {
   const [showAddTOTP, setShowAddTOTP] = useState(false);
-  const [accounts, setAccounts] = useState([
-    { id: 1, label: "GitHub", email: "user@github.com", secret: "MFRGGZA=" },
-    { id: 2, label: "Google", email: "user@gmail.com", secret: "MFRGG" },
-  ]);
+  const [accounts, setAccounts] = useState([]);
+  const [credentials,setCredentials]=useState([]);
 
-  const handleOnCancel = () => setShowAddTOTP(false);
+ const fetchCredentials = async () => {
+    try {
+      const sessionId=sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+      const res = await fetch("http://localhost:3000/api/totp/credentials", {
+        method :"GET",
+        headers: { 
+          Authorization: `Bearer ${sessionId}` },
+      });
 
-  const handleAddNewAccount = ({ label, email, secret }) => {
-    const newAccount = {
-      id: Date.now(),
-      label,
-      email,
-      secret,
-    };
-    setAccounts((prev) => [...prev, newAccount]);
-    setShowAddTOTP(false);
+      if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
+      const json = await res.json();
+      setCredentials(json.data || []);
+    } catch (err) {
+      console.error("Erreur fetch credentials:", err);
+    }
   };
 
-  const handleDelete = (id) => {
-    setAccounts((prev) => prev.filter((acc) => acc.id !== id));
+
+  // Fethc all TOTP accounts from backend
+const fetchAccounts = async () => {
+  try {
+    const sessionId = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+    const res = await fetch("http://localhost:3000/api/totp", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
+
+    if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
+
+    const json = await res.json();
+
+    const filtered = json.data.map(item => ({
+      id: item.id,
+      serviceName: item.serviceName,
+      accountName: item.accountName,
+      secret: item.secret,
+    }));
+    setAccounts(filtered);
+  } catch (err) {
+    console.error("Erreur fetch:", err);
+  }
+};
+
+
+useEffect(()=>{
+  fetchAccounts();
+  fetchCredentials();
+},[]);
+
+useEffect(() => {
+  if (showAddTOTP) {
+    fetchCredentials(); 
+  }
+}, [showAddTOTP]);
+
+
+
+  const handleOnCancel = () => setShowAddTOTP(false);
+const handleAddNewAccount = async ({ serviceName, accountName, secret, credentialId }) => {
+  try {
+    const sessionId = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+
+    const response = await fetch("http://localhost:3000/api/totp", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${sessionId}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        serviceName,
+        accountName,
+        secret,
+        credentialId: credentialId ? parseInt(credentialId) : null,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+    }
+
+    const savedAccount = await response.json();
+
+    setAccounts((prev) => [...prev, savedAccount]);
+    await fetchAccounts();
+    setShowAddTOTP(false);
+  } catch (err) {
+    console.error("Erreur complète:", err);
+    alert(`Erreur lors de l'insertion: ${err.message}\nVérifiez la console pour plus de détails.`);
+  }
+};
+
+
+ const handleDelete = async (id) => {
+    const sessionId = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+    try {
+      const response = await fetch(`http://localhost:3000/api/totp/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${sessionId}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Erreur lors de la suppression"); 
+      setAccounts((prev) => prev.filter((acc) => acc.id !== id));
+    } catch (err) {
+      console.error("Erreur suppression:", err);
+      alert("Suppression échouée");
+    }
   };
 
   return (
@@ -53,14 +149,16 @@ const Authenticator = () => {
 
       {/* Accounts list */}
       <div className="grid gap-4 sm:gap-5">
-        {accounts.map((account) => (
-          <AuthenticatorItem
-            key={account.id}
-            label={account.label}
-            email={account.email}
-            secret={account.secret}
-            onDelete={() => handleDelete(account.id)}
-          />
+        
+      {accounts.map((account) => (
+      <AuthenticatorItem
+      key={account.id}
+      id={account.id}
+      label={account.serviceName}
+      email={account.accountName}
+      secret={account.secret}
+      onDelete={handleDelete}
+      />
         ))}
       </div>
 
@@ -86,7 +184,7 @@ const Authenticator = () => {
               <p className="text-gray-600 mb-4 text-sm sm:text-base">
                 Enter the required details to link your new TOTP account.
               </p>
-              <AddTOTP onAddTOTP={handleAddNewAccount} onCancel={handleOnCancel} />
+              <AddTOTP onAddTOTP={handleAddNewAccount} onCancel={handleOnCancel} credentials={credentials} />
             </div>
           </div>
         </div>
@@ -103,7 +201,7 @@ const Authenticator = () => {
                   How to add 2FA codes
                 </div>
                 <div className="text-xs sm:text-sm text-gray-500 leading-relaxed">
-                  When setting up 2FA on a service, look for “Manual Entry” or “Secret Key”
+                  When setting up 2FA on a service,look for “Manual Entry” or “Secret Key”
                   instead of scanning the QR code. Copy that secret key and add it here.
                 </div>
               </div>

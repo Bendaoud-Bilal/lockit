@@ -3,7 +3,7 @@ import { Shield, Copy, Check, X } from "lucide-react";
 import { useTotpGenerator } from "../../hooks/useTotpGenerator";
 import OtpProgress from "./otpProgress";
 
-const AuthenticatorItem = ({ label, email, secret, onDelete }) => {
+const AuthenticatorItem = ({ id,label, email, secret, onDelete }) => {
   const { totp, timeLeft } = useTotpGenerator(secret);
   const [copied, setCopied] = useState(false);
 
@@ -55,7 +55,7 @@ const AuthenticatorItem = ({ label, email, secret, onDelete }) => {
             </button>
 
             <button
-              onClick={onDelete}
+              onClick={()=>{onDelete(id);}}
               aria-label="Delete account"
               className="bg-white p-2 rounded-lg hover:bg-red-100 transition"
             >
