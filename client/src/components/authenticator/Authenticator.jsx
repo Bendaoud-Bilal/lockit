@@ -3,7 +3,7 @@ import { Plus, X, ScanQrCode } from "lucide-react";
 import AuthenticatorItem from "./AuthenticatorItem";
 import AddTOTP from "./AddTOTP";
 import {STORAGE_KEYS} from "../../context/AuthContext";
-
+import toast,{Toaster} from 'react-hot-toast';
 
 const Authenticator = () => {
   const [showAddTOTP, setShowAddTOTP] = useState(false);
@@ -100,7 +100,6 @@ const handleAddNewAccount = async ({ serviceName, accountName, secret, credentia
     setShowAddTOTP(false);
   } catch (err) {
     console.error("Erreur complète:", err);
-    alert(`Erreur lors de l'insertion: ${err.message}\nVérifiez la console pour plus de détails.`);
   }
 };
 
@@ -119,7 +118,7 @@ const handleAddNewAccount = async ({ serviceName, accountName, secret, credentia
       setAccounts((prev) => prev.filter((acc) => acc.id !== id));
     } catch (err) {
       console.error("Erreur suppression:", err);
-      alert("Suppression échouée");
+      toast.error(" Deletion failed")
     }
   };
 

@@ -22,6 +22,7 @@ function MainLayout({
   activeFilter,
   setActiveFilter,
   showPasswordGenerator,
+
   vaultItems,
   onCredentialsChange,
   setShowPasswordGenerator,
@@ -62,7 +63,7 @@ function MainLayout({
           />
           <Route
             path="/authenticator"
-            element={<div className="p-8">Authenticator</div>}
+            element={<div className="p-8">{<Authenticator />}</div>}
           />
           <Route path="/send" element={<div className="p-8">Send</div>} />
           <Route path="/folders" element={<div className="p-8">Folders</div>} />
@@ -175,20 +176,15 @@ function AppContent() {
               setShowProfileModal={setShowProfileModal}
               showRecoveryKeyModal={showRecoveryKeyModal}
               setShowRecoveryKeyModal={setShowRecoveryKeyModal}
+              
             />
             </ProtectedRoute>
         }
         />
-            
-            {/* Other Main Routes */}
-            <Route path="/security-dashboard" element={<div className="p-8">Security Dashboard</div>} />
-            <Route path="/authenticator" element={<div className="p-8">{<Authenticator />}</div>} />
-            <Route path="/send" element={<div className="p-8">Send</div>} />
-            <Route path="/folders" element={<div className="p-8">Folders</div>} />
-            <Route path="/archive" element={<div className="p-8">Archive</div>} />
              {/* Root redirect - to welcome for unauthenticated */}
             <Route path="/" element={<Navigate to="/welcome" replace />} />
         </Routes>
+        
           
       )};
 

@@ -4,6 +4,7 @@
 // and secret key for 2FA setup, and link it to an existing credential.
 
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 
 function FormField({ label, id, placeholder, type = "text", HandleChange, value, helper }) {
   return (
@@ -48,7 +49,8 @@ export default function AddTOTP({ onAddTOTP, onCancel, credentials=[]}) {
 
   const handleAdd = () => {
     if (!service.trim() || !account.trim() || !secret.trim()) {
-      alert("Please fill in all fields before adding a TOTP.");
+      toast.error('Please fill in all fields before adding a TOTP.');
+
       return;
     }
 
