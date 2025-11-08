@@ -1,6 +1,7 @@
 # Complete Attachment System Explanation
 
 ## 📚 Table of Contents
+
 1. [Overview](#overview)
 2. [Architecture](#architecture)
 3. [Data Flow](#data-flow)
@@ -17,6 +18,7 @@
 ### What Does This System Do?
 
 The attachment system allows users to **securely attach files to their vault credentials** (passwords, credit cards, notes). Files are:
+
 - ✅ Encrypted **client-side** before leaving the browser
 - ✅ Uploaded to server in encrypted form
 - ✅ Downloaded and decrypted **only** in the browser
@@ -24,12 +26,12 @@ The attachment system allows users to **securely attach files to their vault cre
 
 ### Key Technologies
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Client** | React + Web Crypto API | Encryption, UI, file handling |
-| **Server** | Node.js + Express | File storage, API endpoints |
-| **Database** | Prisma + SQLite | Metadata + encrypted data |
-| **Encryption** | AES-256-GCM | Military-grade encryption |
+| Component      | Technology             | Purpose                       |
+| -------------- | ---------------------- | ----------------------------- |
+| **Client**     | React + Web Crypto API | Encryption, UI, file handling |
+| **Server**     | Node.js + Express      | File storage, API endpoints   |
+| **Database**   | Prisma + SQLite        | Metadata + encrypted data     |
+| **Encryption** | AES-256-GCM            | Military-grade encryption     |
 
 ---
 
@@ -111,14 +113,16 @@ The attachment system allows users to **securely attach files to their vault cre
 ### Complete User Journey
 
 #### 1️⃣ **User Opens Modal**
+
 ```
-User clicks "Add Item" 
+User clicks "Add Item"
   → AddItemModal opens
   → User fills credential info (title, username, password, etc.)
   → User switches to "Attachments" tab
 ```
 
 #### 2️⃣ **User Selects Files**
+
 ```
 User drags PDF onto upload area (OR clicks to browse)
   → Attachments.jsx: handleDrop() or handleFileChange() triggered
@@ -128,6 +132,7 @@ User drags PDF onto upload area (OR clicks to browse)
 ```
 
 #### 3️⃣ **User Clicks "Save Item"**
+
 ```
 User clicks "Save Item & Upload 1" button
   → AddItemModal.jsx: saveItem() function executes
@@ -143,6 +148,7 @@ User clicks "Save Item & Upload 1" button
 ```
 
 #### 4️⃣ **File Upload Process (Per File)**
+
 ```
 uploadAttachment() called with file
   → Step 1: Read file as ArrayBuffer
@@ -170,6 +176,7 @@ uploadAttachment() called with file
 ```
 
 #### 5️⃣ **View Saved Attachments**
+
 ```
 After save, Attachments.jsx:
   → useEffect() detects credentialId changed
@@ -181,6 +188,7 @@ After save, Attachments.jsx:
 ```
 
 #### 6️⃣ **Download & Decrypt File**
+
 ```
 User clicks download icon
   → decryptAndDownload() function executes
@@ -206,6 +214,7 @@ User clicks download icon
 ### Step-by-Step Encryption Explained
 
 #### **Input:** Original File
+
 ```javascript
 File: document.pdf
 Size: 461,000 bytes
@@ -213,38 +222,41 @@ Content: [Binary PDF data]
 ```
 
 #### **Step 1: Read File**
+
 ```javascript
-const arrayBuffer = await file.arrayBuffer()
+const arrayBuffer = await file.arrayBuffer();
 // Converts File object to ArrayBuffer (raw bytes)
 
-const data = new Uint8Array(arrayBuffer)
+const data = new Uint8Array(arrayBuffer);
 // Converts ArrayBuffer to Uint8Array for crypto operations
 // data = [37, 80, 68, 70, ...] (461,000 numbers)
 ```
 
 #### **Step 2: Prepare Encryption Key**
+
 ```javascript
-const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs='
+const vaultKey = "YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=";
 // This is a Base64-encoded 32-byte (256-bit) key
 // In production, this comes from user's master password
 
-const keyData = Uint8Array.from(atob(vaultKey), c => c.charCodeAt(0))
+const keyData = Uint8Array.from(atob(vaultKey), (c) => c.charCodeAt(0));
 // Decode Base64 to get raw 32 bytes
 // keyData = [98, 202, 177, ...] (32 numbers)
 
 const cryptoKey = await crypto.subtle.importKey(
-  'raw',           // Key format
-  keyData,         // Raw key bytes
-  { name: 'AES-GCM' }, // Algorithm
-  false,           // Not extractable (security)
-  ['encrypt']      // Can be used for encryption
-)
+  "raw", // Key format
+  keyData, // Raw key bytes
+  { name: "AES-GCM" }, // Algorithm
+  false, // Not extractable (security)
+  ["encrypt"] // Can be used for encryption
+);
 // Creates a CryptoKey object that Web Crypto API can use
 ```
 
 #### **Step 3: Generate Random IV (Initialization Vector)**
+
 ```javascript
-const iv = crypto.getRandomValues(new Uint8Array(12))
+const iv = crypto.getRandomValues(new Uint8Array(12));
 // Generates 12 random bytes (96 bits)
 // iv = [142, 56, 201, 18, ...] (12 numbers)
 // CRITICAL: Must be unique for each encryption!
@@ -252,60 +264,64 @@ const iv = crypto.getRandomValues(new Uint8Array(12))
 ```
 
 #### **Step 4: Encrypt**
+
 ```javascript
 const encryptedBuffer = await crypto.subtle.encrypt(
   {
-    name: 'AES-GCM',
-    iv: iv,           // Initialization vector
-    tagLength: 128    // Authentication tag: 128 bits = 16 bytes
+    name: "AES-GCM",
+    iv: iv, // Initialization vector
+    tagLength: 128, // Authentication tag: 128 bits = 16 bytes
   },
-  cryptoKey,          // The key we imported
-  data                // The file data to encrypt
-)
+  cryptoKey, // The key we imported
+  data // The file data to encrypt
+);
 // Returns: [encrypted_data + 16-byte_auth_tag]
 // Size: 461,000 + 16 = 461,016 bytes
 ```
 
 #### **Step 5: Split Encrypted Result**
+
 ```javascript
-const encryptedArray = new Uint8Array(encryptedBuffer)
-const ciphertext = encryptedArray.slice(0, -16)
+const encryptedArray = new Uint8Array(encryptedBuffer);
+const ciphertext = encryptedArray.slice(0, -16);
 // First 461,000 bytes = encrypted file data
 
-const authTag = encryptedArray.slice(-16)
+const authTag = encryptedArray.slice(-16);
 // Last 16 bytes = authentication tag (for integrity check)
 ```
 
 #### **Step 6: Convert to Base64 (Chunked)**
+
 ```javascript
 // WHY CHUNKED: Prevents "Maximum call stack size exceeded"
 const arrayBufferToBase64 = (buffer) => {
-  let binary = ''
-  const bytes = new Uint8Array(buffer)
-  const chunkSize = 8192  // 8KB chunks
-  
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192; // 8KB chunks
+
   // Process 8KB at a time instead of all at once
   for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize)
+    const chunk = bytes.subarray(i, i + chunkSize);
     // Convert chunk to characters (safe: only 8,192 args)
-    binary += String.fromCharCode.apply(null, chunk)
+    binary += String.fromCharCode.apply(null, chunk);
   }
-  
-  // Encode binary string to Base64
-  return btoa(binary)
-}
 
-const encryptedData = arrayBufferToBase64(ciphertext)
+  // Encode binary string to Base64
+  return btoa(binary);
+};
+
+const encryptedData = arrayBufferToBase64(ciphertext);
 // "JVBERi0xLjQKJeLjz9MKMyAwIG9iago8PC9Qcm9kdWNlci..." (Base64 string)
 
-const dataIv = arrayBufferToBase64(iv)
+const dataIv = arrayBufferToBase64(iv);
 // "jiY5kRI..." (Base64 string, 12 bytes)
 
-const dataAuthTag = arrayBufferToBase64(authTag)
+const dataAuthTag = arrayBufferToBase64(authTag);
 // "8xKp3..." (Base64 string, 16 bytes)
 ```
 
 #### **Output:** Encrypted Package
+
 ```javascript
 {
   encryptedData: "JVBERi0xLjQKJeLjz..." (~614,000 chars),
@@ -317,15 +333,18 @@ const dataAuthTag = arrayBufferToBase64(authTag)
 ### Why This Is Secure
 
 1. **AES-256-GCM**: Military-grade encryption
+
    - AES: Advanced Encryption Standard (NSA approved)
    - 256: Key size in bits (2^256 possible keys = unbreakable)
    - GCM: Galois/Counter Mode (authenticated encryption)
 
 2. **Unique IV**: Different ciphertext every time
+
    - Same file + same key = different encrypted output
    - Prevents pattern analysis
 
 3. **Authentication Tag**: Tamper detection
+
    - Any modification to ciphertext → decryption fails
    - Prevents malicious alterations
 
@@ -344,69 +363,71 @@ const dataAuthTag = arrayBufferToBase64(authTag)
 const uploadAttachment = async (file, credentialId, vaultKey) => {
   try {
     // LOG: Start
-    console.log(`[Upload] Starting encryption for: ${file.name}`)
-    console.log(`[Upload] Original size: ${(file.size / 1024 / 1024).toFixed(2)} MB`)
-    
+    console.log(`[Upload] Starting encryption for: ${file.name}`);
+    console.log(
+      `[Upload] Original size: ${(file.size / 1024 / 1024).toFixed(2)} MB`
+    );
+
     // ========================================
     // STEP 1: READ FILE
     // ========================================
-    const arrayBuffer = await file.arrayBuffer()
+    const arrayBuffer = await file.arrayBuffer();
     // Converts File → ArrayBuffer
     // Input: File object (from <input type="file">)
     // Output: ArrayBuffer (raw bytes)
-    
-    const data = new Uint8Array(arrayBuffer)
+
+    const data = new Uint8Array(arrayBuffer);
     // Converts ArrayBuffer → Uint8Array
     // Why: Web Crypto API needs Uint8Array
-    
+
     // ========================================
     // STEP 2: IMPORT ENCRYPTION KEY
     // ========================================
-    const keyData = Uint8Array.from(atob(vaultKey), c => c.charCodeAt(0))
+    const keyData = Uint8Array.from(atob(vaultKey), (c) => c.charCodeAt(0));
     // Base64 string → byte array
     // 'YsrxSV...' → [98, 202, 177, ...]
-    
+
     const cryptoKey = await crypto.subtle.importKey(
-      'raw',               // Import raw bytes
-      keyData,             // 32 bytes (256 bits)
-      { name: 'AES-GCM' }, // Algorithm spec
-      false,               // Not extractable (can't export key)
-      ['encrypt']          // Usage: encryption only
-    )
+      "raw", // Import raw bytes
+      keyData, // 32 bytes (256 bits)
+      { name: "AES-GCM" }, // Algorithm spec
+      false, // Not extractable (can't export key)
+      ["encrypt"] // Usage: encryption only
+    );
     // Creates CryptoKey object for Web Crypto API
-    
+
     // ========================================
     // STEP 3: GENERATE RANDOM IV
     // ========================================
-    const iv = crypto.getRandomValues(new Uint8Array(12))
+    const iv = crypto.getRandomValues(new Uint8Array(12));
     // Generates 12 cryptographically random bytes
     // CRITICAL: Must be unique per encryption
     // Used to randomize ciphertext
-    
+
     // ========================================
     // STEP 4: ENCRYPT
     // ========================================
     const encryptedBuffer = await crypto.subtle.encrypt(
       {
-        name: 'AES-GCM',    // Algorithm
-        iv: iv,              // 12-byte IV
-        tagLength: 128       // 16-byte auth tag
+        name: "AES-GCM", // Algorithm
+        iv: iv, // 12-byte IV
+        tagLength: 128, // 16-byte auth tag
       },
-      cryptoKey,             // The key
-      data                   // The data to encrypt
-    )
+      cryptoKey, // The key
+      data // The data to encrypt
+    );
     // Returns: ArrayBuffer with [ciphertext + authTag]
-    
+
     // ========================================
     // STEP 5: SPLIT RESULT
     // ========================================
-    const encryptedArray = new Uint8Array(encryptedBuffer)
-    const ciphertext = encryptedArray.slice(0, -16)
+    const encryptedArray = new Uint8Array(encryptedBuffer);
+    const ciphertext = encryptedArray.slice(0, -16);
     // Everything except last 16 bytes
-    
-    const authTag = encryptedArray.slice(-16)
+
+    const authTag = encryptedArray.slice(-16);
     // Last 16 bytes (authentication tag)
-    
+
     // ========================================
     // STEP 6: CONVERT TO BASE64
     // ========================================
@@ -414,10 +435,10 @@ const uploadAttachment = async (file, credentialId, vaultKey) => {
       encryptedData: arrayBufferToBase64(ciphertext),
       dataIv: arrayBufferToBase64(iv),
       dataAuthTag: arrayBufferToBase64(authTag),
-    }
+    };
     // Chunked conversion to avoid stack overflow
     // Each piece converted to Base64 string
-    
+
     // ========================================
     // STEP 7: CALCULATE PAYLOAD SIZE
     // ========================================
@@ -425,38 +446,44 @@ const uploadAttachment = async (file, credentialId, vaultKey) => {
       credentialId,
       filename: file.name,
       fileSize: file.size,
-      mimeType: file.type || 'application/octet-stream',
+      mimeType: file.type || "application/octet-stream",
       ...encryptedData,
-    }).length
-    
-    console.log(`[Upload] Encrypted + Base64 size: ${(payloadSize / 1024 / 1024).toFixed(2)} MB`)
+    }).length;
+
+    console.log(
+      `[Upload] Encrypted + Base64 size: ${(payloadSize / 1024 / 1024).toFixed(
+        2
+      )} MB`
+    );
     // Shows final payload size for debugging
-    
+
     // ========================================
     // STEP 8: SEND TO SERVER
     // ========================================
-    const response = await axios.post('http://localhost:3000/api/vault/attachments', {
-      credentialId,           // Which credential this belongs to
-      filename: file.name,    // Original filename
-      fileSize: file.size,    // Original size (bytes)
-      mimeType: file.type || 'application/octet-stream',
-      ...encryptedData,       // Spreads: encryptedData, dataIv, dataAuthTag
-    })
-    
-    console.log(`[Upload] Server response:`, response.data)
-    return response.data.attachment
-    
+    const response = await axios.post(
+      "http://localhost:3000/api/vault/attachments",
+      {
+        credentialId, // Which credential this belongs to
+        filename: file.name, // Original filename
+        fileSize: file.size, // Original size (bytes)
+        mimeType: file.type || "application/octet-stream",
+        ...encryptedData, // Spreads: encryptedData, dataIv, dataAuthTag
+      }
+    );
+
+    console.log(`[Upload] Server response:`, response.data);
+    return response.data.attachment;
   } catch (error) {
-    console.error(`[Upload] Error for ${file.name}:`, error)
-    
+    console.error(`[Upload] Error for ${file.name}:`, error);
+
     // Special handling for "Payload Too Large"
     if (error.response?.status === 413) {
-      throw new Error(`File too large: ${file.name}. Try a smaller file.`)
+      throw new Error(`File too large: ${file.name}. Try a smaller file.`);
     }
-    
-    throw error
+
+    throw error;
   }
-}
+};
 ```
 
 ### Server-Side Handling
@@ -466,32 +493,44 @@ const uploadAttachment = async (file, credentialId, vaultKey) => {
 export const addAttachment = async (req, res) => {
   try {
     // Extract data from request
-    const { 
-      credentialId, 
-      filename, 
-      fileSize, 
-      mimeType, 
-      encryptedData,  // Base64 string
-      dataIv,         // Base64 string
-      dataAuthTag     // Base64 string
+    const {
+      credentialId,
+      filename,
+      fileSize,
+      mimeType,
+      encryptedData, // Base64 string
+      dataIv, // Base64 string
+      dataAuthTag, // Base64 string
     } = req.body;
 
-    console.log('Received attachment data:', { credentialId, filename, fileSize, mimeType });
-    
+    console.log("Received attachment data:", {
+      credentialId,
+      filename,
+      fileSize,
+      mimeType,
+    });
+
     // Validate required fields
-    if (!credentialId || !filename || !fileSize || !encryptedData || !dataIv || !dataAuthTag) {
-      return res.status(400).json({ 
-        error: 'Missing required fields' 
+    if (
+      !credentialId ||
+      !filename ||
+      !fileSize ||
+      !encryptedData ||
+      !dataIv ||
+      !dataAuthTag
+    ) {
+      return res.status(400).json({
+        error: "Missing required fields",
       });
     }
 
     // Verify credential exists
     const credential = await prisma.credential.findUnique({
-      where: { id: parseInt(credentialId) }
+      where: { id: parseInt(credentialId) },
     });
 
     if (!credential) {
-      return res.status(404).json({ error: 'Credential not found' });
+      return res.status(404).json({ error: "Credential not found" });
     }
 
     // Create attachment record in database
@@ -501,22 +540,22 @@ export const addAttachment = async (req, res) => {
         filename,
         fileSize: parseInt(fileSize),
         mimeType: mimeType || null,
-        encryptedData,  // Stored as Base64 text
-        dataIv,         // Stored as Base64 text
-        dataAuthTag,    // Stored as Base64 text
-      }
+        encryptedData, // Stored as Base64 text
+        dataIv, // Stored as Base64 text
+        dataAuthTag, // Stored as Base64 text
+      },
     });
 
     // Return success
-    res.status(201).json({ 
-      message: 'Attachment added successfully', 
-      attachment 
+    res.status(201).json({
+      message: "Attachment added successfully",
+      attachment,
     });
   } catch (error) {
-    console.error('Error adding attachment:', error);
-    res.status(500).json({ 
-      error: 'Failed to add attachment', 
-      details: error.message 
+    console.error("Error adding attachment:", error);
+    res.status(500).json({
+      error: "Failed to add attachment",
+      details: error.message,
     });
   }
 };
@@ -531,100 +570,93 @@ export const addAttachment = async (req, res) => {
 ```javascript
 const decryptAndDownload = async (attachment) => {
   try {
-    setIsLoading(true)
-    
+    setIsLoading(true);
+
     // ========================================
     // STEP 1: CONVERT BASE64 TO BYTES
     // ========================================
-    const encryptedData = Uint8Array.from(
-      atob(attachment.encryptedData), 
-      c => c.charCodeAt(0)
-    )
+    const encryptedData = Uint8Array.from(atob(attachment.encryptedData), (c) =>
+      c.charCodeAt(0)
+    );
     // Base64 string → byte array
     // "JVBERi0xLjQ..." → [37, 80, 68, 70, ...]
-    
-    const iv = Uint8Array.from(
-      atob(attachment.dataIv), 
-      c => c.charCodeAt(0)
-    )
+
+    const iv = Uint8Array.from(atob(attachment.dataIv), (c) => c.charCodeAt(0));
     // Base64 IV → byte array
-    
-    const authTag = Uint8Array.from(
-      atob(attachment.dataAuthTag), 
-      c => c.charCodeAt(0)
-    )
+
+    const authTag = Uint8Array.from(atob(attachment.dataAuthTag), (c) =>
+      c.charCodeAt(0)
+    );
     // Base64 auth tag → byte array
-    
+
     // ========================================
     // STEP 2: COMBINE CIPHERTEXT + AUTH TAG
     // ========================================
-    const combined = new Uint8Array(encryptedData.length + authTag.length)
-    combined.set(encryptedData)           // Copy encrypted data
-    combined.set(authTag, encryptedData.length)  // Append auth tag
+    const combined = new Uint8Array(encryptedData.length + authTag.length);
+    combined.set(encryptedData); // Copy encrypted data
+    combined.set(authTag, encryptedData.length); // Append auth tag
     // Why: Web Crypto API expects them together
-    
+
     // ========================================
     // STEP 3: IMPORT DECRYPTION KEY
     // ========================================
-    const keyData = Uint8Array.from(atob(vaultKey), c => c.charCodeAt(0))
+    const keyData = Uint8Array.from(atob(vaultKey), (c) => c.charCodeAt(0));
     const cryptoKey = await crypto.subtle.importKey(
-      'raw',
+      "raw",
       keyData,
-      { name: 'AES-GCM' },
+      { name: "AES-GCM" },
       false,
-      ['decrypt']  // This time: decryption permission
-    )
-    
+      ["decrypt"] // This time: decryption permission
+    );
+
     // ========================================
     // STEP 4: DECRYPT
     // ========================================
     const decryptedBuffer = await crypto.subtle.decrypt(
       {
-        name: 'AES-GCM',
-        iv: iv,           // Same IV used during encryption
-        tagLength: 128    // 16-byte auth tag
+        name: "AES-GCM",
+        iv: iv, // Same IV used during encryption
+        tagLength: 128, // 16-byte auth tag
       },
-      cryptoKey,          // Same key used during encryption
-      combined            // Ciphertext + auth tag
-    )
+      cryptoKey, // Same key used during encryption
+      combined // Ciphertext + auth tag
+    );
     // Returns: ArrayBuffer with original file data
     // If tampered: throws error (auth tag verification fails)
-    
+
     // ========================================
     // STEP 5: CREATE DOWNLOADABLE FILE
     // ========================================
-    const blob = new Blob(
-      [decryptedBuffer], 
-      { type: attachment.mimeType || 'application/octet-stream' }
-    )
+    const blob = new Blob([decryptedBuffer], {
+      type: attachment.mimeType || "application/octet-stream",
+    });
     // Creates a Blob (file-like object) from decrypted data
-    
-    const url = URL.createObjectURL(blob)
+
+    const url = URL.createObjectURL(blob);
     // Creates temporary URL: blob:http://localhost:3000/abc-123-def
-    
+
     // ========================================
     // STEP 6: TRIGGER DOWNLOAD
     // ========================================
-    const a = document.createElement('a')
-    a.href = url
-    a.download = attachment.filename  // Set download filename
-    document.body.appendChild(a)
-    a.click()  // Programmatically click link
-    document.body.removeChild(a)
-    
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = attachment.filename; // Set download filename
+    document.body.appendChild(a);
+    a.click(); // Programmatically click link
+    document.body.removeChild(a);
+
     // ========================================
     // STEP 7: CLEANUP
     // ========================================
-    URL.revokeObjectURL(url)
+    URL.revokeObjectURL(url);
     // Free memory (blob URL no longer needed)
-    
   } catch (error) {
-    console.error('Error downloading attachment:', error)
-    alert('Failed to decrypt and download file')
+    console.error("Error downloading attachment:", error);
+    alert("Failed to decrypt and download file");
   } finally {
-    setIsLoading(false)
+    setIsLoading(false);
   }
-}
+};
 ```
 
 ---
@@ -689,6 +721,7 @@ decrypt(ciphertext + authTag, key) → data or ERROR
 ```
 
 **Example Attack Prevented:**
+
 ```
 Hacker modifies encrypted file in database
   → Changes byte 500 from 0x42 to 0x99
@@ -703,7 +736,7 @@ Hacker modifies encrypted file in database
 
 ```javascript
 // Vault Key Storage (session only)
-sessionStorage.setItem('vaultKey', key)  // Cleared on browser close
+sessionStorage.setItem("vaultKey", key); // Cleared on browser close
 // NOT localStorage (persists after close)
 // NOT in code (visible in source)
 // NOT sent to server (stays in browser)
@@ -773,6 +806,6 @@ encrypt(file2, key, iv2) → ciphertext2  ✅
 ✅ **Authenticated**: Tamper detection with GCM mode  
 ✅ **Unique IVs**: Different encryption every time  
 ✅ **Chunked Base64**: Handles large files without stack overflow  
-✅ **Secure Storage**: Session-only vault key  
+✅ **Secure Storage**: Session-only vault key
 
 **Your files are as secure as your master password!** 🔒

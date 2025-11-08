@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom'
 import { decryptCredentialForClient } from '../../utils/credentialHelpers';
 import { useAuth } from '../../context/AuthContext';
 import ApiService from '../../services/apiService'
+import AddItemModal from './AddItemModal'
 
 
 const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) => {
@@ -18,6 +19,8 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
   const [isShow2FA, setIsShow2FA] = useState(false)
   const [isFavorite, setIsFavorite] = useState(credential.favorite)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showAttachments, setShowAttachments] = useState(false)
   const credId = credential.id
   const ownerIdFromCredential = credential.userId
   const [passwordLength, setPasswordLength] = useState(0)
@@ -260,14 +263,14 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
                   )}
 
                   {!isArchived && (
-                    <button className="w-full text-left text-sm text-gray-700 hover:bg-black pl-2 hover:text-white flex gap-x-2 py-1.5 items-center">
+                    <button className="w-full text-left text-sm text-gray-700 hover:bg-black pl-2 hover:text-white flex gap-x-2 py-1.5 items-center" onClick={() => setShowEditModal(true)}>
                       <SquarePen className="w-4" strokeWidth={2} />
                       <div>Edit Item</div>
                     </button>
                   )}
                   
                   {!isArchived && credential.attachments && credential.attachments.length > 0 && (
-                    <button className="w-full text-left text-sm text-gray-700 hover:bg-black pl-2 hover:text-white flex gap-x-2 py-1.5 items-center">
+                    <button className="w-full text-left text-sm text-gray-700 hover:bg-black pl-2 hover:text-white flex gap-x-2 py-1.5 items-center" onClick={() => setShowAttachments(true)}>
                       <Paperclip className="w-4" strokeWidth={2} />
                       <div>View Attachments ({credential.attachments.length})</div>
                     </button>
@@ -402,6 +405,24 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
             </div>
           </div>
         </div>
+      )}
+
+      {showEditModal && decryptedData && (
+        <AddItemModal 
+          show={showEditModal} 
+          setShow={setShowEditModal} 
+          credentialToEdit={decryptedData} 
+          onCredentialAdded={onCredentialUpdated}
+        />
+      )}
+      {showAttachments && (
+        <AddItemModal 
+          show={showAttachments} 
+          setShow={setShowAttachments} 
+          credentialToEdit={decryptedData} 
+          attachmentsOnly={true}
+          onCredentialAdded={onCredentialUpdated}
+        />
       )}
     </>
   )
