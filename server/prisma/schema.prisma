@@ -124,7 +124,7 @@ model Credential {
   updatedAt DateTime @updatedAt @map("updated_at")
   
   // Relations
-  totpSecrets TotpSecret[]
+  totpSecrets TotpSecret?
   attachments Attachment[]
   breachAlerts BreachAlert[]
 
@@ -137,7 +137,7 @@ model Credential {
 
 model TotpSecret {
   id           Int        @id @default(autoincrement())
-  credentialId Int        @map("credential_id")
+  credentialId Int        @unique @map("credential_id")
   credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
   
   serviceName String @map("service_name")

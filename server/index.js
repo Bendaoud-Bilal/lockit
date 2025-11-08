@@ -1,70 +1,82 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import prisma from './prisma/client.js'; 
-
-// Import routes
-import securityRoutes from './routes/security.js';
-import passwordCardsRoutes from './routes/passwordCards.js';
-import breachRoutes from './routes/breach.js';
-import credentialsRoutes from './routes/credentials.js'; 
-import usersRoutes from './routes/users.js'; // ✅ ADD THIS
+import dotenv from "dotenv";
+import app from "./app.js";
+import prisma from "./prisma/client.js";
+import { startBreachScheduler } from "./scheduler/breachScheduler.js";
 
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = Number.parseInt(process.env.PORT ?? "4000", 10);
+const HOST = process.env.HOST || "0.0.0.0";
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+let server;
+let schedulerJob;
+let isShuttingDown = false;
 
-// Health check route
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Lockit Server is running' });
-});
+async function shutdown(reason, error) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
 
-// API Routes
-app.use('/api', securityRoutes);
-app.use('/api', passwordCardsRoutes);
-app.use('/api', breachRoutes);
-app.use('/api/credentials', credentialsRoutes); 
-app.use('/api/users', usersRoutes); // ✅ ADD THIS
+  if (error) {
+    console.error(`[lockit] Fatal error triggered by ${reason}:`, error);
+  } else {
+    console.log(`[lockit] Shutdown triggered by ${reason}`);
+  }
 
-// Start server
+  try {
+    if (schedulerJob) {
+      schedulerJob.cancel();
+      schedulerJob = undefined;
+    }
+
+    if (server) {
+      await new Promise((resolve, reject) => {
+        server.close((err) => (err ? reject(err) : resolve()));
+      });
+    }
+
+    await prisma.$disconnect();
+    console.log("[lockit] Prisma disconnected");
+    process.exit(error ? 1 : 0);
+  } catch (shutdownError) {
+    console.error("[lockit] Error during shutdown", shutdownError);
+    process.exit(1);
+  }
+}
+
 async function start() {
   try {
     await prisma.$connect();
-    console.log('✅ Database connected');
-    
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log("✅ Database connected");
+
+    server = app.listen(PORT, HOST, () => {
+      console.log(`🚀 Lockit server running on http://${HOST}:${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+      console.log(`Client URL: ${process.env.CLIENT_URL || "http://localhost:5173"}`);
     });
-  } catch (err) {
-    console.error('❌ Failed to start server:', err);
-    await prisma.$disconnect().catch(e => console.error('Failed to disconnect Prisma:', e)); 
+
+    if (process.env.ENABLE_BREACH_SCHEDULER !== "false") {
+      schedulerJob = startBreachScheduler();
+    }
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    await prisma.$disconnect().catch((disconnectError) => {
+      console.error("Failed to disconnect Prisma during startup failure:", disconnectError);
+    });
     process.exit(1);
   }
 }
 
 start();
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('🔌 Shutting down server...');
-  await prisma.$disconnect();
-  console.log('🚪 Prisma disconnected.');
-  process.exit(0);
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
+  shutdown("unhandledRejection", reason instanceof Error ? reason : undefined);
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  prisma.$disconnect().finally(() => process.exit(1));
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  prisma.$disconnect().finally(() => process.exit(1));
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+  shutdown("uncaughtException", error);
 });

@@ -4,8 +4,10 @@ import SecurityScoreCard from './SecurityScoreCard';
 import PasswordCards from './PasswordCards';
 import BreachAlerts from './BreachAlerts';
 import CardDetails from './CardDetails';
+import APP_CONFIG from '../../../utils/config';
 
 export default function Dashboard() {
+  const API_BASE_URL = APP_CONFIG.API_BASE_URL;
   const [security, setSecurity] = useState(null);
   const [cardsData, setCardsData] = useState(null);
   const [breachAlerts, setBreachAlerts] = useState([]);
@@ -30,9 +32,9 @@ export default function Dashboard() {
       const headers = { 'x-user-id': userId };
 
       const [scoreRes, cardsRes, alertsRes] = await Promise.all([
-        fetch(`http://localhost:4000/api/users/${userId}/security-score`, { headers }),
-        fetch(`http://localhost:4000/api/users/${userId}/password-cards`, { headers }),
-        fetch(`http://localhost:4000/api/users/${userId}/breach-alerts`, { headers }),
+        fetch(`${API_BASE_URL}/api/users/${userId}/security-score`, { headers }),
+        fetch(`${API_BASE_URL}/api/users/${userId}/password-cards`, { headers }),
+        fetch(`${API_BASE_URL}/api/users/${userId}/breach-alerts`, { headers }),
       ]);
 
       if (scoreRes.ok) {
@@ -60,7 +62,7 @@ export default function Dashboard() {
 
   async function handleCheckBreaches() {
     try {
-      const response = await fetch(`http://localhost:4000/api/users/${userId}/check-breaches`, {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/check-breaches`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +75,7 @@ export default function Dashboard() {
         alert(`Breach check complete! Found ${result.newBreaches} new breaches.`);
         
         // Reload breach alerts
-        const alertsRes = await fetch(`http://localhost:4000/api/users/${userId}/breach-alerts`, {
+  const alertsRes = await fetch(`${API_BASE_URL}/api/users/${userId}/breach-alerts`, {
           headers: { 'x-user-id': userId },
         });
         
@@ -92,7 +94,7 @@ export default function Dashboard() {
 
   async function handleToggleBreachResolved(breachId) {
     try {
-      const response = await fetch(`http://localhost:4000/api/breach-alerts/${breachId}/toggle-resolved`, {
+  const response = await fetch(`${API_BASE_URL}/api/breach-alerts/${breachId}/toggle-resolved`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +117,7 @@ export default function Dashboard() {
 
   async function handleToggleBreachDismissed(breachId) {
     try {
-      const response = await fetch(`http://localhost:4000/api/breach-alerts/${breachId}/toggle-dismissed`, {
+  const response = await fetch(`${API_BASE_URL}/api/breach-alerts/${breachId}/toggle-dismissed`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +139,7 @@ export default function Dashboard() {
   }
 
   function onOpenCardHandler(cardId) {
-    fetch(`http://localhost:4000/api/password-cards/${cardId}/details`, {
+  fetch(`${API_BASE_URL}/api/password-cards/${cardId}/details`, {
       headers: { 'x-user-id': userId },
     })
       .then(r => r.ok ? r.json() : null)
