@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/authenticator-feature
 datasource db {
   provider = "sqlite"
   url      = "file:./lockit.db"
@@ -125,7 +128,11 @@ model Credential {
   updatedAt DateTime @updatedAt @map("updated_at")
   
   // Relations
+<<<<<<< HEAD
   totpSecrets TotpSecret[]
+=======
+  totpSecrets TotpSecret?
+>>>>>>> origin/authenticator-feature
   attachments Attachment[]
   breachAlerts BreachAlert[]
 
@@ -138,11 +145,19 @@ model Credential {
 
 model TotpSecret {
   id           Int        @id @default(autoincrement())
+<<<<<<< HEAD
   credentialId Int        @map("credential_id")
   credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
   
   serviceName String @map("service_name")
   accountName String? @map("account_name")
+=======
+  credentialId Int      @unique @map("credential_id")
+  credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  
+  serviceName String @map("service_name") 
+  accountName String? @map("account_name") @unique
+>>>>>>> origin/authenticator-feature
   issuer      String?
   
   // Encrypted Secret
