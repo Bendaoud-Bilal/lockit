@@ -146,7 +146,7 @@ export async function createEncryptedTotpItem(userId,credentialId, secret, servi
     // Save to database
     const totpSecret = await prisma.totpSecret.create({
       data: {
-        credentialId,
+        credentialId: credentialId || null,
         serviceName,
         accountName,
         issuer: issuer || serviceName, // Use serviceName as default issuer
@@ -166,6 +166,15 @@ export async function createEncryptedTotpItem(userId,credentialId, secret, servi
         createdAt: true,
       },
     });
+  try {
+    const setcredential = await prisma.credential.update({
+      where: { id: credentialId },
+      data: { has2fa: true },
+    });
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du credential :", error);
+  }
+
 
     return totpSecret;
   } catch (error) {
@@ -304,6 +313,10 @@ export async function deleteTotp(totpId, userId) {
         },
       },
     });
+    const setcredential=await prisma.credential.update({
+      where:{id:credentialId},
+      data:{has2fa:false}
+    })
 
     if (!totpSecret) {
       throw new ApiError(404, "TOTP entry not found");
