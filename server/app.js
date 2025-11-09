@@ -8,7 +8,6 @@ import vaultRoutes from "./routes/Vault.js";
 import authenticatorRoutes from "./routes/authenticator.routes.js"
 import { errorHandler } from "./middleware/errorHandler.js";
 
-
 const app = express();
 
 // Rate limiting configuration
@@ -51,6 +50,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/vault", vaultRoutes);
 app.use("/api/totp",authenticatorRoutes)
 //  
+
 
 // Error handling middleware
 app.use(errorHandler);

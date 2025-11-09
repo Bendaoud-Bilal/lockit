@@ -137,8 +137,8 @@ model Credential {
 
 model TotpSecret {
   id           Int        @id @default(autoincrement())
-  credentialId Int      @unique @map("credential_id")
-  credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  credentialId Int?      @unique @map("credential_id")
+  credential   Credential? @relation(fields: [credentialId], references: [id], onDelete: Cascade)
   
   serviceName String @map("service_name") 
   accountName String? @map("account_name") @unique

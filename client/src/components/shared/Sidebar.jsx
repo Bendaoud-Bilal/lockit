@@ -129,7 +129,6 @@ const Sidebar = ({
   const handleLockVault = () => {
     logout("User manually locked vault");
   };
-  
 
   const isInVaultSection = location.pathname === "/my-vault";
 

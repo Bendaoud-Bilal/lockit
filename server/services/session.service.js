@@ -28,7 +28,6 @@ export function validateSession(sessionId) {
   return session.userId;
 }
 
-
 export function destroySession(sessionId) {
   sessions.delete(sessionId);
 }

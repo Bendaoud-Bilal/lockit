@@ -18,8 +18,6 @@ export const STORAGE_KEYS = {
   IS_LOCKED: "lockit_is_locked",
 };
 
-
-
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -373,4 +371,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-

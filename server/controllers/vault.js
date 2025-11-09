@@ -352,17 +352,72 @@ export const deletePass = async (req, res) =>{
 
 }
 
+export const deleteAllPass = async (req, res) => {
+  const { userId } = req.params;
+  const { state } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ message: "userId is required" });
+  }
+
+  try {
+    if (state === 'deleted') {
+      const deletedPasses = await prisma.credential.deleteMany({
+        where: {
+          userId: parseInt(userId),
+          state: 'deleted',
+        },
+      });
+      return res.status(200).json(deletedPasses);
+    } else {
+      return res.status(400).json({ message: "Invalid state value" });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: "Error deleting passwords", error });
+  }
+};
+
+export const restoreCredential = async(req, res) => {
+  const {userId, id} = req.params;
+  if (!userId || ! id){
+    return res.status(404).json({message :'userId or id is missing'})
+  }
+  try{
+    const response = await prisma.credential.update({
+      where : {
+      id: parseInt(id),
+      userId: parseInt(userId)
+    },
+    data : { state : 'active'}
+  })
+  res.status(200).json(
+    {
+      message: 'credential is restored',
+      state : response.state
+    }
+  )
+
+  }catch(error){
+    return res.status(500).json({message: 'error restoring passwords'})
+  }
+
+
+
+
+
+}
+
 // ============================================
 // TOGGLE FAVORITE
 // ============================================
 export const toggleFavorite = async (req, res) => {
   try {
-    const { userID,id} = req.params;
+    const { userId,id} = req.params;
 
     const credential = await prisma.credential.findFirst({
       where: {
         id: parseInt(id),
-        userId: parseInt(userID),
+        userId: parseInt(userId),
       }
     });
 
@@ -591,6 +646,8 @@ export default {
   getCredentialById,
   updateCredential,
   deletePass,
+  deleteAllPass,
+  restoreCredential,
   toggleFavorite,
   createFolder,
   getFolders,

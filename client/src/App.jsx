@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import {X} from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/shared/Sidebar";
 import ProfileModal from "./components/shared/ProfileModal";
@@ -18,11 +17,11 @@ import PasswordGenerator from './components/tools/passwordGenerator';
 import Authenticator from "./components/authenticator/Authenticator";
 
 
+
 function MainLayout({
   activeFilter,
   setActiveFilter,
   showPasswordGenerator,
-
   vaultItems,
   onCredentialsChange,
   setShowPasswordGenerator,
@@ -105,7 +104,6 @@ function MainLayout({
     </div>
   );
 }
-
 
 // AppContent
 function AppContent() {

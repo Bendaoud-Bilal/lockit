@@ -13,8 +13,6 @@ export async function authenticate(req, res, next) {
     const sessionId = authHeader.substring(7);
     const userId = sessionService.validateSession(sessionId);
     
-
-    
     if (!userId) {
       throw new ApiError(401, 'Invalid or expired session');
     }

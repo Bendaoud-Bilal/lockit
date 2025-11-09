@@ -71,7 +71,7 @@ useEffect(() => {
 
 
   const handleOnCancel = () => setShowAddTOTP(false);
-const handleAddNewAccount = async ({ serviceName, accountName, secret, credentialId }) => {
+const handleAddNewAccount = async ({ serviceName, accountName, secret, credentialId}) => {
   try {
     const sessionId = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
 

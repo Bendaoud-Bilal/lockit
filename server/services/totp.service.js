@@ -146,7 +146,7 @@ export async function createEncryptedTotpItem(userId,credentialId, secret, servi
     // Save to database
     const totpSecret = await prisma.totpSecret.create({
       data: {
-        credentialId,
+        credentialId: credentialId || null,
         serviceName,
         accountName,
         issuer: issuer || serviceName, // Use serviceName as default issuer
@@ -165,8 +165,18 @@ export async function createEncryptedTotpItem(userId,credentialId, secret, servi
         state: true,
         createdAt: true,
       },
-    });
 
+    });
+    if(credentialId){
+    const updateCredential=await prisma.credential.update({
+      where:{
+        id:credentialId
+      },
+      data:{
+        has2fa: true
+      }
+    });
+  }
     return totpSecret;
   } catch (error) {
     if (error instanceof ApiError) {

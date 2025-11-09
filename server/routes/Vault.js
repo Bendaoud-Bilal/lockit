@@ -11,7 +11,9 @@ import {
   updateFolder,
   deleteFolder,
   getVaultStats,
-  getArchiveCredentials
+  getArchiveCredentials,
+  deleteAllPass,
+  restoreCredential
 } from '../controllers/vault.js';
 import {
   addAttachment,
@@ -42,10 +44,11 @@ router.put('/credentials/:id', updateCredential);
 
 // Delete credential (soft delete by default, ?permanent=true for hard delete)
 router.delete("/delete-password/:userId/:id", deletePass);
+router.delete("/delete-all-passwords/:userId", deleteAllPass);
 
 // Toggle favorite status
-router.patch('/credentials/:userID/:id/favorite', toggleFavorite);
-
+router.patch('/credentials/:userId/:id/favorite', toggleFavorite);
+router.patch('/credentials/:userId/:id/restore', restoreCredential)
 // ============================================
 // FOLDER ROUTES
 // ============================================

@@ -19,5 +19,3 @@ app.listen(PORT, HOST, () => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
-
-// Routes authenticator
