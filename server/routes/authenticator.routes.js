@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   saveTotp,
   getAllTotps,
-  getTotpById,
+   getTotpByCredentialId,
   deleteTotpEntry,
   getCredentials,
 } from "../controllers/authenticatorController.js";
@@ -38,10 +38,10 @@ router.get("/", getAllTotps);
 
 /**
  * @route   GET /api/totp/:id
- * @desc    Récupère un TOTP spécifique avec le secret déchiffré
+ * @desc    Récupère un TOTP avec le secret déchiffré
  * @access  Private
  */
-router.get("/:id", getTotpById);
+router.get("/:id", getTotpByCredentialId);
 
 /**
  * @route   DELETE /api/totp/:id
