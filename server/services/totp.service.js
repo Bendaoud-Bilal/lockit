@@ -305,19 +305,21 @@ export async function deleteTotp(totpId, userId) {
     }
 
     // Check ownership
-    const totpSecret = await prisma.totpSecret.findUnique({
+     const totpSecret = await prisma.totpSecret.findUnique({
       where: { id: totpId },
       include: {
         credential: {
-          select: { userId: true },
+          select: { id:true,userId: true },
         },
       },
     });
-    const setcredential=await prisma.credential.update({
-      where:{id:credentialId},
-      data:{has2fa:false}
-    })
 
+      await prisma.credential.update({
+      where:{id:totpSecret.credential.id},
+      data:{
+        has2fa:false
+      },
+    });
     if (!totpSecret) {
       throw new ApiError(404, "TOTP entry not found");
     }
