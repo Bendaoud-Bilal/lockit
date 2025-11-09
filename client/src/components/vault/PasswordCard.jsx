@@ -18,7 +18,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
   const [isShow2FA, setIsShow2FA] = useState(false)
   const [isFavorite, setIsFavorite] = useState(credential.favorite)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const credId = credential.id
+  const credId = credential.id;
   const ownerIdFromCredential = credential.userId
   const [passwordLength, setPasswordLength] = useState(0)
   const menuRef = useRef(null)
@@ -170,7 +170,6 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 
   return (
     <>
-      {isShow2FA && <Show2FA onClose={handleToggle2FA} />}
       <div className="w-full bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col">
         <div className="flex flex-col md:flex-row md:justify-between gap-3">
           <div className="flex gap-x-3 items-start sm:items-center flex-1">
