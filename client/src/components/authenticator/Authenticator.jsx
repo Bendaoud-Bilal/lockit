@@ -12,6 +12,7 @@ const Authenticator = () => {
 
  const fetchCredentials = async () => {
     try {
+      
       const sessionId=sessionStorage.getItem(STORAGE_KEYS.TOKEN);
       const res = await fetch("http://localhost:3000/api/totp/credentials", {
         method :"GET",

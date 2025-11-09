@@ -182,15 +182,15 @@ export async function createEncryptedTotpItem(userId,credentialId, secret, servi
  * @param {number} userId - User ID (for authorization)
  * @returns {Object} - TOTP entry with decrypted secret
  */
-export async function getDecryptedSecret(totpId, userId) {
+export async function getDecryptedSecret(credentialid, userId) {
   try {
-    if (!totpId || !userId) {
-      throw new ApiError(400, "TOTP ID and User ID are required");
+    if (!credentialid || !userId) {
+      throw new ApiError(400, "credential ID and User ID are required");
     }
 
     // Fetch TOTP entry with credential
     const totpSecret = await prisma.totpSecret.findUnique({
-      where: { id: totpId },
+      where: { credentialId: credentialid },
       include: {
         credential: {
           select: { userId: true },

@@ -2,11 +2,29 @@ import { Shield, Copy, Check } from "lucide-react";
 import React from "react";
 import { useTotpGenerator } from "../../hooks/useTotpGenerator";
 import OtpProgress from "../../components/authenticator/OtpProgress";
-import { mockAccounts } from "../../Data/mockAccounts";
 
-function Show2FA({ label, onHide }) {
-  const account = mockAccounts.find((acc) => acc.label === label);
+
+function Show2FA({ credentialId, onHide }) {
+  const [account,setAcccount]=useState(null);
   const { otp, timeLeft } = useTotpGenerator(account?.secret || "");
+
+ useEffect(() => {
+    const fetchTotpAccount = async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/api/totp/${credentialId}`);
+        if (!response.ok) throw new Error("Erreur lors du chargement du TOTP");
+
+        const data = await response.data;
+        setAcccount(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchTotpAccount();
+  }, [id]);
 
   if (!account) return null;
 
@@ -23,8 +41,6 @@ function Show2FA({ label, onHide }) {
             active
           </span>
         </div>
-
-        {/* Bouton Hide */}
         <button
           onClick={onHide}
           className=" pt-0.5 text-xs sm:text-base text-gray-500 hover:text-red-600 transition self-start sm:self-auto"
@@ -33,15 +49,14 @@ function Show2FA({ label, onHide }) {
         </button>
       </div>
 
-      {/* OTP code */}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <p className="text-2xl sm:text-3xl font-mono tracking-widest">{otp}</p>
         <OtpProgress timeLeft={timeLeft} />
       </div>
 
-      {/* Email */}
       <p className="text-gray-500 text-xs sm:text-sm mt-2 truncate">
-        {account.email}
+        {account.serviceName}  {account.accountName} 
       </p>
     </div>
   );
