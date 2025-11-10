@@ -1,4 +1,5 @@
 import '../style/dashboard.css';
+import '../style/data-breach.css';
 import React, { useEffect, useState } from 'react';
 import SecurityScoreCard from './SecurityScoreCard';
 import PasswordCards from './PasswordCards';
@@ -16,14 +17,17 @@ export default function Dashboard() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const userId = sessionStorage.getItem('userId') || '1';
 
   useEffect(() => {
     if (!sessionStorage.getItem('userId')) {
       sessionStorage.setItem('userId', '1');
     }
-    loadDashboardData();
+    loadDashboardData().catch((err) => {
+      console.error('Error loading dashboard data:', err);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   async function loadDashboardData() {
@@ -37,133 +41,124 @@ export default function Dashboard() {
         fetch(`${API_BASE_URL}/api/users/${userId}/breach-alerts`, { headers }),
       ]);
 
-      if (scoreRes.ok) {
-        const scoreData = await scoreRes.json();
-        setSecurity(scoreData);
-      }
-      
-      if (cardsRes.ok) {
-        const cardsDataRes = await cardsRes.json();
-        setCardsData(cardsDataRes);
-      }
-      
-      if (alertsRes.ok) {
-        const alerts = await alertsRes.json();
-        setBreachAlerts(alerts);
-      }
-      
-      setLoading(false);
+      if (scoreRes.ok) setSecurity(await scoreRes.json());
+      if (cardsRes.ok) setCardsData(await cardsRes.json());
+      if (alertsRes.ok) setBreachAlerts(await alertsRes.json());
+
+      setError(null);
     } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to load dashboard');
+    } finally {
       setLoading(false);
     }
   }
 
   async function handleCheckBreaches() {
     try {
-  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/check-breaches`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId,
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        alert(`Breach check complete! Found ${result.newBreaches} new breaches.`);
-        
-        // Reload breach alerts
-  const alertsRes = await fetch(`${API_BASE_URL}/api/users/${userId}/breach-alerts`, {
-          headers: { 'x-user-id': userId },
-        });
-        
-        if (alertsRes.ok) {
-          const alerts = await alertsRes.json();
-          setBreachAlerts(alerts);
+      const response = await fetch(
+        `${API_BASE_URL}/api/users/${userId}/check-breaches`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': userId,
+          },
         }
-      } else {
-        alert('Failed to check for breaches. Please try again.');
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to check for breaches');
       }
-    } catch (error) {
-      console.error('Error checking breaches:', error);
-      alert('Error checking breaches. Please try again.');
+
+      const result = await response.json();
+      alert(`Breach check complete! Found ${result.newBreaches} new breaches.`);
+
+      const alertsRes = await fetch(
+        `${API_BASE_URL}/api/users/${userId}/breach-alerts`,
+        { headers: { 'x-user-id': userId } }
+      );
+      if (alertsRes.ok) setBreachAlerts(await alertsRes.json());
+    } catch (err) {
+      console.error('Error checking breaches:', err);
+      alert('Unable to check for breaches. Please try again.');
     }
   }
 
   async function handleToggleBreachResolved(breachId) {
     try {
-  const response = await fetch(`${API_BASE_URL}/api/breach-alerts/${breachId}/toggle-resolved`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId,
-        },
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/api/breach-alerts/${breachId}/toggle-resolved`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': userId,
+          },
+        }
+      );
+      if (!res.ok) return;
 
-      if (response.ok) {
-        const updatedBreach = await response.json();
-        
-        // Update local state
-        setBreachAlerts(prev => 
-          prev.map(b => b.id === breachId ? { ...b, status: updatedBreach.status } : b)
-        );
-      }
-    } catch (error) {
-      console.error('Error toggling breach resolved:', error);
+      const updated = await res.json();
+      setBreachAlerts((prev) =>
+        prev.map((b) =>
+          b.id === breachId ? { ...b, status: updated.status } : b
+        )
+      );
+    } catch (err) {
+      console.error('Error toggling breach resolved:', err);
     }
   }
 
   async function handleToggleBreachDismissed(breachId) {
     try {
-  const response = await fetch(`${API_BASE_URL}/api/breach-alerts/${breachId}/toggle-dismissed`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId,
-        },
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/api/breach-alerts/${breachId}/toggle-dismissed`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': userId,
+          },
+        }
+      );
+      if (!res.ok) return;
 
-      if (response.ok) {
-        const updatedBreach = await response.json();
-        
-        // Update local state
-        setBreachAlerts(prev => 
-          prev.map(b => b.id === breachId ? { ...b, status: updatedBreach.status } : b)
-        );
-      }
-    } catch (error) {
-      console.error('Error toggling breach dismissed:', error);
+      const updated = await res.json();
+      setBreachAlerts((prev) =>
+        prev.map((b) =>
+          b.id === breachId ? { ...b, status: updated.status } : b
+        )
+      );
+    } catch (err) {
+      console.error('Error toggling breach dismissed:', err);
     }
   }
 
-  function onOpenCardHandler(cardId) {
-  fetch(`${API_BASE_URL}/api/password-cards/${cardId}/details`, {
+  function handleOpenCard(cardId) {
+    fetch(`${API_BASE_URL}/api/password-cards/${cardId}/details`, {
       headers: { 'x-user-id': userId },
     })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data && data.items) {
-          const cardTitles = {
-            weak: 'Weak Passwords',
-            reused: 'Reused Passwords',
-            exposed: 'Exposed Passwords',
-            old: 'Old Passwords',
-          };
-          setSelectedCardItems(data.items);
-          setModalTitle(cardTitles[cardId] || 'Credentials');
-          setDetailsOpen(true);
-        }
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data || !data.items) return;
+        const cardTitles = {
+          weak: 'Weak Passwords',
+          reused: 'Reused Passwords',
+          exposed: 'Exposed Passwords',
+          old: 'Old Passwords',
+        };
+        setSelectedCardItems(data.items);
+        setModalTitle(cardTitles[cardId] || 'Credentials');
+        setDetailsOpen(true);
       })
-      .catch(console.error);
+      .catch((err) => console.error('error fetching card details', err));
   }
 
   if (loading) {
     return (
       <div className="container">
         <div style={{ textAlign: 'center', padding: '40px' }}>
-          <h2>Loading dashboard...</h2>
+          <h2>Loading dashboard…</h2>
         </div>
       </div>
     );
@@ -172,7 +167,13 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className="container">
-        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-red)' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '40px',
+            color: 'var(--color-red)',
+          }}
+        >
           <h2>Error loading dashboard</h2>
           <p>{error}</p>
           <button onClick={loadDashboardData}>Retry</button>
@@ -184,14 +185,14 @@ export default function Dashboard() {
   return (
     <div className="container">
       <SecurityScoreCard security={security || {}} />
-      
+
       <PasswordCards
         items={cardsData?.cards || []}
-        onOpenCard={onOpenCardHandler}
+        onOpenCard={handleOpenCard}
       />
 
-      <BreachAlerts 
-        items={breachAlerts} 
+      <BreachAlerts
+        items={breachAlerts}
         onCheckBreaches={handleCheckBreaches}
         onToggleResolved={handleToggleBreachResolved}
         onToggleDismissed={handleToggleBreachDismissed}

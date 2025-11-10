@@ -1,9 +1,14 @@
+// File: client/src/components/dashboard/components/BreachAlerts.jsx
 import React, { useState } from 'react';
-import breachTriangleUrl from '../../../assets/icons/dashboard-icons/breach-triangle.svg';
-import breachCheckUrl from '../../../assets/icons/dashboard-icons/breach-check.svg';
+import { AlertTriangle, Check, BellOff } from 'lucide-react';
 import '../style/dashboard.css';
 
-export default function BreachAlerts({ items = [], onCheckBreaches, onToggleResolved, onToggleDismissed }) {
+export default function BreachAlerts({
+  items = [],
+  onCheckBreaches,
+  onToggleResolved,
+  onToggleDismissed,
+}) {
   const [isChecking, setIsChecking] = useState(false);
 
   async function handleCheckBreaches() {
@@ -20,15 +25,20 @@ export default function BreachAlerts({ items = [], onCheckBreaches, onToggleReso
     <div className="card breach-alerts-card">
       <div className="breach-alerts-header">
         <div className="breach-alerts-title">
-          <img src={breachTriangleUrl} className="breach-title-icon" alt="" />
+          <AlertTriangle
+            className="breach-title-icon"
+            size={20}
+            strokeWidth={1.6}
+            color="#d4183d"
+          />
           <h2>Data Breach Alerts</h2>
         </div>
-        <button 
-          className="check-breaches-button" 
+        <button
+          className="check-breaches-button"
           onClick={handleCheckBreaches}
           disabled={isChecking}
         >
-          {isChecking ? 'Checking...' : 'Check for breaches'}
+          {isChecking ? 'Checking…' : 'Check for breaches'}
         </button>
       </div>
 
@@ -39,9 +49,9 @@ export default function BreachAlerts({ items = [], onCheckBreaches, onToggleReso
           </div>
         ) : (
           items.map((item) => (
-            <BreachAlertItem 
-              key={item.id} 
-              item={item} 
+            <BreachAlertItem
+              key={item.id}
+              item={item}
               onToggleResolved={onToggleResolved}
               onToggleDismissed={onToggleDismissed}
             />
@@ -55,14 +65,13 @@ export default function BreachAlerts({ items = [], onCheckBreaches, onToggleReso
 function BreachAlertItem({ item, onToggleResolved, onToggleDismissed }) {
   const isDismissed = item.status === 'dismissed';
   const isResolved = item.status === 'resolved';
-  const isPending = item.status === 'pending';
 
-  // Determine icon and badge based on status
-  const icon = isDismissed 
-    ? '🔕' // Muted bell for dismissed
-    : isResolved 
-      ? breachCheckUrl // Green checkmark for resolved
-      : breachTriangleUrl; // Red warning for pending
+  const IconComponent = isDismissed ? BellOff : isResolved ? Check : AlertTriangle;
+  const iconColor = isDismissed
+    ? '#9c9ca9'
+    : isResolved
+      ? '#2e7d32'
+      : '#dc3545';
 
   const badgeConfig = isDismissed
     ? { text: 'Dismissed', variant: 'dismissed' }
@@ -73,13 +82,14 @@ function BreachAlertItem({ item, onToggleResolved, onToggleDismissed }) {
   return (
     <div className={`breach-alert-item ${item.status}`}>
       <div className="breach-item-left">
-        <div className={`breach-icon-circle ${item.status}`}>
-          {typeof icon === 'string' && icon.startsWith('http') ? (
-            <img src={icon} width="20" height="20" alt="" />
-          ) : (
-            <span className="breach-emoji-icon">{icon}</span>
-          )}
+        <div className={`breach-icon-circle ${item.status || 'pending'}`}>
+          <IconComponent
+            size={20}
+            strokeWidth={1.6}
+            color={iconColor}
+          />
         </div>
+
         <div className="breach-item-content">
           <div className="breach-item-header">
             <h4>{item.service}</h4>
@@ -87,39 +97,43 @@ function BreachAlertItem({ item, onToggleResolved, onToggleDismissed }) {
               {badgeConfig.text}
             </span>
           </div>
+
           <p className="breach-description">{item.description}</p>
+
           <div className="breach-item-meta">
             <span className="breach-date">Breach date: {item.date}</span>
-            {item.affected && (
+            {item.affected ? (
               <>
                 <span className="breach-separator">•</span>
-                <span className="breach-affected">Affected: {item.affected}</span>
+                <span className="breach-affected">
+                  Affected: {item.affected}
+                </span>
               </>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
       <div className="breach-item-actions">
-        {/* Checkbox for resolved status */}
-        <label className="breach-checkbox-label">
+        <label className="breach-checkbox-label" title="Mark as resolved">
           <input
             type="checkbox"
-            checked={isResolved}
-            onChange={() => onToggleResolved(item.id)}
-            disabled={isDismissed}
             className="breach-checkbox"
+            checked={isResolved}
+            disabled={isDismissed}
+            onChange={() => onToggleResolved(item.id)}
           />
-          <span className="breach-checkbox-custom"></span>
+          <span className="breach-checkbox-custom" />
         </label>
 
-        {/* Dismiss/Undismiss Button */}
         <button
-          className={`breach-dismiss-button ${isDismissed ? 'undismiss' : 'dismiss'}`}
+          className={`breach-dismiss-button ${
+            isDismissed ? 'undismiss' : 'dismiss'
+          }`}
           onClick={() => onToggleDismissed(item.id)}
           title={isDismissed ? 'Restore alert' : 'Dismiss alert'}
         >
-          {isDismissed ? '↩️' : '🚫'}
+          {isDismissed ? '↩︎' : 'Dismiss'}
         </button>
       </div>
     </div>
