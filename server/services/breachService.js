@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from './prisma.service.js';
 
 export async function listBreachAlertsForUser(userId) {
   const uid = Number(userId);

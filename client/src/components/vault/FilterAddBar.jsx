@@ -1,14 +1,39 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Plus, Trash } from 'lucide-react'
+import { Search, Plus, Trash, AlertTriangle } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import AddItemModal from './AddItemModal.jsx'
+import ApiService from '../../services/apiService.js'
+import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast'
 
-const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded }) => {
+const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDeleteAll }) => {
   const location = useLocation()
   const [wideSearch, setWideSearch] = useState(false)
   const [archiveNotEmpty, setArchiveNotEmpty] = useState(false)
   const archiveCount = localStorage.getItem('archiveCount');
   const [show, setShow] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const { user } = useAuth()
+  
+  const deleteAllCredential = async () => {
+    try {
+      await ApiService.deleteAllCredentials(user?.id, 'deleted');
+      toast.success('All credentials have been deleted');
+      if (onDeleteAll) {
+        await onDeleteAll();
+      }
+      setArchiveNotEmpty(false);
+      localStorage.setItem('archiveCount', '0');
+    } catch (error) {
+      console.error('Error deleting all credentials:', error);
+      toast.error(error.message || 'Failed to delete all credentials');
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  }
+  
+
+
 
 
   useEffect(() => {
@@ -52,10 +77,52 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded }) => {
       )}
 
       {archiveNotEmpty && location.pathname === '/archive' && (
-        <button className='flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2'>
+        <button 
+          onClick={() => setShowDeleteConfirm(true)} 
+          className='flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2'
+        >
           <Trash className='w-4' strokeWidth={1} />
           <span className='hidden sm:inline mt-[2px]'>Delete All</span>
         </button>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded-lg shadow-xl mx-4 max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-red-600" aria-hidden="true" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-medium text-gray-900">Delete All Archived Credentials</h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      Are you sure you want to delete all archived credentials? This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-x-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  onClick={deleteAllCredential}
+                >
+                  Delete All
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

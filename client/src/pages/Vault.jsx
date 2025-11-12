@@ -14,7 +14,6 @@ const Vault = ({ activeFilter, onCredentialsChange }) => {
 
   const userId = user?.id;
 
- // In Vault.jsx - separate initial load from updates
 const fetchCredentials = async (notifyParent = false) => {
   if (!userId) return;
   
@@ -26,7 +25,6 @@ const fetchCredentials = async (notifyParent = false) => {
     const creds = res.credentials || [];
     setPasswords(creds);
 
-    // Only notify parent when explicitly requested (after add/edit/delete)
     if (notifyParent && onCredentialsChange) {
       onCredentialsChange();
     }
@@ -128,7 +126,7 @@ useEffect(() => {
           </div>
         ) : (
           filteredPasswords.map((p) => (
-            <div key={p.id} className="w-[70%]">
+            <div key={p.id} className="w-[70%] ">
               <PasswordCard credential={p} onCredentialDeleted={() => fetchCredentials(true)} onCredentialUpdated={() => fetchCredentials(true)}/>
             </div>
           ))
