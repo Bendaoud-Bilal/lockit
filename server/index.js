@@ -14,3 +14,5 @@ app.listen(PORT, HOST, () => {
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`Client URL: ${process.env.CLIENT_URL || "http://localhost:5173"}`);
 });
+
+

@@ -137,11 +137,15 @@ model Credential {
 
 model TotpSecret {
   id           Int        @id @default(autoincrement())
+<<<<<<< HEAD
   credentialId Int        @unique @map("credential_id")
+=======
+  credentialId Int      @unique @map("credential_id")
+>>>>>>> feat/show2fa
   credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
   
-  serviceName String @map("service_name")
-  accountName String? @map("account_name")
+  serviceName String @map("service_name") 
+  accountName String? @map("account_name") @unique
   issuer      String?
   
   // Encrypted Secret
