@@ -38,7 +38,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
   const [activeTab, setActiveTab] = useState("general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
-  const { user } = useAuth();
+  const { user,vaultKey } = useAuth();
   const userId = user?.id;
   
   const [showIcon, setShowIcon] = useState(false)

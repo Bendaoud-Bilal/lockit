@@ -134,6 +134,8 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 
   const handleToggle2FA = () => setIsShow2FA(!isShow2FA)
 
+//hna if state = soft donc show2fa = false (hide) mais tjrs il existe
+//ida state = delete il sera supprimer de la base de donnees
   const handleDelete = async (state = 'soft') => {
     try {
       await ApiService.deleteCredential(userId, credId, state)
@@ -150,6 +152,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
       setIsMenuOpen(false)
     }
   }
+
 
   if (isDecrypting)
     return (
@@ -364,6 +367,12 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
             )}
           </div>
         </div>
+        {
+          // credential.has2fa &&
+          !isArchived && <Show2FA />
+        }
+
+
       </div>
 
       {showDeleteConfirm && isArchived && (
