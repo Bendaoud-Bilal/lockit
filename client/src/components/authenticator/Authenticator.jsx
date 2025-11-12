@@ -1,130 +1,109 @@
 import React, { useEffect, useState } from "react";
-import { Plus, X, ScanQrCode } from "lucide-react";
+import { Plus, X, ScanQrCode, StoreIcon } from "lucide-react";
 import AuthenticatorItem from "./AuthenticatorItem";
 import AddTOTP from "./AddTOTP";
-import {STORAGE_KEYS} from "../../context/AuthContext";
-import toast,{Toaster} from 'react-hot-toast';
+import { useAuth } from "../../context/AuthContext";
+import toast from "react-hot-toast";
+import apiService from "../../services/apiService";
+
 
 const Authenticator = () => {
   const [showAddTOTP, setShowAddTOTP] = useState(false);
   const [accounts, setAccounts] = useState([]);
-  const [credentials,setCredentials]=useState([]);
+  const [credentials, setCredentials] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { isAuthenticated, isLocked } = useAuth(); 
 
- const fetchCredentials = async () => {
+  const fetchCredentials = async () => {
     try {
-      
-      const sessionId=sessionStorage.getItem(STORAGE_KEYS.TOKEN);
-      const res = await fetch("http://localhost:3000/api/totp/credentials", {
-        method :"GET",
-        headers: { 
-          Authorization: `Bearer ${sessionId}` },
-      });
-
-      if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
-      const json = await res.json();
-      setCredentials(json.data || []);
+      const data = await apiService.getTOTPCredentials();
+      setCredentials(data.data);
     } catch (err) {
-      console.error("Erreur fetch credentials:", err);
+      console.error("Erreur fetchCredentials:", err);
+      toast.error(err.message || "Failed to fetch credentials");
     }
   };
 
+  const fetchAccounts = async () => {
+    try {
+      const response = await apiService.getAllTotps();
+      const totpsArray = Array.isArray(response.data) ? response.data : [];
+      const formatted = totpsArray.map((item) => ({
+        id: item.id,
+        serviceName: item.serviceName,
+        accountName: item.accountName,
+        secret: item.secret,
+      }));
+      setAccounts(formatted);
+    } catch (err) {
+      console.error("Erreur fetchAccounts:", err);
+      toast.error(err.message || "Failed to fetch TOTP accounts");
+    }
+  };
 
-  // Fethc all TOTP accounts from backend
-const fetchAccounts = async () => {
-  try {
-    const sessionId = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
-    const res = await fetch("http://localhost:3000/api/totp", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${sessionId}`,
-      },
-    });
+  useEffect(() => {
+    if (isAuthenticated && !isLocked) {
+      fetchAccounts();
+      fetchCredentials();
+    } else {
+      console.log("En attente d'authentification avant de fetch les TOTPs...");
+    }
+  }, [isAuthenticated, isLocked]);
 
-    if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
-
-    const json = await res.json();
-
-    const filtered = json.data.map(item => ({
-      id: item.id,
-      serviceName: item.serviceName,
-      accountName: item.accountName,
-      secret: item.secret,
-    }));
-    setAccounts(filtered);
-  } catch (err) {
-    console.error("Erreur fetch:", err);
-  }
-};
-
-
-useEffect(()=>{
-  fetchAccounts();
-  fetchCredentials();
-},[]);
-
-useEffect(() => {
-  if (showAddTOTP) {
-    fetchCredentials(); 
-  }
-}, [showAddTOTP]);
-
-
+  useEffect(() => {
+    if (showAddTOTP && isAuthenticated && !isLocked)  {
+      fetchCredentials();
+    }
+  }, [showAddTOTP,isAuthenticated,isLocked]);
 
   const handleOnCancel = () => setShowAddTOTP(false);
-const handleAddNewAccount = async ({ serviceName, accountName, secret, credentialId}) => {
-  try {
-    const sessionId = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
 
-    const response = await fetch("http://localhost:3000/api/totp", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${sessionId}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        serviceName,
-        accountName,
-        secret,
-        credentialId: credentialId ? parseInt(credentialId) : null,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
-    }
-
-    const savedAccount = await response.json();
-
-    setAccounts((prev) => [...prev, savedAccount]);
-    await fetchAccounts();
-    setShowAddTOTP(false);
-  } catch (err) {
-    console.error("Erreur complète:", err);
-  }
-};
-
-
- const handleDelete = async (id) => {
-    const sessionId = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+  const handleAddNewAccount = async ({
+    serviceName,
+    accountName,
+    secret,
+    credentialId,
+  }) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/totp/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${sessionId}`,
-        },
+      if (!serviceName || !accountName || !secret) {
+        toast.error("Please fill in all required fields.");
+        return;
+      }
+
+      setLoading(true);
+
+      const savedAccount = await apiService.saveTotp({
+        serviceName: serviceName.trim(),
+        accountName: accountName.trim(),
+        secret: secret.trim().replace(/\s/g, ""),
+        credentialId: credentialId ? parseInt(credentialId) : null,
       });
 
-      if (!response.ok) throw new Error("Erreur lors de la suppression"); 
+      setAccounts((prev) => [...prev, savedAccount]);
+      await fetchAccounts();
+      setShowAddTOTP(false);
+      toast.success(`${serviceName} added successfully`);
+    } catch (err) {
+      console.error("Erreur complète:", err);
+      toast.error(err.message || "Failed to add TOTP account");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await apiService.deleteTotpEntry(id);
       setAccounts((prev) => prev.filter((acc) => acc.id !== id));
+      toast.success("TOTP deleted successfully");
     } catch (err) {
       console.error("Erreur suppression:", err);
-      toast.error(" Deletion failed")
+      toast.error(err.message || "Deletion failed");
     }
   };
 
   return (
-    <div className="p-4 sm:p-8 w-full max-w-5xl mx-auto">
+    <div className="p-4 sm:p-8 w-full max-w-5xl mx-aut bf-white">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full mb-6 gap-4 flex-wrap">
         <div className="flex-1 min-w-[250px]">
@@ -149,16 +128,15 @@ const handleAddNewAccount = async ({ serviceName, accountName, secret, credentia
 
       {/* Accounts list */}
       <div className="grid gap-4 sm:gap-5">
-        
-      {accounts.map((account) => (
-      <AuthenticatorItem
-      key={account.id}
-      id={account.id}
-      label={account.serviceName}
-      email={account.accountName}
-      secret={account.secret}
-      onDelete={handleDelete}
-      />
+        {accounts.map((account) => (
+          <AuthenticatorItem
+            key={account.id}
+            id={account.id}
+            label={account.serviceName}
+            email={account.accountName}
+            secret={account.secret}
+            onDelete={handleDelete}
+          />
         ))}
       </div>
 
@@ -184,7 +162,11 @@ const handleAddNewAccount = async ({ serviceName, accountName, secret, credentia
               <p className="text-gray-600 mb-4 text-sm sm:text-base">
                 Enter the required details to link your new TOTP account.
               </p>
-              <AddTOTP onAddTOTP={handleAddNewAccount} onCancel={handleOnCancel} credentials={credentials} />
+              <AddTOTP
+                onAddTOTP={handleAddNewAccount}
+                onCancel={handleOnCancel}
+                credentials={credentials}
+              />
             </div>
           </div>
         </div>
@@ -201,7 +183,7 @@ const handleAddNewAccount = async ({ serviceName, accountName, secret, credentia
                   How to add 2FA codes
                 </div>
                 <div className="text-xs sm:text-sm text-gray-500 leading-relaxed">
-                  When setting up 2FA on a service,look for “Manual Entry” or “Secret Key”
+                  When setting up 2FA on a service, look for “Manual Entry” or “Secret Key”
                   instead of scanning the QR code. Copy that secret key and add it here.
                 </div>
               </div>

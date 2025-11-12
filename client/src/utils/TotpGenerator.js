@@ -26,7 +26,9 @@ export const generateTOTP = (secret) => {
     });
 
     const code = totp.generate();
-    return code;
+    const formattedCode = code.toString().replace(/(\d{3})(\d{3})/, '$1 $2');
+    console.log(formattedCode);
+    return formattedCode;
   } catch (error) {
     console.error('Error generating TOTP:', error);
     throw error;
@@ -41,7 +43,6 @@ export const getTimeRemaining = () => {
   const now = Math.floor(Date.now() / 1000);
   return 30 - (now % 30);
 };
-
 /**
  * Calcule le compteur actuel (nombre de périodes de 30s depuis epoch)
  * @returns {number} Le compteur actuel

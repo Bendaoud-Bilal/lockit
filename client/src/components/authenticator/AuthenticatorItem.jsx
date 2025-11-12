@@ -32,9 +32,9 @@ const AuthenticatorItem = ({ id,label, email, secret, onDelete }) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col items-center justify-center w-20 ">
-            <span className="text-xl w-full font-mono text-gray-800">{totp}</span>
+            <span className="text-xl w-full font-mono text-gray-800 ">{totp}</span>
             <div className="w-full">
               <OtpProgress duration={30} timeLeft={timeLeft} />
             </div>

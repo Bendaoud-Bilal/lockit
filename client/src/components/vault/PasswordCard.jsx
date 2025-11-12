@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom'
 import { decryptCredentialForClient } from '../../utils/credentialHelpers';
 import { useAuth } from '../../context/AuthContext';
 import ApiService from '../../services/apiService'
+import apiService from '../../services/apiService'
 
 
 const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) => {
@@ -73,6 +74,11 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
     const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
     if (!idToUse || !ownerToUse) return
     try {
+      if(credential.has2fa){
+        let response=await ApiService.getTotpId(idToUse);
+        let totpId=response.data.id;
+        await apiService.updateTotpState(totpId,"active");
+            }
       await ApiService.restoreCredential(ownerToUse, idToUse)
       toast.success('credential restored')
       if (onCredentialUpdated) onCredentialUpdated()
@@ -136,7 +142,21 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 
   const handleDelete = async (state = 'soft') => {
     try {
-      await ApiService.deleteCredential(userId, credId, state)
+  
+         if(credential.has2fa){
+          const response= await ApiService.getTotpId(credId);
+          const totpId=response.data.id;
+
+        if(state ==='soft'){
+          await ApiService.updateTotpState(totpId,"archived");
+        }
+        else{
+          await ApiService.deleteTotpEntry(totpId);
+        }
+      }
+      await ApiService.deleteCredential(userId, credId, state);
+      
+   
       toast.success(state === 'deleted' ? 'Item deleted' : 'Item moved to archive', {
         position: 'top-center'
       })
@@ -338,7 +358,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
               </>
             )}
           </div>
-
+  
           <div className="flex gap-x-2 sm:gap-x-3">
             {credential.category === 'login' && (
               <>
@@ -363,6 +383,12 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
             )}
           </div>
         </div>
+
+                      {isShow2FA && (
+      <div className="mt-1 ml-2 mr-2">
+        <Show2FA credentialId={credId} onHide={handleToggle2FA} />
+      </div>
+    )}
       </div>
 
       {showDeleteConfirm && isArchived && (
@@ -382,7 +408,6 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
                   </div>
                 </div>
               </div>
-
               <div className="mt-6 flex justify-end gap-x-3">
                 <button
                   type="button"
@@ -408,3 +433,4 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 }
 
 export default PasswordCard;
+

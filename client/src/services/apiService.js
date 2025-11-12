@@ -116,6 +116,37 @@ class ApiService {
     this.token = null;
   }
 
+
+ // TOTP endpoints 
+  async saveTotp({ serviceName, accountName, secret, credentialId }) {
+    return this.client.post("/api/totp", {
+      serviceName,
+      accountName,
+      secret,
+      credentialId: credentialId ? parseInt(credentialId) : null,
+    });
+  }
+  async getTOTPCredentials(){
+    return this.client.get("/api/totp/credentials");
+  }
+
+  async getAllTotps() {
+    return this.client.get("/api/totp");
+  }
+
+  async deleteTotpEntry(totpId) {
+    return this.client.delete(`/api/totp/${totpId}`);
+  }
+  async getTotpId(credentialId){
+    return this.client.get(`/api/totp/by-credential/${credentialId}`);
+  }
+async updateTotpState(totpId, state) {
+  if (!totpId || !["active", "archived"].includes(state)) {
+    throw new Error("Invalid TOTP ID or state");
+  }
+  return this.client.patch(`/api/totp/${totpId}/state`,{state});
+}
+
   // Authentication endpoints
   async login(usernameOrEmail, masterPassword) {
     return this.client.post("/api/auth/login", {

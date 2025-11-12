@@ -2,9 +2,11 @@ import { Router } from "express";
 import {
   saveTotp,
   getAllTotps,
-   getTotpByCredentialId,
+  getTotpByCredentialId,
   deleteTotpEntry,
   getCredentials,
+  updateState,
+  getTotpId
 } from "../controllers/authenticatorController.js";
 
 import { authenticate } from "../middleware/auth.js";
@@ -24,30 +26,46 @@ router.post("/", saveTotp);
 
 /**
  * @route   GET /api/totp/credentials
- * @desc    Récupère les credentials du vault
+ * @desc    Gets the vault's credentials
  * @access  Private
  */
 router.get("/credentials", getCredentials);
 
 /**
  * @route   GET /api/totp
- * @desc    Récupère tous les TOTP de l'utilisateur
+ * @desc    Gets all the user's TOTP
  * @access  Private
  */
 router.get("/", getAllTotps);
 
 /**
  * @route   GET /api/totp/:id
- * @desc    Récupère un TOTP avec le secret déchiffré
+ * @desc    Gets a totp infos by using the id of the related credential
  * @access  Private
  */
 router.get("/:id", getTotpByCredentialId);
 
 /**
  * @route   DELETE /api/totp/:id
- * @desc    Supprime un TOTP
+ * @desc    Deletes a TOTP
  * @access  Private
  */
 router.delete("/:id", deleteTotpEntry);
+
+/**
+ * @route   Patch /api/totp/:id/state
+ * @desc    set totp state to "active" OR "archived"
+ * @access  Private
+ */
+router.patch("/:id/state",updateState);
+
+
+/**
+ * @route   GET /api/totp/by-credential/:id
+ * @desc    get TOTP ID related to the credentials with the given id
+ * @access  Private
+ */
+router.get("/by-credential/:credentialId",getTotpId);
+
 
 export default router;

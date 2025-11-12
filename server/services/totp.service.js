@@ -257,33 +257,28 @@ export async function getUserTotps(userId) {
     if (!userId) {
       throw new ApiError(401, "User ID is required");
     }
-
     const totpSecrets = await prisma.totpSecret.findMany({
       where: {
-        credential: {
-          userId,
-        },
+        credential: {userId :userId}
       },
-      orderBy: { createdAt: "desc" },
     });
-
-    const result = [];
+    const result=[];
     for (const item of totpSecrets) {
       const decrypted = decryptTotpSecret(
         item.secretIv,
         item.encryptedSecret,
         item.secretAuthTag,
-        await getUserVaultKey(userId)
+        await getUserVaultKey(userId),
       );
 
       result.push({
         id: item.id,
         serviceName: item.serviceName,
         accountName: item.accountName,
-        secret: decrypted, 
+        secret: decrypted,
+        state:item.state
       });
     }
-
     return result;
   } catch (error) {
     throw new ApiError(500, `Error fetching TOTP entries: ${error.message}`);
@@ -303,7 +298,6 @@ export async function deleteTotp(totpId, userId) {
       throw new ApiError(400, "TOTP ID and User ID are required");
     }
 
-    // Check ownership
     const totpSecret = await prisma.totpSecret.findUnique({
       where: { id: totpId },
       include: {

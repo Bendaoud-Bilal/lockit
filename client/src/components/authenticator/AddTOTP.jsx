@@ -35,6 +35,10 @@ export default function AddTOTP({ onAddTOTP, onCancel, credentials=[]}) {
   const [secret, setSecret] = useState("");
   const [credentialId, setCredentialId] = useState(""); 
 
+  const formattedInput=(input)=>{
+      return input.toUpperCase().replace(/\s+/g,'').replace(/[^A-Z2-7]/g,'');}
+
+
   const handleCancel = () => {
     onCancel();
     resetForm();
@@ -53,11 +57,10 @@ export default function AddTOTP({ onAddTOTP, onCancel, credentials=[]}) {
 
       return;
     }
-
     onAddTOTP({
       serviceName: service,
       accountName: account,
-      secret: secret,
+      secret: formattedInput(secret),
       credentialId: credentialId || null,
     });
 
@@ -97,17 +100,19 @@ export default function AddTOTP({ onAddTOTP, onCancel, credentials=[]}) {
 
 
         <select
-          value={credentialId}
-          onChange={(e) => setCredentialId(e.target.value)}
-          className="w-full px-3 py-2 rounded-md bg-gray-100 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-        >
-          <option value="">None </option>
-          {credentials.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.title}
-            </option>
-          ))}
-        </select>
+  value={credentialId}
+  onChange={(e) => setCredentialId(e.target.value)}
+  required // <-- rend le select obligatoire
+  className="w-full px-3 py-2 rounded-md bg-gray-100 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+>
+  <option value="">-- Select an option --</option>
+  {credentials.map((c) => (
+    <option key={c.id} value={c.id}>
+      {c.title}
+    </option>
+  ))}
+</select>
+
       </div>
 
       <div className="flex flex-col sm:flex-row sm:justify-end sm:space-x-2 mt-5">

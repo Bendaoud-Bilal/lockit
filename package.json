@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@material-tailwind/react": "^2.1.10",
+    "axios": "^1.13.2",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
     "crypto-js": "^4.2.0",

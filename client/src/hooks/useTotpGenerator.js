@@ -2,53 +2,65 @@ import { useEffect, useRef, useState } from "react";
 import { generateTOTP } from "../utils/TotpGenerator";
 
 /**
- * Custom hook for generating and refreshing TOTP codes every 30 seconds.
- * @param {string} secret - The base32 secret key for TOTP generation.
+ * Génère et synchronise un code TOTP toutes les 30 secondes, parfaitement calé sur le temps global.
+ * @param {string} secret - Secret base32
  * @returns {{ totp: string, timeLeft: number }}
  */
 export const useTotpGenerator = (secret) => {
-  const [totp, setTotp] = useState("------");
+  const [totp, setTotp] = useState("--- ---");
   const [timeLeft, setTimeLeft] = useState(30);
-  const counterRef = useRef(null);
-
-  const generateCode = () => {
-    try {
-      const newCode = generateTOTP(secret);
-      setTotp(newCode);
-    } catch (err) {
-      console.error("Erreur lors de la génération du TOTP :", err);
-      setTotp("------");
-    }
-  };
+  const intervalRef = useRef(null);
+  const syncTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!secret) {
-      setTotp("------");
+      setTotp("--- ---");
       return;
     }
 
-    const nowSec = Math.floor(Date.now() / 1000);
-    const currentCounter = Math.floor(nowSec / 30);
-    counterRef.current = currentCounter;
+   
+    const syncToGlobalClock = () => {
+      const now = Date.now();
+      const nowSec = Math.floor(now / 1000);
+      const elapsed = nowSec % 30;
+      const remaining = 30 - elapsed;
 
-    // Génération initiale du code
-    generateCode();
-    setTimeLeft(30 - (nowSec % 30));
 
-    // Interval de mise à jour
-    const interval = setInterval(() => {
-      const now = Math.floor(Date.now() / 1000);
-      const counter = Math.floor(now / 30);
-      const remaining = 30 - (now % 30);
+      setTotp(generateTOTP(secret));
       setTimeLeft(remaining);
 
-      if (counter !== counterRef.current) {
-        counterRef.current = counter;
-        generateCode();
-      }
+      syncTimeoutRef.current = setTimeout(() => {
+        setTotp(generateTOTP(secret));
+        setTimeLeft(30);
+
+        intervalRef.current = setInterval(() => {
+          const drift = Date.now() % 1000; // millisecondes hors phase
+          setTotp(generateTOTP(secret));
+          setTimeLeft(30);
+
+
+          if (drift > 5) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = setInterval(() => {
+              setTotp(generateTOTP(secret));
+              setTimeLeft(30);
+            }, 30000 - drift);
+          }
+        }, 30000);
+      }, remaining * 1000);
+    };
+    const countdown = setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+      setTimeLeft(30 - (now % 30));
     }, 1000);
 
-    return () => clearInterval(interval);
+    syncToGlobalClock();
+
+    return () => {
+      clearTimeout(syncTimeoutRef.current);
+      clearInterval(intervalRef.current);
+      clearInterval(countdown);
+    };
   }, [secret]);
 
   return { totp, timeLeft };
