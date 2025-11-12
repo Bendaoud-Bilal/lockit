@@ -1,7 +1,5 @@
 import dayjs from 'dayjs';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from './prisma.service.js';
 
 export async function getPasswordCards(userId) {
   const uid = Number(userId);
@@ -94,10 +92,40 @@ export async function getCardDetails(userId, cardId) {
       dataEnc: true,
       dataIv: true,
       dataAuthTag: true,
+      hasPassword: true,
+      state: true,
+      userId: true,
+      folderId: true,
+      folder: {
+        select: {
+          name: true,
+        },
+      },
+      attachments: {
+        select: {
+          id: true,
+        },
+      },
     },
     orderBy: { updatedAt: 'desc' },
     take: 200,
   });
 
-  return creds;
+  const bufferToBase64 = (value) => {
+    if (!value) return value;
+    if (typeof value === 'string') return value;
+    if (Buffer.isBuffer(value)) return value.toString('base64');
+    if (value?.type === 'Buffer' && Array.isArray(value.data)) {
+      return Buffer.from(value.data).toString('base64');
+    }
+    return value;
+  };
+
+  return creds.map((credential) => ({
+    ...credential,
+    dataEnc: bufferToBase64(credential.dataEnc),
+    dataIv: bufferToBase64(credential.dataIv),
+    dataAuthTag: bufferToBase64(credential.dataAuthTag),
+    attachments: credential.attachments ?? [],
+  }));
 }

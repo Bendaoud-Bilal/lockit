@@ -1,6 +1,7 @@
 import '../style/dashboard.css';
 import '../style/data-breach.css';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import SecurityScoreCard from './SecurityScoreCard';
 import PasswordCards from './PasswordCards';
 import BreachAlerts from './BreachAlerts';
@@ -20,19 +21,11 @@ export default function Dashboard() {
 
   const userId = sessionStorage.getItem('userId') || '1';
 
-  useEffect(() => {
-    if (!sessionStorage.getItem('userId')) {
-      sessionStorage.setItem('userId', '1');
-    }
-    loadDashboardData().catch((err) => {
-      console.error('Error loading dashboard data:', err);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
-
-  async function loadDashboardData() {
+  const loadDashboardData = useCallback(async ({ showSpinner = true } = {}) => {
     try {
-      setLoading(true);
+      if (showSpinner) {
+        setLoading(true);
+      }
       const headers = { 'x-user-id': userId };
 
       const [scoreRes, cardsRes, alertsRes] = await Promise.all([
@@ -40,6 +33,12 @@ export default function Dashboard() {
         fetch(`${API_BASE_URL}/api/users/${userId}/password-cards`, { headers }),
         fetch(`${API_BASE_URL}/api/users/${userId}/breach-alerts`, { headers }),
       ]);
+
+      console.log('[Dashboard] Fetch responses', {
+        score: scoreRes.status,
+        cards: cardsRes.status,
+        alerts: alertsRes.status,
+      });
 
       if (scoreRes.ok) setSecurity(await scoreRes.json());
       if (cardsRes.ok) setCardsData(await cardsRes.json());
@@ -49,9 +48,20 @@ export default function Dashboard() {
     } catch (err) {
       setError(err.message || 'Failed to load dashboard');
     } finally {
-      setLoading(false);
+      if (showSpinner) {
+        setLoading(false);
+      }
     }
-  }
+  }, [API_BASE_URL, userId]);
+
+  useEffect(() => {
+    if (!sessionStorage.getItem('userId')) {
+      sessionStorage.setItem('userId', '1');
+    }
+    loadDashboardData().catch((err) => {
+      console.error('Error loading dashboard data:', err);
+    });
+  }, [loadDashboardData, userId]);
 
   async function handleCheckBreaches() {
     try {
@@ -66,21 +76,26 @@ export default function Dashboard() {
         }
       );
 
+      if (response.status === 429) {
+        toast.error('Rate limit exceeded. Please wait before retrying.');
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Failed to check for breaches');
+        throw new Error('failed_to_check');
       }
 
       const result = await response.json();
-      alert(`Breach check complete! Found ${result.newBreaches} new breaches.`);
-
-      const alertsRes = await fetch(
-        `${API_BASE_URL}/api/users/${userId}/breach-alerts`,
-        { headers: { 'x-user-id': userId } }
+      toast.success(
+        result.newBreaches > 0
+          ? `Found ${result.newBreaches} new breach${result.newBreaches > 1 ? 'es' : ''}.`
+          : 'No new breaches detected.'
       );
-      if (alertsRes.ok) setBreachAlerts(await alertsRes.json());
+
+  await loadDashboardData({ showSpinner: false });
     } catch (err) {
       console.error('Error checking breaches:', err);
-      alert('Unable to check for breaches. Please try again.');
+      toast.error('Unable to check for breaches. Please try again.');
     }
   }
 
@@ -96,7 +111,10 @@ export default function Dashboard() {
           },
         }
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        toast.error('Unable to update breach status right now.');
+        return;
+      }
 
       const updated = await res.json();
       setBreachAlerts((prev) =>
@@ -106,6 +124,7 @@ export default function Dashboard() {
       );
     } catch (err) {
       console.error('Error toggling breach resolved:', err);
+      toast.error('Unable to update breach status.');
     }
   }
 
@@ -121,7 +140,10 @@ export default function Dashboard() {
           },
         }
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        toast.error('Unable to update breach status right now.');
+        return;
+      }
 
       const updated = await res.json();
       setBreachAlerts((prev) =>
@@ -131,8 +153,16 @@ export default function Dashboard() {
       );
     } catch (err) {
       console.error('Error toggling breach dismissed:', err);
+      toast.error('Unable to update breach status.');
     }
   }
+
+  const handleCredentialMutated = useCallback(() => {
+    loadDashboardData({ showSpinner: false }).catch((err) => {
+      console.error('Error refreshing dashboard data:', err);
+      toast.error('Failed to refresh dashboard data.');
+    });
+  }, [loadDashboardData]);
 
   function handleOpenCard(cardId) {
     fetch(`${API_BASE_URL}/api/password-cards/${cardId}/details`, {
@@ -203,6 +233,7 @@ export default function Dashboard() {
         onClose={() => setDetailsOpen(false)}
         listItems={selectedCardItems}
         title={modalTitle}
+        onRefresh={handleCredentialMutated}
       />
     </div>
   );

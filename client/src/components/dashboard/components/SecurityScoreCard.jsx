@@ -1,5 +1,5 @@
 import React from 'react';
-import shieldUrl from '../../../assets/icons/dashboard-icons/shield.svg';
+import { ShieldCheck } from 'lucide-react';
 
 export default function SecurityScoreCard({ security = {} }) {
   const { score = 0, pct = 0, statusText = 'Unknown', total = 0, weak = 0, reused = 0, exposed = 0 } = security;
@@ -8,7 +8,7 @@ export default function SecurityScoreCard({ security = {} }) {
     <div className="card score-card" aria-label="Security Score">
       <div className="score-left">
         <div className="security-score-header">
-          <img src={shieldUrl} className="shield-icon" alt="Shield" />
+          <ShieldCheck className="shield-icon" strokeWidth={1.8} aria-hidden="true" />
           <h2>Security Score</h2>
         </div>
 
@@ -23,7 +23,7 @@ export default function SecurityScoreCard({ security = {} }) {
 
             <div className="score-sub">
             <div className="score-badge" aria-hidden="true">
-              <img src={shieldUrl} alt="" />
+              <ShieldCheck strokeWidth={1.8} />
             </div>
             <div className="progress-caption">{statusText}</div>
           </div>

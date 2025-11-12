@@ -1,15 +1,15 @@
 import React from 'react';
 import '../style/dashboard.css';
-
-import shieldUrl from '../../../assets/icons/dashboard-icons/shield.svg';
-import eyeUrl from '../../../assets/icons/dashboard-icons/eye.svg';
-import iconWeakUrl from '../../../assets/icons/dashboard-icons/icon-weak.svg';
-import iconReusedUrl from '../../../assets/icons/dashboard-icons/icon-reused.svg';
-import iconExposedUrl from '../../../assets/icons/dashboard-icons/icon-exposed.svg';
-import iconOldUrl from '../../../assets/icons/dashboard-icons/icon-old.svg';
-import breachTriUrl from '../../../assets/icons/dashboard-icons/breach-triangle.svg';
-import breachCheckUrl from '../../../assets/icons/dashboard-icons/breach-check.svg';
-import refreshUrl from '../../../assets/icons/dashboard-icons/refresh.svg';
+import {
+  ShieldCheck,
+  Eye,
+  AlertTriangle,
+  Repeat,
+  ShieldAlert,
+  Clock,
+  RefreshCcw,
+  CheckCircle,
+} from 'lucide-react';
 
 export default function Dashboard() {
   return (
@@ -18,7 +18,7 @@ export default function Dashboard() {
       <div className="card score-card">
         <div className="score-left">
           <div className="security-score-header">
-            <img src={shieldUrl} className="shield-icon" alt="Shield" />
+            <ShieldCheck className="shield-icon" strokeWidth={1.8} aria-hidden="true" />
             <h2>Security Score</h2>
           </div>
 
@@ -34,7 +34,7 @@ export default function Dashboard() {
             </div>
             <div className="score-sub">
             <div className="score-badge" aria-hidden="true">
-              <img src={shieldUrl} alt="" />
+              <ShieldCheck strokeWidth={1.8} />
             </div>
             <div>Good security</div>
           </div>
@@ -71,13 +71,13 @@ export default function Dashboard() {
           <div className="password-card-header">
             <div className="password-card-info">
               <div className="icon-circle red">
-                <img src={iconWeakUrl} width="22" height="22" alt="Weak icon" />
+                <AlertTriangle size={22} strokeWidth={1.8} aria-hidden="true" />
               </div>
               <div className="password-card-title">
                 <h3>Weak Passwords</h3>
               </div>
             </div>
-            <img src={eyeUrl} className="eye-icon" alt="Toggle visibility" />
+            <Eye className="eye-icon" strokeWidth={1.6} aria-hidden="true" />
           </div>
 
           <div className="password-card-content">
@@ -91,13 +91,13 @@ export default function Dashboard() {
           <div className="password-card-header">
             <div className="password-card-info">
               <div className="icon-circle yellow">
-                <img src={iconReusedUrl} width="22" height="22" alt="Reused icon" />
+                <Repeat size={22} strokeWidth={1.8} aria-hidden="true" />
               </div>
               <div className="password-card-title">
                 <h3>Reused Passwords</h3>
               </div>
             </div>
-            <img src={eyeUrl} className="eye-icon" alt="Toggle visibility" />
+            <Eye className="eye-icon" strokeWidth={1.6} aria-hidden="true" />
           </div>
 
           <div className="password-card-content">
@@ -111,13 +111,13 @@ export default function Dashboard() {
           <div className="password-card-header">
             <div className="password-card-info">
               <div className="icon-circle orange">
-                <img src={iconExposedUrl} width="22" height="22" alt="Exposed icon" />
+                <ShieldAlert size={22} strokeWidth={1.8} aria-hidden="true" />
               </div>
               <div className="password-card-title">
                 <h3>Exposed Passwords</h3>
               </div>
             </div>
-            <img src={eyeUrl} className="eye-icon" alt="Toggle visibility" />
+            <Eye className="eye-icon" strokeWidth={1.6} aria-hidden="true" />
           </div>
 
           <div className="password-card-content">
@@ -130,7 +130,7 @@ export default function Dashboard() {
           <div className="password-card-header">
             <div className="password-card-info">
               <div className="icon-circle blue">
-                <img src={iconOldUrl} width="22" height="22" alt="Old icon" />
+                <Clock size={22} strokeWidth={1.8} aria-hidden="true" />
               </div>
               <div className="password-card-title">
                 <h3>Old Passwords</h3>
@@ -149,12 +149,12 @@ export default function Dashboard() {
       <div className="card">
         <div className="breach-header">
           <div className="breach-title">
-            <img src={breachTriUrl} width="20" height="20" alt="" />
+            <AlertTriangle size={20} strokeWidth={1.6} aria-hidden="true" />
             <h2>Data Breach Alerts</h2>
           </div>
 
           <div className="check-button">
-            <img src={refreshUrl} width="16" height="16" alt="Refresh" />
+            <RefreshCcw size={16} strokeWidth={1.6} aria-hidden="true" />
             <div>Check for breaches</div>
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function Dashboard() {
         <div className="breach-list">
           <div className="breach-item">
             <div className="breach-icon red">
-              <img src={breachTriUrl} width="24" height="24" alt="" />
+              <AlertTriangle size={24} strokeWidth={1.6} aria-hidden="true" />
             </div>
 
             <div className="breach-content">
@@ -177,7 +177,7 @@ export default function Dashboard() {
 
           <div className="breach-item">
             <div className="breach-icon green">
-              <img src={breachCheckUrl} width="24" height="24" alt="" />
+              <CheckCircle size={24} strokeWidth={1.6} aria-hidden="true" />
             </div>
 
             <div className="breach-content">
