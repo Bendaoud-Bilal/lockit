@@ -162,7 +162,6 @@ export const AuthProvider = ({ children }) => {
   const login = async (usernameOrEmail, masterPassword) => {
     try {
       const data = await apiService.login(usernameOrEmail, masterPassword);
-
       setToken(data.token);
       setUser({
         id: data.user.id,

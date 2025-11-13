@@ -51,7 +51,7 @@ useEffect(() => {
     'all-items': null, // Show all
     'favorites': null, // Handle separately
     'logins': 'login',
-    'credit-cards': 'card',
+    'credit_card': 'credit_card',
     'secure-notes': 'note',
     'identities': 'identity',
   };

@@ -100,7 +100,7 @@ const Sidebar = ({
     },
     { id: "logins", icon: Globe, label: "Logins", count: counts["logins"] },
     {
-      id: "credit-cards",
+      id: "credit_card",
       icon: CreditCard,
       label: "Credit Cards",
       count: counts["credit-cards"],

@@ -104,7 +104,7 @@ const Authenticator = () => {
   };
 
   return (
-    <div className="p-4 sm:p-8 w-full max-w-5xl mx-aut bf-white">
+    <div className="p-4 sm:p-8 w-full max-w-5xl mx-aut bf-white ">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full mb-6 gap-4 flex-wrap">
         <div className="flex-1 min-w-[250px]">

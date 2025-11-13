@@ -3,6 +3,7 @@ import { Shield, Copy, Check } from "lucide-react";
 import { useTotpGenerator } from "../../hooks/useTotpGenerator";
 import OtpProgress from "../../components/authenticator/OtpProgress";
 import apiService from "../../services/apiService";
+import toast from "react-hot-toast";
 
 function Show2FA({ credentialId, onHide }) {
 const [account, setAccount] = useState(null);

@@ -32,7 +32,7 @@ function MainLayout({
   setShowRecoveryKeyModal,
 }) {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen ">
       {/* Sidebar */}
       <Sidebar
         activeFilter={activeFilter}
@@ -63,7 +63,7 @@ function MainLayout({
           />
           <Route
             path="/authenticator"
-            element={<div className="p-8">{<Authenticator />}</div>}
+            element={<div className=" p-8">{<Authenticator />}</div>}
           />
           <Route path="/send" element={<div className="p-8">Send</div>} />
           <Route path="/folders" element={<div className="p-8">Folders</div>} />
