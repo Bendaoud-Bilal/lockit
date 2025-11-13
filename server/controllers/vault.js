@@ -226,7 +226,8 @@ export const getCredentialById = async (req, res) => {
 export const updateCredential = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, title, icon, folderId, category, dataEnc, dataIv, dataAuthTag, favorite, passwordStrength, hasPassword } = req.body;
+    // console.log(req.body)
+    const { userId, title, icon, folderId, category, dataEnc, dataIv, dataAuthTag, favorite, passwordStrength, hasPassword } = req.body.encryptedCredential;
 
     // Verify ownership
     const existing = await prisma.credential.findFirst({

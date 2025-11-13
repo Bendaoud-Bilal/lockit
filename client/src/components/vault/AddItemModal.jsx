@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useContext } from "react"
 import { 
   X, 
   Globe, 
@@ -31,41 +31,59 @@ import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
 import axios from "axios"
 import { useAuth } from '../../context/AuthContext';
+import apiService from "../../services/apiService"
 import toast from "react-hot-toast"
 
 
-const AddItemModal= ({show, setShow, onCredentialAdded}) => {
-  const [activeTab, setActiveTab] = useState("general")
+const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null, attachmentsOnly}) => {
+  const [activeTab, setActiveTab] = useState(attachmentsOnly ? "attachments": "general")
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
-  const { user,vaultKey } = useAuth();
+  const [vKey, setVKey] = useState(null);
+  const { user, vaultKey } = useAuth();
   const userId = user?.id;
+  const isEditMode = !!credentialToEdit;
   
+  // Helper function to normalize category names
+  const normalizeCategory = (category) => {
+    if (!category) return "Login";
+    const categoryMap = {
+      'login': 'Login',
+      'credit_card': 'Credit Card',
+      'note': 'Note',
+      'secure_note': 'Note',
+    };
+    return categoryMap[category.toLowerCase()] || category;
+  };
+  
+  useEffect(() => {
+    setVKey(vaultKey);
+  }, );
   const [showIcon, setShowIcon] = useState(false)
   const [errors, setErrors] = useState({})
-  const [savedCredentialId, setSavedCredentialId] = useState(null) // Store saved credential ID
+  const [savedCredentialId, setSavedCredentialId] = useState(credentialToEdit?.id || null) // Store saved credential ID
   const [selectedFiles, setSelectedFiles] = useState([]) // Store files to be uploaded
   const [formData, setFormData] = useState({
-    userId,
-    title: "",
-    category: "Login",
-    folder: "Work",
+    userId: credentialToEdit?.userId || userId,
+    title: credentialToEdit?.title || "",
+    category: normalizeCategory(credentialToEdit?.category) || "Login",
+    folder: credentialToEdit?.folder?.name || "Work",
     // Login fields
-    username: "",
-    email: "",
-    password: "",  // Password is now part of formData
-    website: "",
+    username: credentialToEdit?.username || "",
+    email: credentialToEdit?.email || "",
+    password: credentialToEdit?.password || "",  // Password is now part of formData
+    website: credentialToEdit?.website || "",
     // Credit Card fields
-    cardholderName: "",
-    cardNumber: "",
-    expiryMonth: "",
-    expiryYear: "",
-    cvv: "",
+    cardholderName: credentialToEdit?.cardholderName || "",
+    cardNumber: credentialToEdit?.cardNumber || "",
+    expiryMonth: credentialToEdit?.expiryMonth || "",
+    expiryYear: credentialToEdit?.expiryYear || "",
+    cvv: credentialToEdit?.cvv || "",
     // Secure Note fields
-    content: "",
+    content: credentialToEdit?.content || "",
     // Common field
-    notes: "",
-    icon: "globe",
+    notes: credentialToEdit?.notes || "",
+    icon: credentialToEdit?.icon || "globe",
     
   })
 
@@ -178,22 +196,22 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
   };
 
   const saveItem = async () => { 
+    // console.log('hehe:' vKey)
     try {
       // Validate form before saving
       if (!validateForm()) {
         // alert('Please fix the errors in the form');
         return;
       }
-
       // Clear old invalid keys from sessionStorage
       sessionStorage.removeItem('vaultKey');
     
       // Use a properly generated 256-bit key (32 bytes = 256 bits)
       // Generated using: crypto.randomBytes(32).toString('base64')
-      const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
+      // const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
     
       // Store it for future use
-      sessionStorage.setItem('vaultKey', vaultKey);
+      sessionStorage.setItem('vaultKey', vKey);
     
       if (!vaultKey) {
         throw new Error('No vault key found. Please login first.');
@@ -202,55 +220,67 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
     
   
     // Encrypt and prepare for API
-    const encryptedCredential = await prepareCredentialForStorage(formData, vaultKey);
+    const encryptedCredential = await prepareCredentialForStorage(formData, vKey);
 
-    const decryptedCredential = await decryptCredentialForClient(encryptedCredential, vaultKey);
+    // const decryptedCredential = await decryptCredentialForClient(encryptedCredential, vKey);
 
-    // Save credential first
-    const response = await axios.post(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/api/vault/credentials`, {
-      encryptedCredential})
+    // Save or update credential
+    let response;
+    if (isEditMode) {
+      // Update existing credential
+      response = await axios.put(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/api/vault/credentials/${credentialToEdit.id}`, {
+        encryptedCredential
+      });
+    } else {
+      // Create new credential
+      // response = await axios.post(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/api/vault/credentials`, {
+      //   encryptedCredential
+      // });
+      response = await apiService.addCredential(encryptedCredential)
+      // console.log(response.data)
+    }
 
-    // Save the credential ID
-    const credentialId = response.data.credential?.id
-    if (credentialId) {
-      setSavedCredentialId(credentialId)
+    // Get the credential ID (from response or from edit mode)
+    // const credentialId = response.data.credential?.id || credentialToEdit?.id;
+    
+    const credentialId = response.credential?.id || credentialToEdit?.id;
+    // Upload attachments if any were selected
+    if (selectedFiles.length > 0 && credentialId) {
+      let successCount = 0
+      let failCount = 0
       
-      // Upload attachments if any were selected
-      if (selectedFiles.length > 0) {
-        
-        let successCount = 0
-        let failCount = 0
-        
-        for (const file of selectedFiles) {
-          try {
-            await uploadAttachment(file, credentialId, vaultKey)
-            successCount++
-          } catch (attachError) {
-            failCount++
-            console.error(`✗ Error uploading attachment: ${file.name}`, attachError)
-            if (attachError.response) {
-              console.error('Server response:', attachError.response.data)
-              console.error('Status code:', attachError.response.status)
-            }
+      for (const file of selectedFiles) {
+        try {
+          await uploadAttachment(file, credentialId, vKey)
+          successCount++
+        } catch (attachError) {
+          failCount++
+          console.error(`✗ Error uploading attachment: ${file.name}`, attachError)
+          if (attachError.response) {
+            console.error('Server response:', attachError.response.data)
+            console.error('Status code:', attachError.response.status)
           }
         }
-        
-        // Clear selected files after upload
-        setSelectedFiles([])
-        
-        if (failCount > 0) {
-          toast.success(`Credential saved! ${successCount} attachment(s) uploaded successfully, ${failCount} failed.`)
-        } else {
-          toast.success(`Credential and ${successCount} attachment(s) saved successfully!`)
-        }
-      } else {
-
-        toast.success('Credential saved successfully!')
       }
-      setShow(false);
-        if (onCredentialAdded) {
-          onCredentialAdded(); // Trigger refetch in Vault
-        }
+      
+      // Clear selected files after upload
+      setSelectedFiles([])
+      
+      if (failCount > 0) {
+        toast.success(`Credential ${isEditMode ? 'updated' : 'saved'}! ${successCount} attachment(s) uploaded successfully, ${failCount} failed.`)
+      } else {
+        toast.success(`Credential ${isEditMode ? 'updated' : 'saved'} with ${successCount} attachment(s) successfully!`)
+      }
+    } else if (isEditMode) {
+      toast.success('Credential updated successfully!')
+    } else if (credentialId) {
+      setSavedCredentialId(credentialId)
+      toast.success('Credential saved successfully!')
+    }
+    
+    setShow(false);
+    if (onCredentialAdded) {
+      onCredentialAdded(); // Trigger refetch in Vault
     }
   
     } catch (error) {
@@ -377,14 +407,16 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 ">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Item</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {isEditMode && attachmentsOnly ? 'View Attachments' : isEditMode ? 'Edit Item' : 'Add New Item'}
+          </h2>
           <button type="button" className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-all" onClick={closeModal}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-6 pt-4 ">
+        {!attachmentsOnly && <div className="px-6 pt-4 ">
           <div className="flex gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
             <button
               onClick={() => setActiveTab("general")}
@@ -419,7 +451,8 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
               Attachments
             </button>
           </div>
-        </div>
+        </div> }
+        
 
         {/* Form Content - Scrollable */}
         {activeTab === "general" &&
@@ -451,7 +484,10 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none cursor-pointer"
+                  disabled={isEditMode}
+                  className={`w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none ${
+                    isEditMode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                  }`}
                 >
                   {category.map((cat) => (
                   <option key={cat.id}>{cat.name}</option>
@@ -459,6 +495,9 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
+              {isEditMode && (
+                <p className="text-xs text-gray-500 mt-1 italic">Category cannot be changed when editing</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Icon</label>
@@ -839,7 +878,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
         }
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-200 bg-gray-50">
+         <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center gap-2">
             <button type="button" className="px-5 py-2.5 text-sm text-gray-700 font-semibold hover:bg-gray-200 rounded-lg transition-all" onClick={closeModal}>
               Cancel
@@ -859,9 +898,13 @@ const AddItemModal= ({show, setShow, onCredentialAdded}) => {
                 d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
               />
             </svg>
-            Save Item{selectedFiles.length > 0 ? ` & Upload ${selectedFiles.length}` : ''}
+            {isEditMode 
+              ? `Update Item${selectedFiles.length > 0 ? ` & Upload ${selectedFiles.length}` : ''}`
+              : `Save Item${selectedFiles.length > 0 ? ` & Upload ${selectedFiles.length}` : ''}`
+            }
           </button>
         </div>
+        
       </div>
 
       {showIcon && <IconPicker showIcon= {showIcon} setShowIcon={setShowIcon} formData={formData} setFormData={setFormData} />}

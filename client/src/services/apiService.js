@@ -253,6 +253,14 @@ async updateTotpState(totpId, state) {
     return this.client.patch(`/api/vault/credentials/${ownerId}/${credentialId}/restore`)
 
    }
+   async addCredential(encryptedCredential){
+    return this.client.post(`/api/vault/credentials`,{encryptedCredential})
+
+   }
+   async updateCredential(credentialId,encryptedCredential){
+    return this.client.put(`/api/vault/credentials/${credentialId}`,{encryptedCredential})
+
+   }
   get axiosInstance() {
     return this.client;
   }
