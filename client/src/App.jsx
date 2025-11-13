@@ -15,6 +15,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import apiService from './services/apiService';
 import PasswordGenerator from './components/tools/passwordGenerator';
 import Authenticator from "./components/authenticator/Authenticator";
+import { X } from "lucide-react";
 
 
 
