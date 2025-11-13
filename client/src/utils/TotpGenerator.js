@@ -27,7 +27,6 @@ export const generateTOTP = (secret) => {
 
     const code = totp.generate();
     const formattedCode = code.toString().replace(/(\d{3})(\d{3})/, '$1 $2');
-    console.log(formattedCode);
     return formattedCode;
   } catch (error) {
     console.error('Error generating TOTP:', error);

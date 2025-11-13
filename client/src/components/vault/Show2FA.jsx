@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Shield, Copy, Check } from "lucide-react";
 import { useTotpGenerator } from "../../hooks/useTotpGenerator";
 import OtpProgress from "../../components/authenticator/OtpProgress";
-import { STORAGE_KEYS } from "../../context/AuthContext";
+import apiService from "../../services/apiService";
 
 function Show2FA({ credentialId, onHide }) {
 const [account, setAccount] = useState(null);
@@ -12,19 +12,10 @@ const [copied, setCopied] = useState(false);
 useEffect(() => {
   const fetchTotpAccount = async () => {
     try {
-      const sessionId = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
-      const response = await fetch(`http://localhost:3000/api/totp/${credentialId}`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${sessionId}`,
-        },
-      });
-
-      if (!response.ok) throw new Error("Erreur lors du chargement du TOTP");
-
-      const data = await response.json();
-      setAccount(data.data);
+      const response=await apiService.getTotpByCredentialId(credentialId);
+       setAccount(response.data);
     } catch (err) {
+      toast.error("Failed to show 2FA");
       console.error("Erreur lors du chargement du TOTP :", err);
     }
   };
@@ -40,8 +31,8 @@ const handleCopy = () => {
 
 if (!account) {
   return (
-    <div className="border rounded-lg bg-white shadow-sm mt-3 p-3 w-full">
-      <p className="text-gray-500 text-center text-xs">Chargement...</p>
+    <div className="border rounded-lg bg-white shadow-sm mt-3 p-3 w-full sm:flex-auto">
+      <p className="text-gray-500 text-center text-xs">Loading...</p>
     </div>
   );
 }

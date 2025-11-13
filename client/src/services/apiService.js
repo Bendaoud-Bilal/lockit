@@ -133,7 +133,11 @@ class ApiService {
   async getAllTotps() {
     return this.client.get("/api/totp");
   }
+ 
 
+  async getTotpByCredentialId(credentialId){
+    return this.client.get(`/api/totp/${credentialId}`);
+  }
   async deleteTotpEntry(totpId) {
     return this.client.delete(`/api/totp/${totpId}`);
   }
