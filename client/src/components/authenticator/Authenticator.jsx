@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import apiService from "../../services/apiService";
 
 
+
 const Authenticator = () => {
   const [showAddTOTP, setShowAddTOTP] = useState(false);
   const [accounts, setAccounts] = useState([]);

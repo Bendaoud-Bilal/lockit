@@ -127,7 +127,6 @@ export async function getAllTotps(req, res, next) {
   
     const userId = req.user.id;
     let totps = await getUserTotps(userId);
-    console.log("totp:",totps);
     totps = totps.filter((totp) => totp.state === "active");
     res.status(200).json({
       success: true,
