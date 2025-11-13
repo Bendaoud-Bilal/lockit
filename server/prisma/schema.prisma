@@ -141,7 +141,7 @@ model TotpSecret {
   credential   Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
   
   serviceName String @map("service_name") 
-  accountName String? @map("account_name") @unique
+  accountName String? @map("account_name")
   issuer      String?
   
   // Encrypted Secret
