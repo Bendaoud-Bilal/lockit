@@ -99,7 +99,7 @@ model Credential {
   
   // Basic Info
   category String  @default("login") // login, credit_card, secure_note, identity
-  title    String
+  title    String  @unique
   icon     String?
   favorite Boolean @default(false)
   

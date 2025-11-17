@@ -285,7 +285,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
   
     } catch (error) {
       console.error("Error saving item:", error);
-      alert('Failed to save credential. Please try again.')
+      alert(error)
     }
   
     
