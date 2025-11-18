@@ -7,6 +7,7 @@ import { decryptCredentialForClient } from '../../utils/credentialHelpers';
 import { useAuth } from '../../context/AuthContext';
 import ApiService from '../../services/apiService'
 import AddItemModal from './AddItemModal'
+import { notifyCredentialsMutated } from '../../utils/credentialEvents';
 
 
 const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) => {
@@ -62,8 +63,9 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
     const newState = !previous
     setIsFavorite(newState)
     try {
-      await ApiService.toggleFavorite(ownerToUse, idToUse)
-      if (onCredentialUpdated) onCredentialUpdated()
+  await ApiService.toggleFavorite(ownerToUse, idToUse)
+  notifyCredentialsMutated({ source: 'PasswordCard', kind: 'favorite', credentialId: idToUse })
+  if (onCredentialUpdated) onCredentialUpdated()
     } catch {
       setIsFavorite(previous)
       toast.error('Failed to update favorite')
@@ -75,8 +77,9 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
     const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
     if (!idToUse || !ownerToUse) return
     try {
-      await ApiService.restoreCredential(ownerToUse, idToUse)
+  await ApiService.restoreCredential(ownerToUse, idToUse)
       toast.success('credential restored')
+  notifyCredentialsMutated({ source: 'PasswordCard', kind: 'restore', credentialId: idToUse })
       if (onCredentialUpdated) onCredentialUpdated()
     } catch {
       
@@ -142,6 +145,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
       toast.success(state === 'deleted' ? 'Item deleted' : 'Item moved to archive', {
         position: 'top-center'
       })
+      notifyCredentialsMutated({ source: 'PasswordCard', kind: state === 'deleted' ? 'delete' : 'archive', credentialId: credId })
       if (onCredentialDeleted) onCredentialDeleted()
     } catch (error) {
       toast.error(error.message || 'Failed to delete password', {

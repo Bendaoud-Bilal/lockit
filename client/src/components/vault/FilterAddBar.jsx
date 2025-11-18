@@ -5,6 +5,7 @@ import AddItemModal from './AddItemModal.jsx'
 import ApiService from '../../services/apiService.js'
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast'
+import { notifyCredentialsMutated } from '../../utils/credentialEvents.js'
 
 const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDeleteAll }) => {
   const location = useLocation()
@@ -14,7 +15,7 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDelete
   const [show, setShow] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { user } = useAuth()
-  
+
   const deleteAllCredential = async () => {
     try {
       await ApiService.deleteAllCredentials(user?.id, 'deleted');
@@ -24,6 +25,7 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDelete
       }
       setArchiveNotEmpty(false);
       localStorage.setItem('archiveCount', '0');
+      notifyCredentialsMutated();
     } catch (error) {
       console.error('Error deleting all credentials:', error);
       toast.error(error.message || 'Failed to delete all credentials');
@@ -31,22 +33,23 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDelete
       setShowDeleteConfirm(false);
     }
   }
-  
+
 
 
 
 
   useEffect(() => {
-    if(location.pathname === '/archive')
-        setWideSearch(true)
+    if (location.pathname === '/archive')
+      setWideSearch(true)
   }, [location]);
 
   useEffect(() => {
     if (archiveCount > 0) {
       setArchiveNotEmpty(true);
-    }}, [archiveCount]);
-  
-  
+    }
+  }, [archiveCount]);
+
+
 
 
 
@@ -60,7 +63,7 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDelete
         <input
           type='text'
           placeholder='Search...'
-          className={`w-full rounded-md bg-gray-100 px-3 focus:outline-none text-sm sm:text-base ${wideSearch && archiveNotEmpty==false ? 'py-2' : 'py-1.5'}`}
+          className={`w-full rounded-md bg-gray-100 px-3 focus:outline-none text-sm sm:text-base ${wideSearch && archiveNotEmpty == false ? 'py-2' : 'py-1.5'}`}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -72,13 +75,13 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDelete
             <Plus className='w-4' strokeWidth={1} />
             <span className='hidden sm:inline'>Add item</span>
           </button>
-          {show && <AddItemModal show={show} setShow={setShow} onCredentialAdded={onCredentialAdded}/>}
+          {show && <AddItemModal show={show} setShow={setShow} onCredentialAdded={onCredentialAdded} />}
         </>
       )}
 
       {archiveNotEmpty && location.pathname === '/archive' && (
-        <button 
-          onClick={() => setShowDeleteConfirm(true)} 
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
           className='flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2'
         >
           <Trash className='w-4' strokeWidth={1} />

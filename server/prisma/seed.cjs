@@ -1,38 +1,121 @@
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+const argon2 = require('argon2');
+const crypto = require('crypto');
 
 const prisma = new PrismaClient();
+
+function generateSalt(length = 32) {
+  return crypto.randomBytes(length).toString('base64');
+}
+
+async function hashPassword(password, salt) {
+  const saltBuffer = Buffer.from(salt, 'base64');
+  return argon2.hash(password, {
+    type: argon2.argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 4,
+    salt: saltBuffer,
+  });
+}
+
+function generateVaultKey(masterPassword, vaultSalt) {
+  const plainKey = crypto.randomBytes(32).toString('base64');
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(
+    'aes-256-gcm',
+    crypto.scryptSync(masterPassword, Buffer.from(vaultSalt, 'base64'), 32),
+    iv
+  );
+
+  const encrypted = Buffer.concat([
+    cipher.update(plainKey, 'base64'),
+    cipher.final(),
+  ]);
+
+  const authTag = cipher.getAuthTag();
+
+  return {
+    plainKey,
+    encryptedKey: encrypted.toString('base64'),
+    iv: iv.toString('base64'),
+    authTag: authTag.toString('base64'),
+  };
+}
+
+function hashRecoveryKey(recoveryKey, salt) {
+  return crypto
+    .pbkdf2Sync(recoveryKey, Buffer.from(salt, 'base64'), 100000, 64, 'sha512')
+    .toString('base64');
+}
+
+function encryptCredentialPayload(payload, vaultKeyBase64) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv(
+    'aes-256-gcm',
+    Buffer.from(vaultKeyBase64, 'base64'),
+    iv
+  );
+  const ciphertext = Buffer.concat([
+    cipher.update(JSON.stringify(payload), 'utf8'),
+    cipher.final(),
+  ]);
+  const authTag = cipher.getAuthTag();
+
+  return {
+    dataEnc: ciphertext.toString('base64'),
+    dataIv: iv.toString('base64'),
+    dataAuthTag: authTag.toString('base64'),
+  };
+}
 
 async function main() {
   console.log('🌱 Starting database seed...');
 
   // Clean existing data
   await prisma.breachAlert.deleteMany({});
+  await prisma.recoveryKey.deleteMany({});
   await prisma.credential.deleteMany({});
   await prisma.folder.deleteMany({});
   await prisma.user.deleteMany({});
 
   console.log('✅ Cleaned existing data');
 
-  // Create test user
-  const salt = await bcrypt.genSalt(10);
-  const masterPasswordHash = await bcrypt.hash('TestPassword123!', salt);
+  // Create test user with secure defaults
+  const masterPassword = 'TestPassword123!';
+  const masterSalt = generateSalt();
+  const vaultSalt = generateSalt();
+  const recoverySalt = generateSalt();
+
+  const masterPasswordHash = await hashPassword(masterPassword, masterSalt);
+  const vaultKeyData = generateVaultKey(masterPassword, vaultSalt);
+  const recoveryKeyPlain = 'TEST-RECOVERY-KEY-123456';
+  const recoveryKeyHash = hashRecoveryKey(recoveryKeyPlain, recoverySalt);
 
   const user = await prisma.user.create({
     data: {
       username: 'testuser',
       email: 'john.doe@gmail.com',
       masterPasswordHash,
-      salt,
+      salt: masterSalt,
       kdfAlgorithm: 'argon2id',
       argon2Iterations: 3,
       kdfMemory: 65536,
       kdfParallelism: 4,
-      encryptedVaultKey: 'dummy_encrypted_key',
-      vaultKeyIv: 'dummy_iv',
-      vaultKeyAuthTag: 'dummy_auth_tag',
-      vaultSalt: 'dummy_vault_salt',
+      encryptedVaultKey: vaultKeyData.encryptedKey,
+      vaultKeyIv: vaultKeyData.iv,
+      vaultKeyAuthTag: vaultKeyData.authTag,
+      vaultSalt,
       masterKeyKdfIterations: 100000,
+    },
+  });
+
+  await prisma.recoveryKey.create({
+    data: {
+      userId: user.id,
+      keyHash: recoveryKeyHash,
+      salt: recoverySalt,
+      status: 'active',
     },
   });
 
@@ -55,163 +138,168 @@ async function main() {
 
   console.log('✅ Created folders');
 
-  // Create credentials with various security states
   const now = new Date();
-  const oneYearAgo = new Date(now.setFullYear(now.getFullYear() - 1));
-  const twoYearsAgo = new Date(now.setFullYear(now.getFullYear() - 2));
+  const twoYearsAgo = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
 
-  const credentials = await Promise.all([
-    // Weak password
-    prisma.credential.create({
+  const credentialBlueprints = [
+    {
+      title: 'LinkedIn',
+      icon: 'globe',
+      folderId: workFolder.id,
+      favorite: false,
+      passwordStrength: 25,
+      passwordReused: false,
+      compromised: false,
+      passwordLastChanged: new Date(),
+      has2fa: false,
+      payload: {
+        username: 'john.doe',
+        email: 'john.doe@gmail.com',
+        password: 'WeakLinkedin#1',
+        website: 'https://www.linkedin.com',
+        notes: 'Needs stronger password',
+      },
+    },
+    {
+      title: 'GitHub',
+      icon: 'gitbranch',
+      folderId: workFolder.id,
+      favorite: true,
+      passwordStrength: 75,
+      passwordReused: true,
+      compromised: false,
+      passwordLastChanged: new Date(),
+      has2fa: true,
+      payload: {
+        username: 'john-github',
+        email: 'john.doe@gmail.com',
+        password: 'ReusedPassword!2024',
+        website: 'https://github.com',
+        notes: 'Reused with Slack – update soon',
+      },
+    },
+    {
+      title: 'Twitter',
+      icon: 'target',
+      folderId: personalFolder.id,
+      favorite: false,
+      passwordStrength: 60,
+      passwordReused: false,
+      compromised: true,
+      passwordLastChanged: new Date(),
+      has2fa: false,
+      payload: {
+        username: 'johnnyTweets',
+        email: 'john.doe@gmail.com',
+        password: 'CompromisedPass123!',
+        website: 'https://twitter.com',
+        notes: 'Reported in latest breach',
+      },
+    },
+    {
+      title: 'Facebook',
+      icon: 'globe',
+      folderId: personalFolder.id,
+      favorite: false,
+      passwordStrength: 65,
+      passwordReused: false,
+      compromised: false,
+      passwordLastChanged: twoYearsAgo,
+      has2fa: false,
+      payload: {
+        username: 'john.doe',
+        email: 'john.doe@gmail.com',
+        password: 'OldFacebookPass!2019',
+        website: 'https://facebook.com',
+        notes: 'Password not changed in over 2 years',
+      },
+    },
+    {
+      title: 'Gmail',
+      icon: 'mail',
+      folderId: workFolder.id,
+      favorite: true,
+      passwordStrength: 95,
+      passwordReused: false,
+      compromised: false,
+      passwordLastChanged: new Date(),
+      has2fa: true,
+      payload: {
+        username: 'john.doe',
+        email: 'john.doe@gmail.com',
+        password: 'Sup3rStrongGmail!2025',
+        website: 'https://mail.google.com',
+        notes: 'Primary email account',
+      },
+    },
+    {
+      title: 'Amazon',
+      icon: 'wallet',
+      folderId: personalFolder.id,
+      favorite: false,
+      passwordStrength: 85,
+      passwordReused: false,
+      compromised: false,
+      passwordLastChanged: new Date(),
+      has2fa: true,
+      payload: {
+        username: 'johnshopper',
+        email: 'john.doe@gmail.com',
+        password: 'ShoppingSecure#2025',
+        website: 'https://amazon.com',
+        notes: '2FA enabled via authenticator app',
+      },
+    },
+  ];
+
+  const credentials = [];
+
+  for (const blueprint of credentialBlueprints) {
+    const encrypted = encryptCredentialPayload(blueprint.payload, vaultKeyData.plainKey);
+    const credential = await prisma.credential.create({
       data: {
         userId: user.id,
-        folderId: workFolder.id,
+        folderId: blueprint.folderId,
         category: 'login',
-        title: 'LinkedIn',
-        icon: '🔗',
-        favorite: false,
-        dataEnc: 'encrypted_linkedin_data',
-        dataIv: 'iv_linkedin',
-        dataAuthTag: 'auth_linkedin',
+        title: blueprint.title,
+        icon: blueprint.icon,
+        favorite: blueprint.favorite,
+        dataEnc: encrypted.dataEnc,
+        dataIv: encrypted.dataIv,
+        dataAuthTag: encrypted.dataAuthTag,
         hasPassword: true,
-        passwordStrength: 25, // Weak
-        passwordReused: false,
-        passwordLastChanged: new Date(),
-        compromised: false,
-        has2fa: false,
+        passwordStrength: blueprint.passwordStrength,
+        passwordReused: blueprint.passwordReused,
+        passwordLastChanged: blueprint.passwordLastChanged,
+        compromised: blueprint.compromised,
+        has2fa: blueprint.has2fa,
       },
-    }),
-
-    // Reused password
-    prisma.credential.create({
-      data: {
-        userId: user.id,
-        folderId: workFolder.id,
-        category: 'login',
-        title: 'GitHub',
-        icon: '💻',
-        favorite: true,
-        dataEnc: 'encrypted_github_data',
-        dataIv: 'iv_github',
-        dataAuthTag: 'auth_github',
-        hasPassword: true,
-        passwordStrength: 75,
-        passwordReused: true, // Reused
-        passwordLastChanged: new Date(),
-        compromised: false,
-        has2fa: true,
-      },
-    }),
-
-    // Exposed/Compromised password
-    prisma.credential.create({
-      data: {
-        userId: user.id,
-        folderId: personalFolder.id,
-        category: 'login',
-        title: 'Twitter',
-        icon: '🐦',
-        favorite: false,
-        dataEnc: 'encrypted_twitter_data',
-        dataIv: 'iv_twitter',
-        dataAuthTag: 'auth_twitter',
-        hasPassword: true,
-        passwordStrength: 60,
-        passwordReused: false,
-        passwordLastChanged: new Date(),
-        compromised: true, // Exposed
-        has2fa: false,
-      },
-    }),
-
-    // Old password
-    prisma.credential.create({
-      data: {
-        userId: user.id,
-        folderId: personalFolder.id,
-        category: 'login',
-        title: 'Facebook',
-        icon: '📘',
-        favorite: false,
-        dataEnc: 'encrypted_facebook_data',
-        dataIv: 'iv_facebook',
-        dataAuthTag: 'auth_facebook',
-        hasPassword: true,
-        passwordStrength: 65,
-        passwordReused: false,
-        passwordLastChanged: twoYearsAgo, // Old
-        compromised: false,
-        has2fa: false,
-      },
-    }),
-
-    // Strong password (good example)
-    prisma.credential.create({
-      data: {
-        userId: user.id,
-        folderId: workFolder.id,
-        category: 'login',
-        title: 'Gmail',
-        icon: '📧',
-        favorite: true,
-        dataEnc: 'encrypted_gmail_data',
-        dataIv: 'iv_gmail',
-        dataAuthTag: 'auth_gmail',
-        hasPassword: true,
-        passwordStrength: 95, // Strong
-        passwordReused: false,
-        passwordLastChanged: new Date(),
-        compromised: false,
-        has2fa: true,
-      },
-    }),
-
-    // Another strong one
-    prisma.credential.create({
-      data: {
-        userId: user.id,
-        folderId: personalFolder.id,
-        category: 'login',
-        title: 'Amazon',
-        icon: '🛒',
-        favorite: false,
-        dataEnc: 'encrypted_amazon_data',
-        dataIv: 'iv_amazon',
-        dataAuthTag: 'auth_amazon',
-        hasPassword: true,
-        passwordStrength: 85,
-        passwordReused: false,
-        passwordLastChanged: new Date(),
-        compromised: false,
-        has2fa: true,
-      },
-    }),
-  ]);
+    });
+    credentials.push(credential);
+  }
 
   console.log('✅ Created', credentials.length, 'credentials');
 
-  // Create breach alerts
   const breachAlerts = await Promise.all([
     prisma.breachAlert.create({
       data: {
         userId: user.id,
-        credentialId: credentials[0].id, // LinkedIn
+        credentialId: credentials[0].id,
         affectedEmail: 'john.doe@gmail.com',
         breachSource: 'LinkedIn',
-        breachDate: new Date('2024-01-15'),
+        breachDate: new Date('2024-01-15T00:00:00Z'),
         affectedData: '700 million user records exposed including emails and passwords',
         severity: 'critical',
         status: 'pending',
       },
     }),
-
     prisma.breachAlert.create({
       data: {
         userId: user.id,
         credentialId: null,
         affectedEmail: 'johndoe@work.com',
         breachSource: 'Adobe',
-        breachDate: new Date('2023-12-10'),
+        breachDate: new Date('2023-12-10T00:00:00Z'),
         affectedData: 'Security breach affecting 38 million users',
         severity: 'high',
         status: 'resolved',
@@ -225,7 +313,8 @@ async function main() {
   console.log('\nTest User Credentials:');
   console.log('  Username:', user.username);
   console.log('  Email:', user.email);
-  console.log('  Password: TestPassword123!');
+  console.log('  Password:', masterPassword);
+  console.log('  Recovery Key:', recoveryKeyPlain);
   console.log('  User ID:', user.id);
 }
 

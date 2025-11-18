@@ -31,6 +31,7 @@ import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
 import APP_CONFIG from "../../utils/config";
 import axios from "axios"
+import { notifyCredentialsMutated } from '../../utils/credentialEvents';
 import { useAuth } from '../../context/AuthContext';
 import apiService from "../../services/apiService"
 import toast from "react-hot-toast"
@@ -205,6 +206,7 @@ const AddItemModal = ({
 
   const saveItem = async () => { 
     // console.log('hehe:' vKey)
+    let credentialId = null;
     try {
       // Validate form before saving
       if (!validateForm()) {
@@ -243,7 +245,7 @@ const AddItemModal = ({
     // Get the credential ID (from response or from edit mode)
     // const credentialId = response.data.credential?.id || credentialToEdit?.id;
     
-    const credentialId = response?.credential?.id || response?.id || credentialToEdit?.id;
+    credentialId = response?.credential?.id || response?.id || credentialToEdit?.id;
     // Upload attachments if any were selected
     if (selectedFiles.length > 0 && credentialId) {
       let successCount = 0
@@ -279,18 +281,16 @@ const AddItemModal = ({
     }
     
     setShow(false);
+    notifyCredentialsMutated({ source: 'AddItemModal', credentialId });
     if (onCredentialAdded) {
       onCredentialAdded(); // Trigger refetch in Vault
     }
-  
+    
     } catch (error) {
       console.error("Error saving item:", error);
-      alert('Failed to save credential. Please try again.')
+      toast.error('Failed to save credential. Please try again.');
     }
-  
-    
-   }
-
+  }
   // Function to encrypt and upload a file
   const uploadAttachment = async (file, credentialId, vaultKey) => {
     try {

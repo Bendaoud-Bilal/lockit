@@ -1,48 +1,72 @@
 import '../style/dashboard.css';
 import '../style/data-breach.css';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import SecurityScoreCard from './SecurityScoreCard';
 import PasswordCards from './PasswordCards';
 import BreachAlerts from './BreachAlerts';
 import CardDetails from './CardDetails';
-import APP_CONFIG from '../../../utils/config';
+import apiService from '../../../services/apiService';
+import { useAuth } from '../../../context/AuthContext';
+import { subscribeToCredentialMutations } from '../../../utils/credentialEvents';
 
 export default function Dashboard() {
-  const API_BASE_URL = APP_CONFIG.API_BASE_URL;
   const [security, setSecurity] = useState(null);
   const [cardsData, setCardsData] = useState(null);
   const [breachAlerts, setBreachAlerts] = useState([]);
   const [selectedCardItems, setSelectedCardItems] = useState(null);
+  const [selectedCardId, setSelectedCardId] = useState(null);
   const [modalTitle, setModalTitle] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const userId = sessionStorage.getItem('userId') || '1';
+  const { user, isAuthenticated } = useAuth();
+
+  const userId = useMemo(() => {
+    if (user?.id) return user.id;
+    try {
+      const stored = sessionStorage.getItem('lockit_user_data');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.id) return parsed.id;
+      }
+    } catch (parseError) {
+      console.warn('Failed to restore user from sessionStorage', parseError);
+    }
+    return null;
+  }, [user]);
+
+  const buildRequestConfig = useCallback(() => {
+    if (!userId || isAuthenticated) return undefined;
+    return { headers: { 'x-user-id': userId.toString() } };
+  }, [isAuthenticated, userId]);
 
   const loadDashboardData = useCallback(async ({ showSpinner = true } = {}) => {
+    if (!userId) {
+      setSecurity(null);
+      setCardsData(null);
+      setBreachAlerts([]);
+      setError('Please log in to view your dashboard metrics.');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (showSpinner) {
         setLoading(true);
       }
-      const headers = { 'x-user-id': userId };
+      const config = buildRequestConfig();
 
       const [scoreRes, cardsRes, alertsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/users/${userId}/security-score`, { headers }),
-        fetch(`${API_BASE_URL}/api/users/${userId}/password-cards`, { headers }),
-        fetch(`${API_BASE_URL}/api/users/${userId}/breach-alerts`, { headers }),
+        apiService.axiosInstance.get(`/api/users/${userId}/security-score`, config),
+        apiService.axiosInstance.get(`/api/users/${userId}/password-cards`, config),
+        apiService.axiosInstance.get(`/api/users/${userId}/breach-alerts`, config),
       ]);
 
-      console.log('[Dashboard] Fetch responses', {
-        score: scoreRes.status,
-        cards: cardsRes.status,
-        alerts: alertsRes.status,
-      });
-
-      if (scoreRes.ok) setSecurity(await scoreRes.json());
-      if (cardsRes.ok) setCardsData(await cardsRes.json());
-      if (alertsRes.ok) setBreachAlerts(await alertsRes.json());
+      setSecurity(scoreRes);
+      setCardsData(cardsRes);
+      setBreachAlerts(alertsRes);
 
       setError(null);
     } catch (err) {
@@ -52,71 +76,53 @@ export default function Dashboard() {
         setLoading(false);
       }
     }
-  }, [API_BASE_URL, userId]);
+  }, [buildRequestConfig, userId]);
 
   useEffect(() => {
-    if (!sessionStorage.getItem('userId')) {
-      sessionStorage.setItem('userId', '1');
-    }
     loadDashboardData().catch((err) => {
       console.error('Error loading dashboard data:', err);
     });
-  }, [loadDashboardData, userId]);
+  }, [loadDashboardData]);
 
   async function handleCheckBreaches() {
+    if (!userId) {
+      toast.error('User not available. Please log in again.');
+      return;
+    }
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/users/${userId}/check-breaches`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': userId,
-          },
-        }
+      const config = buildRequestConfig();
+      const result = await apiService.axiosInstance.post(
+        `/api/users/${userId}/check-breaches`,
+        {},
+        config
       );
-
-      if (response.status === 429) {
-        toast.error('Rate limit exceeded. Please wait before retrying.');
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error('failed_to_check');
-      }
-
-      const result = await response.json();
       toast.success(
         result.newBreaches > 0
           ? `Found ${result.newBreaches} new breach${result.newBreaches > 1 ? 'es' : ''}.`
           : 'No new breaches detected.'
       );
 
-  await loadDashboardData({ showSpinner: false });
+      await loadDashboardData({ showSpinner: false });
     } catch (err) {
       console.error('Error checking breaches:', err);
-      toast.error('Unable to check for breaches. Please try again.');
+      if (err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate')) {
+        toast.error('Rate limit exceeded. Please wait before retrying.');
+        return;
+      }
+      toast.error(err?.message || 'Unable to check for breaches. Please try again.');
     }
   }
 
   async function handleToggleBreachResolved(breachId) {
+    if (!userId) return;
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/breach-alerts/${breachId}/toggle-resolved`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': userId,
-          },
-        }
+      const config = buildRequestConfig();
+      const updated = await apiService.axiosInstance.patch(
+        `/api/breach-alerts/${breachId}/toggle-resolved`,
+        {},
+        config
       );
-      if (!res.ok) {
-        toast.error('Unable to update breach status right now.');
-        return;
-      }
 
-      const updated = await res.json();
       setBreachAlerts((prev) =>
         prev.map((b) =>
           b.id === breachId ? { ...b, status: updated.status } : b
@@ -124,28 +130,20 @@ export default function Dashboard() {
       );
     } catch (err) {
       console.error('Error toggling breach resolved:', err);
-      toast.error('Unable to update breach status.');
+      toast.error(err?.message || 'Unable to update breach status.');
     }
   }
 
   async function handleToggleBreachDismissed(breachId) {
+    if (!userId) return;
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/breach-alerts/${breachId}/toggle-dismissed`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': userId,
-          },
-        }
+      const config = buildRequestConfig();
+      const updated = await apiService.axiosInstance.patch(
+        `/api/breach-alerts/${breachId}/toggle-dismissed`,
+        {},
+        config
       );
-      if (!res.ok) {
-        toast.error('Unable to update breach status right now.');
-        return;
-      }
 
-      const updated = await res.json();
       setBreachAlerts((prev) =>
         prev.map((b) =>
           b.id === breachId ? { ...b, status: updated.status } : b
@@ -153,22 +151,39 @@ export default function Dashboard() {
       );
     } catch (err) {
       console.error('Error toggling breach dismissed:', err);
-      toast.error('Unable to update breach status.');
+      toast.error(err?.message || 'Unable to update breach status.');
     }
   }
+
+  const fetchCardDetails = useCallback(async (cardId) => {
+    if (!userId) return null;
+    const config = buildRequestConfig();
+    return apiService.axiosInstance.get(`/api/password-cards/${cardId}/details`, config);
+  }, [buildRequestConfig, userId]);
 
   const handleCredentialMutated = useCallback(() => {
     loadDashboardData({ showSpinner: false }).catch((err) => {
       console.error('Error refreshing dashboard data:', err);
       toast.error('Failed to refresh dashboard data.');
     });
-  }, [loadDashboardData]);
+
+    if (detailsOpen && selectedCardId) {
+      fetchCardDetails(selectedCardId)
+        .then((data) => {
+          if (!data || !data.items) return;
+          setSelectedCardItems(data.items);
+        })
+        .catch((err) => console.error('Error refreshing card details:', err));
+    }
+  }, [detailsOpen, fetchCardDetails, loadDashboardData, selectedCardId]);
 
   function handleOpenCard(cardId) {
-    fetch(`${API_BASE_URL}/api/password-cards/${cardId}/details`, {
-      headers: { 'x-user-id': userId },
-    })
-      .then((res) => (res.ok ? res.json() : null))
+    if (!userId) {
+      toast.error('User not available.');
+      return;
+    }
+
+    fetchCardDetails(cardId)
       .then((data) => {
         if (!data || !data.items) return;
         const cardTitles = {
@@ -177,12 +192,20 @@ export default function Dashboard() {
           exposed: 'Exposed Passwords',
           old: 'Old Passwords',
         };
+        setSelectedCardId(cardId);
         setSelectedCardItems(data.items);
         setModalTitle(cardTitles[cardId] || 'Credentials');
         setDetailsOpen(true);
       })
       .catch((err) => console.error('error fetching card details', err));
   }
+
+  useEffect(() => {
+    const unsubscribe = subscribeToCredentialMutations(() => {
+      handleCredentialMutated();
+    });
+    return unsubscribe;
+  }, [handleCredentialMutated]);
 
   if (loading) {
     return (
@@ -206,7 +229,7 @@ export default function Dashboard() {
         >
           <h2>Error loading dashboard</h2>
           <p>{error}</p>
-          <button onClick={loadDashboardData}>Retry</button>
+          {userId && <button onClick={loadDashboardData}>Retry</button>}
         </div>
       </div>
     );
@@ -230,7 +253,11 @@ export default function Dashboard() {
 
       <CardDetails
         isOpen={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
+        onClose={() => {
+          setDetailsOpen(false);
+          setSelectedCardId(null);
+          setSelectedCardItems(null);
+        }}
         listItems={selectedCardItems}
         title={modalTitle}
         onRefresh={handleCredentialMutated}
