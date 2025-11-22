@@ -18,7 +18,7 @@ import {
  * @returns {Promise<Object>} Encrypted credential object ready for API
  */
 export async function prepareCredentialForStorage(credentialData, vaultKeyBase64) {
-  const { userId, title, category, icon, favorite, folderId, has2fa } = credentialData;
+  const { userId, title, category, icon, favorite, folderId, has2fa, passwordReused, compromised } = credentialData;
   
   // Extract the sensitive data that needs to be encrypted
   let sensitiveData = {};
@@ -97,6 +97,8 @@ export async function prepareCredentialForStorage(credentialData, vaultKeyBase64
     dataIv,
     dataAuthTag,
     hasPassword,
+    passwordReused: passwordReused || false,
+    compromised: compromised || false,
     passwordStrength,
     passwordLastChanged: hasPassword ? new Date().toISOString() : null
   };
@@ -319,6 +321,57 @@ export function getReusedPasswordCredentials(credentials) {
 }
 
 /**
+ * Detect password reuse across all credentials
+ * @param {Array} credentials - Array of decrypted credentials
+ * @returns {Array} Updated credentials with passwordReused flag
+ */
+export function detectPasswordReuse(credentials) {
+  const passwordMap = new Map(); // Map password -> array of credential IDs
+  
+  // First pass: build password map
+  credentials.forEach(credential => {
+    if (credential.hasPassword && credential.password) {
+      if (!passwordMap.has(credential.password)) {
+        passwordMap.set(credential.password, []);
+      }
+      passwordMap.get(credential.password).push(credential.id);
+    }
+  });
+  
+  // Second pass: mark reused passwords
+  return credentials.map(credential => {
+    if (credential.hasPassword && credential.password) {
+      const usageCount = passwordMap.get(credential.password)?.length || 0;
+      return {
+        ...credential,
+        passwordReused: usageCount > 1
+      };
+    }
+    return {
+      ...credential,
+      passwordReused: false
+    };
+  });
+}
+
+/**
+ * Check if a specific password is reused
+ * @param {string} password - Password to check
+ * @param {Array} allPasswords - Array of all passwords to check against
+ * @param {string} excludePassword - Optional password to exclude from check (for edit mode)
+ * @returns {boolean} True if password is reused
+ */
+export function isPasswordReused(password, allPasswords, excludePassword = null) {
+  if (!password) return false;
+  
+  const passwordsToCheck = excludePassword 
+    ? allPasswords.filter(pwd => pwd !== excludePassword)
+    : allPasswords;
+  
+  return passwordsToCheck.includes(password);
+}
+
+/**
  * Get compromised credentials
  * @param {Array} credentials - Array of decrypted credentials
  * @returns {Array} Compromised credentials
@@ -397,6 +450,8 @@ export default {
   sortCredentials,
   getWeakPasswordCredentials,
   getReusedPasswordCredentials,
+  detectPasswordReuse,
+  isPasswordReused,
   getCompromisedCredentials,
   getFavoriteCredentials,
   validateCredential

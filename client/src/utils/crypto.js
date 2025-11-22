@@ -180,8 +180,8 @@ export function calculatePasswordStrength(password) {
   
   // Length check
   if (password.length >= 8) score += 1;
+  if (password.length >= 10) score += 1;
   if (password.length >= 12) score += 1;
-  if (password.length >= 16) score += 1;
   
   // Character variety
   if (/[a-z]/.test(password)) score += 1;

@@ -9,7 +9,7 @@ import ApiService from '../../services/apiService'
 import AddItemModal from './AddItemModal'
 
 
-const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) => {
+const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, listPasswords, setListPasswords }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [showCardNumber, setShowCardNumber] = useState(false)
   const [showCvv, setShowCvv] = useState(false)
@@ -209,6 +209,18 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
                     <span className="text-green-600">strong</span>
                   </div>
                 )}
+                {/* {credential.passwordReused && credential.category==='login' && (
+                  <div className="flex justify-center items-center text-xs bg-yellow-100 rounded-lg px-2 sm:px-3 py-0.5">
+                    <RefreshCcw className="w-3 mr-1" strokeWidth={2} />
+                    <span className="text-yellow-700">Reused</span>
+                  </div>
+                )}
+                {credential.compromised && credential.category==='login' && (
+                  <div className="flex justify-center items-center text-xs bg-red-100 rounded-lg px-2 sm:px-3 py-0.5">
+                    <Shield className="w-3 mr-1" strokeWidth={2} />
+                    <span className="text-red-600">Compromised</span>
+                  </div>
+                )} */}
               </div>
               <div className="flex flex-wrap gap-2 items-center">
                 {hasFolder && (
@@ -413,6 +425,8 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
           setShow={setShowEditModal} 
           credentialToEdit={decryptedData} 
           onCredentialAdded={onCredentialUpdated}
+          listPasswords={listPasswords}
+          setListPasswords={setListPasswords}
         />
       )}
       {showAttachments && (
@@ -422,6 +436,8 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
           credentialToEdit={decryptedData} 
           attachmentsOnly={true}
           onCredentialAdded={onCredentialUpdated}
+          listPasswords={listPasswords}
+          setListPasswords={setListPasswords}
         />
       )}
     </>

@@ -6,7 +6,7 @@ import ApiService from '../../services/apiService.js'
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast'
 
-const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDeleteAll }) => {
+const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDeleteAll, listPasswords }) => {
   const location = useLocation()
   const [wideSearch, setWideSearch] = useState(false)
   const [archiveNotEmpty, setArchiveNotEmpty] = useState(false)
@@ -72,7 +72,7 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDelete
             <Plus className='w-4' strokeWidth={1} />
             <span className='hidden sm:inline'>Add item</span>
           </button>
-          {show && <AddItemModal show={show} setShow={setShow} onCredentialAdded={onCredentialAdded}/>}
+          {show && <AddItemModal show={show} setShow={setShow} onCredentialAdded={onCredentialAdded} listPasswords={listPasswords}/>}
         </>
       )}
 
