@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 // ============================================
 export const addCredential = async (req, res) => {
   try {
-    const { userId, folderId, category, title, icon, dataEnc, dataIv, dataAuthTag, hasPassword, passwordStrength } = req.body.encryptedCredential;
+    const { userId, folderId, category, title, icon, dataEnc, dataIv, dataAuthTag, hasPassword, passwordStrength, passwordReused, compromised } = req.body.encryptedCredential;
 
     console.log('Received credential data:', req.body);
     
@@ -31,6 +31,8 @@ export const addCredential = async (req, res) => {
         dataAuthTag,
         hasPassword: hasPassword !== undefined ? hasPassword : true,
         passwordStrength: passwordStrength || null,
+        passwordReused: passwordReused || false,
+        compromised: compromised || false,
         passwordLastChanged: hasPassword ? new Date() : null,
       },
       include: {
@@ -227,7 +229,7 @@ export const updateCredential = async (req, res) => {
   try {
     const { id } = req.params;
     // console.log(req.body)
-    const { userId, title, icon, folderId, category, dataEnc, dataIv, dataAuthTag, favorite, passwordStrength, hasPassword } = req.body.encryptedCredential;
+    const { userId, title, icon, folderId, category, dataEnc, dataIv, dataAuthTag, favorite, passwordStrength, hasPassword, passwordReused, compromised } = req.body.encryptedCredential;
 
     // Verify ownership
     const existing = await prisma.credential.findFirst({
@@ -250,6 +252,8 @@ export const updateCredential = async (req, res) => {
     if (favorite !== undefined) updateData.favorite = favorite;
     if (passwordStrength !== undefined) updateData.passwordStrength = passwordStrength;
     if (hasPassword !== undefined) updateData.hasPassword = hasPassword;
+    if (passwordReused !== undefined) updateData.passwordReused = passwordReused;
+    if (compromised !== undefined) updateData.compromised = compromised;
     
     // If encrypted data is being updated
     if (dataEnc && dataIv && dataAuthTag) {
