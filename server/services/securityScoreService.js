@@ -3,6 +3,11 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+/**
+ * Calculates the composite security score and supporting metrics.
+ * - Applies configurable weights to penalties for risky credential states.
+ * - Aggregates Prisma counts in parallel to build the final response object.
+ */
 export async function computeSecurityScore(userId, opts = {}) {
   const {
     compromisedWeight = 40,

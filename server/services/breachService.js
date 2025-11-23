@@ -1,5 +1,10 @@
 import prisma from './prisma.service.js';
 
+/**
+ * Retrieves breach alerts for a user and normalizes them for the dashboard.
+ * - Loads recent alerts with minimal fields and applies presentation mapping.
+ * - Formats dates and severity text for direct display consumption.
+ */
 export async function listBreachAlertsForUser(userId) {
   const uid = Number(userId);
   const alerts = await prisma.breachAlert.findMany({
@@ -31,6 +36,10 @@ export async function listBreachAlertsForUser(userId) {
   }));
 }
 
+/**
+ * Finds a single breach alert with ownership information.
+ * - Supports dashboard interactions that need the full alert payload.
+ */
 export async function getBreachAlert(id) {
   return prisma.breachAlert.findUnique({
     where: { id: Number(id) },

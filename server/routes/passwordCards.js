@@ -4,6 +4,11 @@ import { getPasswordCards, getCardDetails } from '../services/passwordCardsServi
 
 const router = express.Router();
 
+/**
+ * Delivers the password card aggregates for the authenticated user.
+ * - Validates that the requester matches the path parameter via middleware.
+ * - Invokes the card service to compute categorized counts.
+ */
 router.get('/users/:id/password-cards', requireAuth, async (req, res) => {
   try {
     const userId = Number(req.params.id);
@@ -16,6 +21,11 @@ router.get('/users/:id/password-cards', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * Returns the credential list that backs a specific password risk card.
+ * - Ensures the caller is authenticated and owns the requested data.
+ * - Delegates to the service layer for the filtered credential query.
+ */
 router.get('/password-cards/:cardId/details', requireAuth, async (req, res) => {
   try {
     const userId = req.userId;

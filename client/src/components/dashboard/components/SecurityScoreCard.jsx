@@ -1,6 +1,11 @@
 import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 
+/**
+ * Renders the security score summary card at the top of the dashboard.
+ * - Displays the aggregate score, textual status, and supporting metrics.
+ * - Visualizes progress through a horizontal bar tied to the percentage value.
+ */
 export default function SecurityScoreCard({ security = {} }) {
   const { score = 0, pct = 0, statusText = 'Unknown', total = 0, weak = 0, reused = 0, exposed = 0 } = security;
 

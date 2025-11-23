@@ -9,6 +9,11 @@ import {
 
 const router = express.Router();
 
+/**
+ * Lists breach alerts tied to the authenticated user.
+ * - Verifies path ownership before retrieving items from the service layer.
+ * - Returns a trimmed payload used in the dashboard breach panel.
+ */
 router.get('/users/:id/breach-alerts', requireAuth, async (req, res) => {
   try {
     const userId = Number(req.params.id);
@@ -21,6 +26,11 @@ router.get('/users/:id/breach-alerts', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * Triggers a Have I Been Pwned sync for the requesting user.
+ * - Rejects unauthorized calls and handles upstream rate limit responses.
+ * - Returns summary counts so the dashboard can provide feedback.
+ */
 router.post('/users/:id/check-breaches', requireAuth, async (req, res) => {
   try {
     const userId = Number(req.params.id);
@@ -41,6 +51,11 @@ router.post('/users/:id/check-breaches', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * Fetches detail for a specific breach alert when needed.
+ * - Confirms the alert exists and belongs to the authenticated user.
+ * - Supplies the alert payload for follow-up UI flows if required.
+ */
 router.get('/breach-alerts/:id', requireAuth, async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -54,6 +69,11 @@ router.get('/breach-alerts/:id', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * Toggles an alert between pending and resolved states.
+ * - Delegates to the detection service which enforces ownership checks.
+ * - Returns the new status so the client can sync without refetching.
+ */
 router.patch('/breach-alerts/:id/toggle-resolved', requireAuth, async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -71,6 +91,11 @@ router.patch('/breach-alerts/:id/toggle-resolved', requireAuth, async (req, res)
   }
 });
 
+/**
+ * Switches an alert between dismissed and active states.
+ * - Calls the detection service helper and handles common error responses.
+ * - Responds with the updated status for optimistic UI updates.
+ */
 router.patch('/breach-alerts/:id/toggle-dismissed', requireAuth, async (req, res) => {
   try {
     const id = Number(req.params.id);
