@@ -75,25 +75,7 @@ const IconPicker = ({showIcon, setShowIcon, formData, setFormData}) => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 bg-[#ececf0] p-1 rounded-full w-fit">
-          <button
-            onClick={() => setActiveTab("general")}
-            className={`px-8 py-2 rounded-full font-medium transition-colors ${
-              activeTab === "general" ? "bg-white text-[#000000]" : "text-[#717182] hover:text-[#000000]"
-            }`}
-          >
-            General
-          </button>
-          <button
-            onClick={() => setActiveTab("custom")}
-            className={`px-8 py-2 rounded-full font-medium transition-colors ${
-              activeTab === "custom" ? "bg-white text-[#000000]" : "text-[#717182] hover:text-[#000000]"
-            }`}
-          >
-            Custom
-          </button>
-        </div>
+       
 
         {/* Icon Grid */}
         <div className="grid grid-cols-8 gap-3">

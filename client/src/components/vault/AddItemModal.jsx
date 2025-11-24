@@ -422,9 +422,10 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
 
   // Determine label
   let label = "";
-  if (strength <= 2) label = "Weak";
-  else if (strength === 3 || strength === 4) label = "Medium";
-  else if (strength === 5) label = "Strong";
+  if (strength <= 1) label = "Weak";
+  else if (strength === 2 ) label = "Medium";
+  else if (strength === 3 ) label = "Good";
+  else if (strength > 3) label = "Strong";
   console.log(strength, label)
   return { strength, label };
 
@@ -682,7 +683,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
                       </span>
                     </div>
                     <div className="flex gap-1.5">
-                      {[1, 2, 3, 4, 5].map((level) => (
+                      {[1, 2, 3, 4,  ].map((level) => (
                         <div
                           key={level}
                           className={`h-1.5 flex-1 rounded-full transition-all ${

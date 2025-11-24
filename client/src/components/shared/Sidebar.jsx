@@ -59,8 +59,7 @@ const Sidebar = ({
         .length,
       "secure-notes": vaultItems.filter((item) => item.category === "note")
         .length,
-      identities: vaultItems.filter((item) => item.category === "identity")
-        .length,
+      
     };
   };
 
@@ -110,13 +109,7 @@ const Sidebar = ({
       icon: FileText,
       label: "Secure Notes",
       count: counts["secure-notes"],
-    },
-    {
-      id: "identities",
-      icon: UserCircle,
-      label: "Identities",
-      count: counts["identities"],
-    },
+    }
   ];
 
   const handleMainNavClick = (path) => {

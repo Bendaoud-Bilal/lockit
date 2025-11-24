@@ -62,30 +62,42 @@ model Folder {
 }
 
 model Credential {
-  id                  Int           @id @default(autoincrement())
-  userId              Int           @map("user_id")
-  folderId            Int?          @map("folder_id")
-  category            String        @default("login")
-  title               String
-  icon                String?
-  favorite            Boolean       @default(false)
-  dataEnc             String        @map("data_enc")
-  dataIv              String        @map("data_iv")
-  dataAuthTag         String        @map("data_auth_tag")
-  hasPassword         Boolean       @default(true) @map("has_password")
-  passwordStrength    Int?          @map("password_strength")
-  passwordReused      Boolean       @default(false) @map("password_reused")
-  passwordLastChanged DateTime?     @map("password_last_changed")
-  compromised         Boolean       @default(false)
-  state               String        @default("active")
-  has2fa              Boolean       @default(false) @map("has_2fa")
-  createdAt           DateTime      @default(now()) @map("created_at")
-  updatedAt           DateTime      @updatedAt @map("updated_at")
-  attachments         Attachment[]
-  breachAlerts        BreachAlert[]
-  folder              Folder?       @relation(fields: [folderId], references: [id])
-  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totpSecrets         TotpSecret?
+  id       Int     @id @default(autoincrement())
+  userId   Int     @map("user_id")
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folderId Int?    @map("folder_id")
+  folder   Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  
+  // Basic Info
+  category String  @default("login") // login, credit_card, secure_note, identity
+  title    String  @unique
+  icon     String?
+  favorite Boolean @default(false)
+  
+  // Encrypted Data
+  dataEnc     String @map("data_enc") // Encrypted JSON
+  dataIv      String @map("data_iv")
+  dataAuthTag String @map("data_auth_tag")
+  
+  // Password Analysis
+  hasPassword         Boolean   @default(true) @map("has_password")
+  passwordStrength    Int?      @map("password_strength") // 0-100 or 0-4
+  passwordReused      Boolean   @default(false) @map("password_reused")
+  passwordLastChanged DateTime? @map("password_last_changed")
+  compromised         Boolean   @default(false)
+  
+  // State
+  state String @default("active") // active, deleted (soft delete)
+  has2fa Boolean @default(false) @map("has_2fa")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  totpSecrets TotpSecret?
+  attachments Attachment[]
+  breachAlerts BreachAlert[]
 
   @@map("credentials")
 }

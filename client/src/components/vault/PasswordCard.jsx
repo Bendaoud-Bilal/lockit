@@ -100,7 +100,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
       try {
         const decrypted = await decryptCredentialForClient(credential, vaultKey)
         setDecryptedData(decrypted)
-        setPasswordLength(decrypted?.password?.length ?? 0)
+        setPasswordLength(decrypted?.passwordStrength ?? 0)
       } catch {
         setDecryptedData(null)
         toast.error('Impossible de déchiffrer les données')
@@ -217,22 +217,22 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
                     <span className="mt-[1px]">2FA</span>
                   </div>
                 )}
-                {credential.passwordStrength == null && credential.category==='login' && (
+                {passwordLength == 0 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-red-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-red-600">Weak</span>
                   </div>
                 )}
-                {credential.passwordStrength== 1 && credential.category==='login' && (
+                {passwordLength == 1 &&  credential.category==='login' && (
+                  <div className="flex justify-center items-center text-xs bg-yellow-100 rounded-lg px-2 sm:px-3 py-0.5">
+                    <span className="text-yellow-600">medium</span>
+                  </div>
+                )}
+                {passwordLength == 2 &&  credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-orange-100 rounded-lg px-2 sm:px-3 py-0.5">
-                    <span className="text-orange-600">medium</span>
+                    <span className="text-orange-600">Good</span>
                   </div>
                 )}
-                 {credential.passwordStrength==2 && credential.category==='login' && (
-                  <div className="flex justify-center items-center text-xs bg-green-100 rounded-lg px-2 sm:px-3 py-0.5">
-                    <span className="text-green-400">good</span>
-                  </div>
-                )}
-                {credential.passwordStrength==3 && credential.category==='login' && (
+                {passwordLength >2 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-green-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-green-600">strong</span>
                   </div>

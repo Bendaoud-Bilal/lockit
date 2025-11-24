@@ -62,6 +62,9 @@ class ApiService {
         if (message.toLowerCase().includes('email')) {
           return "This email is already registered. Please use a different one.";
         }
+        if (message.toLowerCase().includes('title')) {
+          return "This title is already registered. Please use a different one.";
+        }
         return "This value is already in use. Please choose a different one.";
       }
 
