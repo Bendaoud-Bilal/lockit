@@ -317,7 +317,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
     
     } catch (error) {
       console.error("Error saving item:", error);
-      toast.error('Failed to save credential. Please try again.');
+      toast.error('This title is already in use.');
     }
   }
   // Function to encrypt and upload a file
