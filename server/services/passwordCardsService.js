@@ -1,6 +1,11 @@
 import dayjs from 'dayjs';
 import prisma from './prisma.service.js';
 
+/**
+ * Summarizes credential risk categories for the dashboard cards.
+ * - Counts total active credentials and specific subsets in parallel.
+ * - Shapes the response into card metadata with titles, colors, and badges.
+ */
 export async function getPasswordCards(userId) {
   const uid = Number(userId);
   const baseWhere = { userId: uid, state: 'active', hasPassword: true };
@@ -51,6 +56,11 @@ export async function getPasswordCards(userId) {
   return { total, cards };
 }
 
+/**
+ * Retrieves credential records supporting a chosen card filter.
+ * - Builds the Prisma where clause based on the requested risk bucket.
+ * - Converts binary fields to base64 strings for transport to the client.
+ */
 export async function getCardDetails(userId, cardId) {
   const uid = Number(userId);
   const base = { userId: uid, state: 'active', hasPassword: true };

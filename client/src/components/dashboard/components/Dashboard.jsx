@@ -10,6 +10,11 @@ import apiService from '../../../services/apiService';
 import { useAuth } from '../../../context/AuthContext';
 import { subscribeToCredentialMutations } from '../../../utils/credentialEvents';
 
+/**
+ * Orchestrates the dashboard experience for the authenticated user.
+ * - Loads security score, password risk cards, and breach alerts from the API.
+ * - Subscribes to credential mutation events to refresh data in real time.
+ */
 export default function Dashboard() {
   const [security, setSecurity] = useState(null);
   const [cardsData, setCardsData] = useState(null);
@@ -37,11 +42,21 @@ export default function Dashboard() {
     return null;
   }, [user]);
 
+  /**
+   * Builds request headers for API calls when session data is restored client-side.
+   * - Supplies the user identifier header when the auth context is unavailable.
+   * - Returns undefined so axios keeps default headers when not needed.
+   */
   const buildRequestConfig = useCallback(() => {
     if (!userId || isAuthenticated) return undefined;
     return { headers: { 'x-user-id': userId.toString() } };
   }, [isAuthenticated, userId]);
 
+  /**
+   * Pulls dashboard resources from the backend and stores them locally.
+   * - Fetches security score, password cards, and breach alerts in parallel.
+   * - Handles loading and error state transitions around the API calls.
+   */
   const loadDashboardData = useCallback(async ({ showSpinner = true } = {}) => {
     if (!userId) {
       setSecurity(null);
@@ -84,6 +99,11 @@ export default function Dashboard() {
     });
   }, [loadDashboardData]);
 
+  /**
+   * Initiates a breach scan for the user through the backend service.
+   * - Shows toast feedback based on whether new breaches were discovered.
+   * - Refreshes dashboard data without resetting the main loading spinner.
+   */
   async function handleCheckBreaches() {
     if (!userId) {
       toast.error('User not available. Please log in again.');
@@ -113,6 +133,11 @@ export default function Dashboard() {
     }
   }
 
+  /**
+   * Switches a breach alert between pending and resolved states.
+   * - Sends the toggle request to the backend before mutating local state.
+   * - Mirrors the response status onto the cached alert collection.
+   */
   async function handleToggleBreachResolved(breachId) {
     if (!userId) return;
     try {
@@ -134,6 +159,11 @@ export default function Dashboard() {
     }
   }
 
+  /**
+   * Toggles the dismissed flag for a breach alert.
+   * - Sends the request to the backend and syncs the returned status locally.
+   * - Leaves other alert properties untouched to avoid refetching.
+   */
   async function handleToggleBreachDismissed(breachId) {
     if (!userId) return;
     try {
@@ -155,12 +185,22 @@ export default function Dashboard() {
     }
   }
 
+  /**
+   * Retrieves the credential list for the selected risk card.
+   * - Reuses the API service instance to respect interceptors and headers.
+   * - Returns the axios payload so callers can decide how to use the data.
+   */
   const fetchCardDetails = useCallback(async (cardId) => {
     if (!userId) return null;
     const config = buildRequestConfig();
     return apiService.axiosInstance.get(`/api/password-cards/${cardId}/details`, config);
   }, [buildRequestConfig, userId]);
 
+  /**
+   * Refreshes dashboard datasets in response to credential mutations.
+   * - Re-runs the summary fetches without showing the primary spinner.
+   * - Updates the open details modal when present to keep contents current.
+   */
   const handleCredentialMutated = useCallback(() => {
     loadDashboardData({ showSpinner: false }).catch((err) => {
       console.error('Error refreshing dashboard data:', err);
@@ -246,6 +286,11 @@ export default function Dashboard() {
 
       <BreachAlerts
         items={breachAlerts}
+  /**
+   * Opens the card details modal and loads its credential list.
+   * - Maps the card identifier to a readable title for the modal header.
+   * - Persists the selected id for subsequent refresh operations.
+   */
         onCheckBreaches={handleCheckBreaches}
         onToggleResolved={handleToggleBreachResolved}
         onToggleDismissed={handleToggleBreachDismissed}

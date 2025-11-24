@@ -4,6 +4,11 @@ import '../style/card-details.css';
 
 const noop = () => {};
 
+/**
+ * Provides the modal listing credentials for a selected risk card.
+ * - Mirrors incoming items into local state so child actions can prune entries.
+ * - Delegates update and deletion refreshes through the supplied callbacks.
+ */
 export default function CardDetails({ isOpen, onClose, listItems, title, onRefresh = noop }) {
     const [itemsState, setItemsState] = useState([]);
 

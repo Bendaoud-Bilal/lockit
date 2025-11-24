@@ -1,8 +1,12 @@
-// File: client/src/components/dashboard/components/BreachAlerts.jsx
 import React, { useState } from 'react';
 import { AlertTriangle, Check, BellOff } from 'lucide-react';
 import '../style/dashboard.css';
 
+/**
+ * Displays the breach alert summary panel.
+ * - Shows a refresh button that triggers a breach scan via parent callback.
+ * - Lists breach items with controls to resolve or dismiss each entry.
+ */
 export default function BreachAlerts({
   items = [],
   onCheckBreaches,
@@ -11,6 +15,11 @@ export default function BreachAlerts({
 }) {
   const [isChecking, setIsChecking] = useState(false);
 
+  /**
+   * Submits a breach scan request without allowing concurrent clicks.
+   * - Sets a temporary loading flag before calling the parent handler.
+   * - Always clears the flag once the handler promise resolves.
+   */
   async function handleCheckBreaches() {
     if (isChecking) return;
     setIsChecking(true);
@@ -62,6 +71,11 @@ export default function BreachAlerts({
   );
 }
 
+/**
+ * Renders a single breach alert row with resolve and dismiss controls.
+ * - Chooses contextual icon and badge styling based on alert status.
+ * - Forwards user interactions to the parent callbacks.
+ */
 function BreachAlertItem({ item, onToggleResolved, onToggleDismissed }) {
   const isDismissed = item.status === 'dismissed';
   const isResolved = item.status === 'resolved';

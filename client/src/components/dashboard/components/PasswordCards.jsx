@@ -1,7 +1,6 @@
-// client/src/components/PasswordCards.jsx
 import React from 'react';
 import { Eye, AlertTriangle, Repeat, ShieldAlert, Clock } from 'lucide-react';
-import '../style/card-details.css'; // adjust path if needed
+import '../style/card-details.css';
 
 const iconMap = {
   weak: AlertTriangle,
@@ -10,8 +9,17 @@ const iconMap = {
   old: Clock,
 };
 
+/**
+ * Presents the top-level password health cards used on the dashboard.
+ * - Picks an icon and accent color per risk category via a lookup map.
+ * - Delegates detail modal opening through the supplied callback.
+ */
 export default function PasswordCards({ items = [], onOpenCard = () => {} }) {
-  // Empty state message component
+  /**
+   * Shows a fallback panel when no password metrics are available.
+   * - Keeps layout consistent with the surrounding card grid.
+   * - Communicates the empty state with minimal markup.
+   */
   const EmptyState = () => (
     <div className="empty-state">
       <p>No passwords found</p>

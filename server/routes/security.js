@@ -4,6 +4,11 @@ import { computeSecurityScore } from '../services/securityScoreService.js';
 
 const router = express.Router();
 
+/**
+ * Serves the computed security score for the authenticated account.
+ * - Rejects mismatched user requests before delegating to the service layer.
+ * - Returns the raw score payload consumed by the dashboard.
+ */
 router.get('/users/:id/security-score', requireAuth, async (req, res) => {
   try {
     const userId = Number(req.params.id);
