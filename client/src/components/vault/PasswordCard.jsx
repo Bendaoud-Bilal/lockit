@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import ApiService from '../../services/apiService'
 import apiService from '../../services/apiService'
 import AddItemModal from './AddItemModal'
+import { notifyCredentialsMutated } from '../../utils/credentialEvents';
 
 
 const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, listPasswords, setListPasswords }) => {
@@ -63,8 +64,9 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
     const newState = !previous
     setIsFavorite(newState)
     try {
-      await ApiService.toggleFavorite(ownerToUse, idToUse)
-      if (onCredentialUpdated) onCredentialUpdated()
+  await ApiService.toggleFavorite(ownerToUse, idToUse)
+  notifyCredentialsMutated({ source: 'PasswordCard', kind: 'favorite', credentialId: idToUse })
+  if (onCredentialUpdated) onCredentialUpdated()
     } catch {
       setIsFavorite(previous)
       toast.error('Failed to update favorite')
@@ -83,6 +85,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
             }
       await ApiService.restoreCredential(ownerToUse, idToUse)
       toast.success('credential restored')
+  notifyCredentialsMutated({ source: 'PasswordCard', kind: 'restore', credentialId: idToUse })
       if (onCredentialUpdated) onCredentialUpdated()
     } catch {
       
@@ -162,6 +165,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
       toast.success(state === 'deleted' ? 'Item deleted' : 'Item moved to archive', {
         position: 'top-center'
       })
+      notifyCredentialsMutated({ source: 'PasswordCard', kind: state === 'deleted' ? 'delete' : 'archive', credentialId: credId })
       if (onCredentialDeleted) onCredentialDeleted()
     } catch (error) {
       toast.error(error.message || 'Failed to delete password', {
@@ -213,17 +217,22 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
                     <span className="mt-[1px]">2FA</span>
                   </div>
                 )}
-                {passwordLength < 6 && credential.category==='login' && (
+                {credential.passwordStrength == null && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-red-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-red-600">Weak</span>
                   </div>
                 )}
-                {passwordLength < 10 && passwordLength >=6 && credential.category==='login' && (
+                {credential.passwordStrength== 1 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-orange-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-orange-600">medium</span>
                   </div>
                 )}
-                {passwordLength >=10 && credential.category==='login' && (
+                 {credential.passwordStrength==2 && credential.category==='login' && (
+                  <div className="flex justify-center items-center text-xs bg-green-100 rounded-lg px-2 sm:px-3 py-0.5">
+                    <span className="text-green-400">good</span>
+                  </div>
+                )}
+                {credential.passwordStrength==3 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-green-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-green-600">strong</span>
                   </div>

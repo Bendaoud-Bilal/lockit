@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { checkCompromised, checkReuse } from '../services/credentialStatusService.js';
 
 const prisma = new PrismaClient();
 
@@ -18,11 +19,17 @@ export const addCredential = async (req, res) => {
       });
     }
 
+    const normalizedUserId = parseInt(userId);
+    const normalizedFolderId = folderId ? parseInt(folderId) : null;
+    const normalizedHasPassword = hasPassword !== undefined ? hasPassword : true;
+    const reuseFlag = await checkReuse(prisma, normalizedUserId, { dataEnc, dataIv, dataAuthTag });
+    const compromisedFlag = checkCompromised(passwordStrength);
+
     // Create credential
     const credential = await prisma.credential.create({
       data: {
-        userId: parseInt(userId),
-        folderId: folderId ? parseInt(folderId) : null,
+        userId: normalizedUserId,
+        folderId: normalizedFolderId,
         category: category || 'login',
         title,
         icon: icon || null,
@@ -243,6 +250,21 @@ export const updateCredential = async (req, res) => {
       return res.status(404).json({ error: 'Credential not found or unauthorized' });
     }
 
+    const normalizedUserId = parseInt(userId);
+    const effectivePasswordStrength = passwordStrength !== undefined ? passwordStrength : existing.passwordStrength;
+    const effectiveHasPassword = hasPassword !== undefined ? hasPassword : existing.hasPassword;
+    const effectiveDataEnc = dataEnc ?? existing.dataEnc;
+    const effectiveDataIv = dataIv ?? existing.dataIv;
+    const effectiveDataAuthTag = dataAuthTag ?? existing.dataAuthTag;
+
+    const reuseFlag = await checkReuse(
+      prisma,
+      normalizedUserId,
+      { dataEnc: effectiveDataEnc, dataIv: effectiveDataIv, dataAuthTag: effectiveDataAuthTag },
+      existing.id
+    );
+    const compromisedFlag = checkCompromised(effectivePasswordStrength);
+
     // Prepare update data
     const updateData = {};
     if (title !== undefined) updateData.title = title;
@@ -262,10 +284,13 @@ export const updateCredential = async (req, res) => {
       updateData.dataAuthTag = dataAuthTag;
       
       // If password changed, update timestamp
-      if (hasPassword) {
+      if (effectiveHasPassword) {
         updateData.passwordLastChanged = new Date();
       }
     }
+
+    updateData.passwordReused = reuseFlag;
+    updateData.compromised = compromisedFlag;
 
     const credential = await prisma.credential.update({
       where: { id: parseInt(id) },
@@ -285,45 +310,7 @@ export const updateCredential = async (req, res) => {
   }
 };
 
-// ============================================
-// DELETE CREDENTIAL (Soft Delete)
-// ============================================
-// export const deleteCredential = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { userId, permanent } = req.query;
 
-//     // Verify ownership
-//     const existing = await prisma.credential.findFirst({
-//       where: {
-//         id: parseInt(id),
-//         userId: parseInt(userId),
-//       }
-//     });
-
-//     if (!existing) {
-//       return res.status(404).json({ error: 'Credential not found or unauthorized' });
-//     }
-
-//     if (permanent === 'true') {
-//       // Permanent delete
-//       await prisma.credential.delete({
-//         where: { id: parseInt(id) }
-//       });
-//       res.status(200).json({ message: 'Credential permanently deleted' });
-//     } else {
-//       // Soft delete
-//       await prisma.credential.update({
-//         where: { id: parseInt(id) },
-//         data: { state: 'deleted' }
-//       });
-//       res.status(200).json({ message: 'Credential moved to trash' });
-//     }
-//   } catch (error) {
-//     console.error('Error deleting credential:', error);
-//     res.status(500).json({ error: 'Failed to delete credential', details: error.message });
-//   }
-// };
 export const deletePass = async (req, res) =>{
     const { userId, id } = req.params;
     const {state} = req.query;

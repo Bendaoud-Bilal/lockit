@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { Plus, Paperclip, Upload, X, Download } from 'lucide-react'
 import axios from 'axios'
+import APP_CONFIG from '../../utils/config'
 
 const Attachments = ({ credentialId, vaultKey, selectedFiles, setSelectedFiles }) => {
   const fileInputRef = useRef(null)
@@ -14,12 +15,16 @@ const Attachments = ({ credentialId, vaultKey, selectedFiles, setSelectedFiles }
     }
   }, [credentialId])
 
+  const API_BASE_URL = APP_CONFIG.API_BASE_URL
+
   const fetchAttachments = async () => {
     if (!credentialId) return
 
     try {
       setIsLoading(true)
-      const response = await axios.get(`http://localhost:3000/api/vault/attachments/credential/${credentialId}`)
+      const response = await axios.get(
+        `${API_BASE_URL}/api/vault/attachments/credential/${credentialId}`
+      )
       setSavedAttachments(response.data.attachments || [])
     } catch (error) {
       console.error('Error fetching attachments:', error)
@@ -35,8 +40,8 @@ const Attachments = ({ credentialId, vaultKey, selectedFiles, setSelectedFiles }
     if (!confirm('Are you sure you want to delete this attachment?')) return
 
     try {
-      setIsLoading(true)
-      await axios.delete(`http://localhost:3000/api/vault/attachments/${attachmentId}`)
+    setIsLoading(true)
+    await axios.delete(`${API_BASE_URL}/api/vault/attachments/${attachmentId}`)
       
       // Refresh list
       await fetchAttachments()

@@ -210,7 +210,7 @@ const AddItemModal = ({ show, setShow }) => {
       const encryptedData = await prepareCredentialForStorage(formData, vaultKey);
       
       // Send to API
-      const response = await fetch('http://localhost:3000/api/credentials', {
+  const response = await fetch('http://localhost:4000/api/credentials', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

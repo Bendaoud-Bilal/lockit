@@ -16,6 +16,8 @@ import apiService from './services/apiService';
 import PasswordGenerator from './components/tools/passwordGenerator';
 import Authenticator from "./components/authenticator/Authenticator";
 import { X } from "lucide-react";
+import Dashboard from "./components/dashboard/components/Dashboard";
+
 
 
 
@@ -57,10 +59,7 @@ function MainLayout({
           />
 
           {/* Other Main Routes */}
-          <Route
-            path="/security-dashboard"
-            element={<div className="p-8">Security Dashboard</div>}
-          />
+          <Route path="/security-dashboard" element={<Dashboard />} />
           <Route
             path="/authenticator"
             element={<div className=" p-8">{<Authenticator />}</div>}

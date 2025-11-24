@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react"
+import { useState, useEffect } from "react"
 import { 
   X, 
   Globe, 
@@ -30,7 +30,9 @@ import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
 import { checkPasswordCompromised } from '../../utils/pwnedPassword';
+import APP_CONFIG from "../../utils/config";
 import axios from "axios"
+import { notifyCredentialsMutated } from '../../utils/credentialEvents';
 import { useAuth } from '../../context/AuthContext';
 import apiService from "../../services/apiService"
 import toast from "react-hot-toast"
@@ -38,6 +40,7 @@ import toast from "react-hot-toast"
 
 const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null, attachmentsOnly, listPasswords, setListPasswords}) => {
   const [activeTab, setActiveTab] = useState(attachmentsOnly ? "attachments": "general")
+  const API_BASE_URL = APP_CONFIG.API_BASE_URL;
   const [showPassword, setShowPassword] = useState(false)
   const [showCVV, setShowCVV] = useState(false)
   const [vKey, setVKey] = useState(null);
@@ -200,6 +203,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
 
   const saveItem = async () => { 
     // console.log('hehe:' vKey)
+    let credentialId = null;
     try {
       // Validate form before saving
       if (!validateForm()) {
@@ -262,23 +266,15 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
     // Save or update credential
     let response;
     if (isEditMode) {
-      // Update existing credential
-      response = await axios.put(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/api/vault/credentials/${credentialToEdit.id}`, {
-        encryptedCredential
-      });
+      response = await apiService.updateCredential(credentialToEdit.id, encryptedCredential);
     } else {
-      // Create new credential
-      // response = await axios.post(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/api/vault/credentials`, {
-      //   encryptedCredential
-      // });
-      response = await apiService.addCredential(encryptedCredential)
-      // console.log(response.data)
+      response = await apiService.addCredential(encryptedCredential);
     }
 
     // Get the credential ID (from response or from edit mode)
     // const credentialId = response.data.credential?.id || credentialToEdit?.id;
     
-    const credentialId = response.credential?.id || credentialToEdit?.id;
+    credentialId = response?.credential?.id || response?.id || credentialToEdit?.id;
     // Upload attachments if any were selected
     if (selectedFiles.length > 0 && credentialId) {
       let successCount = 0
@@ -314,18 +310,16 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
     }
     
     setShow(false);
+    notifyCredentialsMutated({ source: 'AddItemModal', credentialId });
     if (onCredentialAdded) {
       onCredentialAdded(); // Trigger refetch in Vault
     }
-  
+    
     } catch (error) {
       console.error("Error saving item:", error);
-      alert('Failed to save credential. Please try again.')
+      toast.error('Failed to save credential. Please try again.');
     }
-  
-    
-   }
-
+  }
   // Function to encrypt and upload a file
   const uploadAttachment = async (file, credentialId, vaultKey) => {
     try {
@@ -376,7 +370,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
       }).length
 
       // Upload to server
-      const response = await axios.post('http://localhost:3000/api/vault/attachments', {
+      const response = await axios.post(`${API_BASE_URL}/api/vault/attachments`, {
         credentialId,
         filename: file.name,
         fileSize: file.size,

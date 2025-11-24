@@ -6,56 +6,65 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import vaultRoutes from "./routes/Vault.js";
 import authenticatorRoutes from "./routes/authenticator.routes.js"
+import credentialsRouter from "./routes/credentials.js";
+import legacyUsersRouter from "./routes/users.js";
+import passwordCardsRouter from "./routes/passwordCards.js";
+import securityRouter from "./routes/security.js";
+import breachRouter from "./routes/breach.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 
-// Rate limiting configuration
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // limit each IP to 30 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: Number.parseInt(process.env.RATE_LIMIT_MAX ?? "300", 10),
 });
 
-// Security middleware
 app.use(helmet());
 
-// CORS configuration
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
   })
 );
 
-// Body parsing middleware
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ limit: "100mb", extended: true }));
+const payloadLimit = process.env.PAYLOAD_LIMIT || "100mb";
+app.use(express.json({ limit: payloadLimit }));
+app.use(express.urlencoded({ limit: payloadLimit, extended: true }));
 
-// Health check endpoint
 app.get("/health", (req, res) => {
-  res.json({ 
-    status: "ok", 
+  res.json({
+    status: "ok",
     message: "Lockit Server is running",
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
   });
 });
 
-// Apply rate limiting to all API routes
-app.use("/api/", limiter);
 
-// API Routes
+
+app.use("/api", limiter);
+
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/vault", vaultRoutes);
 app.use("/api/totp",authenticatorRoutes)
 //  
 
+app.use("/api/credentials", credentialsRouter);
+app.use("/api/users", legacyUsersRouter);
+app.use("/api", passwordCardsRouter);
+app.use("/api", securityRouter);
+app.use("/api", breachRouter);
 
-// Error handling middleware
 app.use(errorHandler);
 
-// 404 handler (must be last)
-app.use("*", (req, res) => {
+app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
