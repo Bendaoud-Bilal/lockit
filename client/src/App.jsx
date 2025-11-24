@@ -13,6 +13,11 @@ import Archive from './pages/Archive';
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import apiService from './services/apiService';
+import PasswordGenerator from './components/tools/passwordGenerator';
+import Authenticator from "./components/authenticator/Authenticator";
+import { X } from "lucide-react";
+
+
 
 function MainLayout({
   activeFilter,
@@ -27,7 +32,7 @@ function MainLayout({
   setShowRecoveryKeyModal,
 }) {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen ">
       {/* Sidebar */}
       <Sidebar
         activeFilter={activeFilter}
@@ -58,7 +63,7 @@ function MainLayout({
           />
           <Route
             path="/authenticator"
-            element={<div className="p-8">Authenticator</div>}
+            element={<div className=" p-8">{<Authenticator />}</div>}
           />
           <Route path="/send" element={<div className="p-8">Send</div>} />
           <Route path="/folders" element={<div className="p-8">Folders</div>} />
@@ -70,20 +75,23 @@ function MainLayout({
       </div>
 
       {/* Modals - rendered at layout level, outside Routes */}
-      {showPasswordGenerator && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Password Generator</h2>
-            <p className="text-gray-600 mb-4">Modal content goes here...</p>
-            <button
-              onClick={() => setShowPasswordGenerator(false)}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+       {showPasswordGenerator && (
+
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className='relative w-full max-w-md'>
+            <button 
+            onClick={()=> setShowPasswordGenerator(false)}
+            className="absolute top-2 right-2">
+                <X size={20} />
+              </button>
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold mb-4">Password Generator</h2>
+              <p className="text-gray-600 mb-4"></p>
+              <PasswordGenerator />
+            </div>
+            </div>
+            </div>
+        )}
 
       <ProfileModal
         isOpen={showProfileModal}

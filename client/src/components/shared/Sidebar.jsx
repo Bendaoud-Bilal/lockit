@@ -55,7 +55,7 @@ const Sidebar = ({
       "all-items": vaultItems.length,
       favorites: vaultItems.filter((item) => item.favorite).length,
       logins: vaultItems.filter((item) => item.category === "login").length,
-      "credit-cards": vaultItems.filter((item) => item.category === "card")
+      "credit-cards": vaultItems.filter((item) => item.category === "credit_card")
         .length,
       "secure-notes": vaultItems.filter((item) => item.category === "note")
         .length,
@@ -100,7 +100,7 @@ const Sidebar = ({
     },
     { id: "logins", icon: Globe, label: "Logins", count: counts["logins"] },
     {
-      id: "credit-cards",
+      id: "credit_card",
       icon: CreditCard,
       label: "Credit Cards",
       count: counts["credit-cards"],

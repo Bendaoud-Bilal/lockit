@@ -46,7 +46,7 @@ export const addCredential = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding credential:', error);
-    res.status(500).json({ error: 'Failed to add credential', details: error.message });
+    res.status(500).json({ error: error.message, details: error.message });
   }
 };
 

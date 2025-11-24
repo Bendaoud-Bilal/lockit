@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import vaultRoutes from "./routes/Vault.js";
+import authenticatorRoutes from "./routes/authenticator.routes.js"
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -46,6 +47,8 @@ app.use("/api/", limiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/vault", vaultRoutes);
+app.use("/api/totp",authenticatorRoutes)
+//  
 
 
 // Error handling middleware

@@ -6,6 +6,7 @@ import { useLocation } from 'react-router-dom'
 import { decryptCredentialForClient } from '../../utils/credentialHelpers';
 import { useAuth } from '../../context/AuthContext';
 import ApiService from '../../services/apiService'
+import apiService from '../../services/apiService'
 import AddItemModal from './AddItemModal'
 
 
@@ -75,6 +76,11 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
     const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
     if (!idToUse || !ownerToUse) return
     try {
+      if(credential.has2fa){
+        let response=await ApiService.getTotpId(idToUse);
+        let totpId=response.data.id;
+        await apiService.updateTotpState(totpId,"active");
+            }
       await ApiService.restoreCredential(ownerToUse, idToUse)
       toast.success('credential restored')
       if (onCredentialUpdated) onCredentialUpdated()
@@ -138,7 +144,21 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
 
   const handleDelete = async (state = 'soft') => {
     try {
-      await ApiService.deleteCredential(userId, credId, state)
+  
+         if(credential.has2fa){
+          const response= await ApiService.getTotpId(credId);
+          const totpId=response.data.id;
+
+        if(state ==='soft'){
+          await ApiService.updateTotpState(totpId,"archived");
+        }
+        else{
+          await ApiService.deleteTotpEntry(totpId);
+        }
+      }
+      await ApiService.deleteCredential(userId, credId, state);
+      
+   
       toast.success(state === 'deleted' ? 'Item deleted' : 'Item moved to archive', {
         position: 'top-center'
       })
@@ -172,10 +192,9 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
 
   return (
     <>
-      {isShow2FA && <Show2FA onClose={handleToggle2FA} />}
-      <div className="w-full bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col">
+      <div className="w-full hover:shadow-lg bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col">
         <div className="flex flex-col md:flex-row md:justify-between gap-3">
-          <div className="flex gap-x-3 items-start sm:items-center flex-1">
+          <div className="flex gap-x-3 items-center flex-1">
             <Icon className="w-5" strokeWidth={1} />
             <div className="flex flex-col gap-y-2 min-w-0 flex-1">
               <div className="flex flex-wrap gap-x-2 gap-y-1.5 items-center">
@@ -236,13 +255,13 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row md:flex-col sm:items-center md:items-end gap-2 sm:gap-y-1 flex-shrink-0">
-            <p className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+          <div className="flex  flex-row sm:flex-row md:flex-col sm:items-center md:items-end gap-2 sm:gap-y-1 flex-shrink-0">
+            <p className="text-sm  sm:text-sm text-gray-500 whitespace-nowrap">
               Last Update: {new Date(credential.updatedAt).toLocaleDateString()}
             </p>
             <div className="relative" ref={menuRef}>
               <Ellipsis
-                className="w-5 sm:w-4 cursor-pointer"
+                className="w-5 sm:w-4  cursor-pointer"
                 strokeWidth={1}
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               />
@@ -301,7 +320,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
           </div>
         </div>
 
-        <div className="flex flex-wrap sm:flex-nowrap text-sm gap-x-3 gap-y-2 mt-3 text-gray-500 items-center">
+        <div className="flex flex-wrap sm:flex-nowrap text-sm gap-x-3 gap-y-2 mt-1 md:mt-3 text-gray-500 items-center">
           <div className="flex items-center gap-x-2 sm:gap-x-3 flex-wrap sm:flex-nowrap">
             {credential.category === 'login' && (
               <>
@@ -378,6 +397,12 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
             )}
           </div>
         </div>
+
+                      {isShow2FA && (
+      <div className="mt-1 ml-2 mr-2">
+        <Show2FA credentialId={credId} onHide={handleToggle2FA} />
+      </div>
+    )}
       </div>
 
       {showDeleteConfirm && isArchived && (
@@ -397,7 +422,6 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
                   </div>
                 </div>
               </div>
-
               <div className="mt-6 flex justify-end gap-x-3">
                 <button
                   type="button"

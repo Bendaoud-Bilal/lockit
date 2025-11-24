@@ -59,7 +59,6 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
   
   useEffect(() => {
     setVKey(vaultKey);
-    console.log(vaultKey)
   }, );
   const [showIcon, setShowIcon] = useState(false)
   const [errors, setErrors] = useState({})
@@ -321,7 +320,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
   
     } catch (error) {
       console.error("Error saving item:", error);
-      alert('Failed to save credential. Please try again.')
+      alert(error)
     }
   
     
