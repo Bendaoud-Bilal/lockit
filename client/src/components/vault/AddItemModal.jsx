@@ -45,6 +45,11 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
   const userId = user?.id;
   const isEditMode = !!credentialToEdit;
   
+  // Store original password when editing to detect changes
+  const [originalPassword] = useState(credentialToEdit?.password || "");
+  const [originalPasswordReused] = useState(credentialToEdit?.passwordReused || false);
+  const [originalCompromised] = useState(credentialToEdit?.compromised || false);
+  
   // Helper function to normalize category names
   const normalizeCategory = (category) => {
     if (!category) return "Login";
@@ -73,7 +78,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
     username: credentialToEdit?.username || "",
     email: credentialToEdit?.email || "",
     password: credentialToEdit?.password || "",  // Password is now part of formData
-    passwordReused: credentialToEdit?.passwordReused || false,
+    passwordReused: (credentialToEdit?.passwordReused) ? credentialToEdit?.passwordReused : false,
     compromised: credentialToEdit?.compromised || false,
     website: credentialToEdit?.website || "",
     // Credit Card fields
@@ -223,32 +228,44 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
     // Check if password is reused and compromised before encryption
     let updatedFormData = { ...formData };
     
+    // Only check password reuse/compromise if password has changed or it's a new credential
+    const passwordHasChanged = !isEditMode || formData.password !== originalPassword;
+    
     if (formData.category === "Login" && formData.password) {
-      // Filter out the current credential's password if in edit mode
-      const otherPasswords = isEditMode && credentialToEdit?.password 
-        ? listPasswords.filter(pwd => pwd !== credentialToEdit.password)
-        : listPasswords;
-      
-      // Check if password exists in other credentials
-      const isReused = otherPasswords.includes(formData.password);
-      updatedFormData.passwordReused = isReused;
-      
-      // Check if password has been compromised in data breaches
-      try {
-        const { compromised, occurrences } = await checkPasswordCompromised(formData.password);
-        updatedFormData.compromised = compromised;
+      if (passwordHasChanged) {
+        // Filter out the current credential's original password if in edit mode
+        const otherPasswords = isEditMode && originalPassword 
+          ? listPasswords.filter(pwd => pwd !== originalPassword)
+          : listPasswords;
+
+        console.log('Other passwords:', otherPasswords);
+        console.log('Current password:', formData.password);
         
-        if (compromised) {
-          console.log(`🚨 Warning: This password has been found in ${occurrences} data breaches!`);
-          toast.error(`This password has been found in ${occurrences.toLocaleString()} data breaches! Consider changing it.`, {
-            duration: 5000
-          });
+        // Check if password exists in other credentials
+        const isReused = otherPasswords.includes(formData.password);
+        updatedFormData.passwordReused = isReused;
+        
+        // Check if password has been compromised in data breaches
+        try {
+          const { compromised, occurrences } = await checkPasswordCompromised(formData.password);
+          updatedFormData.compromised = compromised;
+          
+          if (compromised) {
+            console.log(`🚨 Warning: This password has been found in ${occurrences} data breaches!`);
+            toast.error(`This password has been found in ${occurrences.toLocaleString()} data breaches! Consider changing it.`, {
+              duration: 5000
+            });
+          }
+        } catch (error) {
+          console.error('Error checking password compromise:', error);
+          updatedFormData.compromised = false;
         }
-      } catch (error) {
-        console.error('Error checking password compromise:', error);
-        updatedFormData.compromised = false;
+      } else {
+        // Password hasn't changed, keep original values
+        console.log('Password unchanged, keeping original values');
+        updatedFormData.passwordReused = originalPasswordReused;
+        updatedFormData.compromised = originalCompromised;
       }
-      
     } else {
       updatedFormData.passwordReused = false;
       updatedFormData.compromised = false;
@@ -402,39 +419,33 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
 
   
   const calculatePasswordStrength = (pwd) => {
-    // if (pwd.length === 0) return { strength: 0, label: "" }
-    // if (pwd.length < 6) return { strength: 1, label: "Weak" }
-    // if (pwd.length < 10) return { strength: 3, label: "Medium" }
-    // return { strength: 5, label: "Strong" }
+    if (!pwd) return { strength: 0, label: "" };
 
-
-  if (!pwd || pwd.length === 0) return { strength: 0, label: "" };
-
-  let strength = 0;
-
-  // Criteria checks
-  const hasLower = /[a-z]/.test(pwd);
-  const hasUpper = /[A-Z]/.test(pwd);
-  const hasNumber = /\d/.test(pwd);
-  const hasSymbol = /[^A-Za-z0-9]/.test(pwd);
-  const hasLength = pwd.length >= 8;
-
-  // Add points for each criterion
-  if (hasLower) strength++;
-  if (hasUpper) strength++;
-  if (hasNumber) strength++;
-  if (hasSymbol) strength++;
-  if (hasLength) strength++;
-
-  // Determine label
-  let label = "";
-  if (strength <= 1) label = "Weak";
-  else if (strength === 2 ) label = "Medium";
-  else if (strength === 3 ) label = "Good";
-  else if (strength > 3) label = "Strong";
-  console.log(strength, label)
-  return { strength, label };
-
+    let score = 0;
+    
+    // Length check
+    if (pwd.length >= 8) score += 1;
+    if (pwd.length >= 10) score += 1;
+    if (pwd.length >= 12) score += 1;
+    
+    // Character variety
+    if (/[a-z]/.test(pwd)) score += 1;
+    if (/[A-Z]/.test(pwd)) score += 1;
+    if (/[0-9]/.test(pwd)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(pwd)) score += 1;
+    
+    // Calculate strength on 0-4 scale
+    const strength = Math.min(4, Math.floor(score / 2));
+    
+    // Determine label
+    let label = "";
+    if (strength === 0) label = "Weak";
+    else if (strength === 1) label = "Medium";
+    else if (strength === 2) label = "Good";
+    else if (strength === 3) label = "Strong";
+    else if (strength === 4) label = "Strong";
+    
+    return { strength, label };
   }
 
   const passwordStrength = calculatePasswordStrength(formData.password)
@@ -683,20 +694,20 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
                       <span className="text-xs font-semibold text-gray-700">
                         Strength: <span className={`${
                           passwordStrength.strength <= 1 ? 'text-red-600' : 
-                          passwordStrength.strength <= 3 ? 'text-yellow-600' : 
+                          passwordStrength.strength <= 2 ? 'text-yellow-600' : 
                           'text-green-600'
                         }`}>{passwordStrength.label}</span>
                       </span>
                     </div>
                     <div className="flex gap-1.5">
-                      {[1, 2, 3, 4,  ].map((level) => (
+                      {[0, 1, 2, 3 ].map((level) => (
                         <div
                           key={level}
                           className={`h-1.5 flex-1 rounded-full transition-all ${
                             level <= passwordStrength.strength 
                               ? passwordStrength.strength <= 1 
                                 ? 'bg-red-600' 
-                                : passwordStrength.strength <= 3 
+                                : passwordStrength.strength <= 2 
                                 ? 'bg-yellow-600' 
                                 : 'bg-green-600'
                               : "bg-gray-200"
