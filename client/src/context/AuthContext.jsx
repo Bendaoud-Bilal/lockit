@@ -12,7 +12,7 @@ import InactivityWarning from "../components/shared/InactivityWarning";
 const AuthContext = createContext(null);
 
 // Storage keys
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   TOKEN: "lockit_session_token",
   USER: "lockit_user_data",
   IS_LOCKED: "lockit_is_locked",
@@ -162,7 +162,6 @@ export const AuthProvider = ({ children }) => {
   const login = async (usernameOrEmail, masterPassword) => {
     try {
       const data = await apiService.login(usernameOrEmail, masterPassword);
-
       setToken(data.token);
       setUser({
         id: data.user.id,

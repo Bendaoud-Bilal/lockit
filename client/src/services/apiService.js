@@ -62,6 +62,9 @@ class ApiService {
         if (message.toLowerCase().includes('email')) {
           return "This email is already registered. Please use a different one.";
         }
+        if (message.toLowerCase().includes('title')) {
+          return "This title is already registered. Please use a different one.";
+        }
         return "This value is already in use. Please choose a different one.";
       }
 
@@ -115,6 +118,41 @@ class ApiService {
   clearToken() {
     this.token = null;
   }
+
+
+ // TOTP endpoints 
+  async saveTotp({ serviceName, accountName, secret, credentialId }) {
+    return this.client.post("/api/totp", {
+      serviceName,
+      accountName,
+      secret,
+      credentialId: credentialId ? parseInt(credentialId) : null,
+    });
+  }
+  async getTOTPCredentials(){
+    return this.client.get("/api/totp/credentials");
+  }
+
+  async getAllTotps() {
+    return this.client.get("/api/totp");
+  }
+ 
+
+  async getTotpByCredentialId(credentialId){
+    return this.client.get(`/api/totp/${credentialId}`);
+  }
+  async deleteTotpEntry(totpId) {
+    return this.client.delete(`/api/totp/${totpId}`);
+  }
+  async getTotpId(credentialId){
+    return this.client.get(`/api/totp/by-credential/${credentialId}`);
+  }
+async updateTotpState(totpId, state) {
+  if (!totpId || !["active", "archived"].includes(state)) {
+    throw new Error("Invalid TOTP ID or state");
+  }
+  return this.client.patch(`/api/totp/${totpId}/state`,{state});
+}
 
   // Authentication endpoints
   async login(usernameOrEmail, masterPassword) {

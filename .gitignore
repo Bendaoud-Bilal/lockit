@@ -8,7 +8,7 @@ structure.txt
 conception.txt
 .\client\src\components\dashboard\dashboard design.png
 .\client\src\components\dashboard\detailed card pop ups design.png
-
+.vscode
 
 # Electron
 out/
@@ -17,7 +17,3 @@ build/
 # Database
 *.db
 *.db-journal
-
-# OS
-Thumbs.db
-.vite

@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // ============================================
 export const addCredential = async (req, res) => {
   try {
-    const { userId, folderId, category, title, icon, dataEnc, dataIv, dataAuthTag, hasPassword, passwordStrength } = req.body.encryptedCredential;
+    const { userId, folderId, category, title, icon, dataEnc, dataIv, dataAuthTag, hasPassword, passwordStrength, passwordReused, compromised } = req.body.encryptedCredential;
 
     console.log('Received credential data:', req.body);
     
@@ -19,11 +19,13 @@ export const addCredential = async (req, res) => {
       });
     }
 
-    const normalizedUserId = parseInt(userId);
-    const normalizedFolderId = folderId ? parseInt(folderId) : null;
-    const normalizedHasPassword = hasPassword !== undefined ? hasPassword : true;
-    const reuseFlag = await checkReuse(prisma, normalizedUserId, { dataEnc, dataIv, dataAuthTag });
-    const compromisedFlag = checkCompromised(passwordStrength);
+  const normalizedUserId = parseInt(userId);
+  const normalizedFolderId = folderId ? parseInt(folderId) : null;
+  const normalizedHasPassword = hasPassword !== undefined ? hasPassword : true;
+  const normalizedPasswordStrength = passwordStrength ?? null;
+  const computedReuse = await checkReuse(prisma, normalizedUserId, { dataEnc, dataIv, dataAuthTag });
+  const reuseFlag = passwordReused ? true : computedReuse;
+  const compromisedFlag = (typeof compromised === 'boolean' ? compromised : false) || checkCompromised(normalizedPasswordStrength);
 
     // Create credential
     const credential = await prisma.credential.create({
@@ -33,14 +35,14 @@ export const addCredential = async (req, res) => {
         category: category || 'login',
         title,
         icon: icon || null,
-        dataEnc,
-        dataIv,
-        dataAuthTag,
-        hasPassword: normalizedHasPassword,
-        passwordStrength: passwordStrength ?? null,
-        passwordLastChanged: normalizedHasPassword ? new Date() : null,
-        passwordReused: reuseFlag,
-        compromised: compromisedFlag,
+  dataEnc,
+  dataIv,
+  dataAuthTag,
+  hasPassword: normalizedHasPassword,
+  passwordStrength: normalizedPasswordStrength,
+  passwordLastChanged: normalizedHasPassword ? new Date() : null,
+  passwordReused: reuseFlag,
+  compromised: compromisedFlag,
       },
       include: {
         folder: true,
@@ -53,7 +55,7 @@ export const addCredential = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding credential:', error);
-    res.status(500).json({ error: 'Failed to add credential', details: error.message });
+    res.status(500).json({ error: error.message, details: error.message });
   }
 };
 
@@ -236,7 +238,7 @@ export const updateCredential = async (req, res) => {
   try {
     const { id } = req.params;
     // console.log(req.body)
-    const { userId, title, icon, folderId, category, dataEnc, dataIv, dataAuthTag, favorite, passwordStrength, hasPassword } = req.body.encryptedCredential;
+    const { userId, title, icon, folderId, category, dataEnc, dataIv, dataAuthTag, favorite, passwordStrength, hasPassword, passwordReused, compromised } = req.body.encryptedCredential;
 
     // Verify ownership
     const existing = await prisma.credential.findFirst({
@@ -257,13 +259,14 @@ export const updateCredential = async (req, res) => {
     const effectiveDataIv = dataIv ?? existing.dataIv;
     const effectiveDataAuthTag = dataAuthTag ?? existing.dataAuthTag;
 
-    const reuseFlag = await checkReuse(
+    const computedReuse = await checkReuse(
       prisma,
       normalizedUserId,
       { dataEnc: effectiveDataEnc, dataIv: effectiveDataIv, dataAuthTag: effectiveDataAuthTag },
       existing.id
     );
-    const compromisedFlag = checkCompromised(effectivePasswordStrength);
+    const reuseFlag = passwordReused ? true : computedReuse;
+    const compromisedFlag = (typeof compromised === 'boolean' ? compromised : false) || checkCompromised(effectivePasswordStrength);
 
     // Prepare update data
     const updateData = {};
@@ -274,6 +277,8 @@ export const updateCredential = async (req, res) => {
     if (favorite !== undefined) updateData.favorite = favorite;
     if (passwordStrength !== undefined) updateData.passwordStrength = passwordStrength;
     if (hasPassword !== undefined) updateData.hasPassword = hasPassword;
+    if (passwordReused !== undefined) updateData.passwordReused = passwordReused;
+    if (compromised !== undefined) updateData.compromised = compromised;
     
     // If encrypted data is being updated
     if (dataEnc && dataIv && dataAuthTag) {
@@ -287,8 +292,8 @@ export const updateCredential = async (req, res) => {
       }
     }
 
-    updateData.passwordReused = reuseFlag;
-    updateData.compromised = compromisedFlag;
+  updateData.passwordReused = reuseFlag;
+  updateData.compromised = compromisedFlag;
 
     const credential = await prisma.credential.update({
       where: { id: parseInt(id) },

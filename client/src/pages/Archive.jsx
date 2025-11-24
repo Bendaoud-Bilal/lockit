@@ -67,7 +67,7 @@ function Archive({onCredentialsChange}) {
         ) : (
           <div className="w-full flex flex-col items-center gap-y-4 mt-10 max-h-[calc(100vh-12rem)]">
             {filteredPasswords.map((p) => (
-              <div key={p.id} className="w-[70%]">
+              <div key={p.id} className="md:w-[70%] w-[80%]">
                 <PasswordCard credential={p} onCredentialDeleted={fetchDeletedPasswords} onCredentialUpdated={fetchDeletedPasswords}/>
               </div>
             ))}

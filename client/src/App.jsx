@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
+import { X } from "lucide-react";
 import Sidebar from "./components/shared/Sidebar";
 import ProfileModal from "./components/shared/ProfileModal";
 import RecoveryKeyModal from "./components/shared/RecoveryKeyModal";
@@ -11,6 +12,8 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import Vault from "./pages/Vault";
 import Archive from "./pages/Archive";
 import Dashboard from "./components/dashboard/components/Dashboard";
+import Authenticator from "./components/authenticator/Authenticator";
+import PasswordGenerator from "./components/tools/passwordGenerator";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import apiService from "./services/apiService";
@@ -28,7 +31,7 @@ function MainLayout({
 	setShowRecoveryKeyModal,
 }) {
 	return (
-		<div className="flex h-screen bg-gray-50">
+  <div className="flex h-screen bg-gray-50">
 			<Sidebar
 				activeFilter={activeFilter}
 				onFilterChange={setActiveFilter}
@@ -50,11 +53,15 @@ function MainLayout({
 						}
 					/>
 
-					<Route path="/security-dashboard" element={<Dashboard />} />
-					<Route
-						path="/authenticator"
-						element={<div className="p-8">Authenticator</div>}
-					/>
+          <Route path="/security-dashboard" element={<Dashboard />} />
+          <Route
+            path="/authenticator"
+            element={
+              <div className="p-8">
+                <Authenticator />
+              </div>
+            }
+          />
 					<Route path="/send" element={<div className="p-8">Send</div>} />
 					<Route path="/folders" element={<div className="p-8">Folders</div>} />
 					<Route
@@ -66,20 +73,22 @@ function MainLayout({
 				</Routes>
 			</div>
 
-			{showPasswordGenerator && (
-				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-md w-full">
-						<h2 className="text-xl font-bold mb-4">Password Generator</h2>
-						<p className="text-gray-600 mb-4">Modal content goes here...</p>
-						<button
-							onClick={() => setShowPasswordGenerator(false)}
-							className="px-4 py-2 bg-gray-900 text-white rounded-lg"
-						>
-							Close
-						</button>
-					</div>
-				</div>
-			)}
+      {showPasswordGenerator && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative w-full max-w-md">
+            <button
+              onClick={() => setShowPasswordGenerator(false)}
+              className="absolute top-2 right-2 text-gray-600 hover:text-black"
+            >
+              <X size={20} />
+            </button>
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold mb-4">Password Generator</h2>
+              <PasswordGenerator />
+            </div>
+          </div>
+        </div>
+      )}
 
 			<ProfileModal
 				isOpen={showProfileModal}

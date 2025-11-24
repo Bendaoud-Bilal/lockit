@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast'
 import { notifyCredentialsMutated } from '../../utils/credentialEvents.js'
 
-const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDeleteAll }) => {
+const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDeleteAll, listPasswords }) => {
   const location = useLocation()
   const [wideSearch, setWideSearch] = useState(false)
   const [archiveNotEmpty, setArchiveNotEmpty] = useState(false)
@@ -53,6 +53,11 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDelete
 
 
 
+  useEffect(() => {
+    if (archiveCount > 0) {
+      setArchiveNotEmpty(true);
+    }}, [archiveCount]);
+  
   return (
     <div className='w-full flex items-center gap-3 h-16 bg-white border-b border-gray-100 px-4'>
       <div className='flex-shrink-0'>
@@ -75,7 +80,14 @@ const FilterAddBar = ({ searchQuery, setSearchQuery, onCredentialAdded, onDelete
             <Plus className='w-4' strokeWidth={1} />
             <span className='hidden sm:inline'>Add item</span>
           </button>
-          {show && <AddItemModal show={show} setShow={setShow} onCredentialAdded={onCredentialAdded} />}
+          {show && (
+            <AddItemModal
+              show={show}
+              setShow={setShow}
+              onCredentialAdded={onCredentialAdded}
+              listPasswords={listPasswords}
+            />
+          )}
         </>
       )}
 

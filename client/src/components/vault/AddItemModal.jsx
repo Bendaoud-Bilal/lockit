@@ -30,6 +30,7 @@ import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
 import APP_CONFIG from "../../utils/config";
+import { checkPasswordCompromised } from '../../utils/pwnedPassword';
 import axios from "axios"
 import { notifyCredentialsMutated } from '../../utils/credentialEvents';
 import { useAuth } from '../../context/AuthContext';
@@ -43,6 +44,7 @@ const AddItemModal = ({
   onCredentialAdded,
   credentialToEdit = null,
   attachmentsOnly = false,
+  listPasswords = [],
 }) => {
   const API_BASE_URL = APP_CONFIG.API_BASE_URL;
   const [activeTab, setActiveTab] = useState(attachmentsOnly ? "attachments" : "general")
@@ -81,6 +83,8 @@ const AddItemModal = ({
     username: credentialToEdit?.username || "",
     email: credentialToEdit?.email || "",
     password: credentialToEdit?.password || "",  // Password is now part of formData
+    passwordReused: credentialToEdit?.passwordReused || false,
+    compromised: credentialToEdit?.compromised || false,
     website: credentialToEdit?.website || "",
     // Credit Card fields
     cardholderName: credentialToEdit?.cardholderName || "",
@@ -227,10 +231,42 @@ const AddItemModal = ({
         throw new Error('No vault key found. Please login first.');
       }
   
+    // Check if password is reused and compromised before encryption
+    let updatedFormData = { ...formData };
     
+    if (formData.category === "Login" && formData.password) {
+      // Filter out the current credential's password if in edit mode
+      const otherPasswords = isEditMode && credentialToEdit?.password 
+        ? listPasswords.filter(pwd => pwd !== credentialToEdit.password)
+        : listPasswords;
+      
+      // Check if password exists in other credentials
+      const isReused = otherPasswords.includes(formData.password);
+      updatedFormData.passwordReused = isReused;
+      
+      // Check if password has been compromised in data breaches
+      try {
+        const { compromised, occurrences } = await checkPasswordCompromised(formData.password);
+        updatedFormData.compromised = compromised;
+        
+        if (compromised) {
+          console.log(`🚨 Warning: This password has been found in ${occurrences} data breaches!`);
+          toast.error(`This password has been found in ${occurrences.toLocaleString()} data breaches! Consider changing it.`, {
+            duration: 5000
+          });
+        }
+      } catch (error) {
+        console.error('Error checking password compromise:', error);
+        updatedFormData.compromised = false;
+      }
+      
+    } else {
+      updatedFormData.passwordReused = false;
+      updatedFormData.compromised = false;
+    }
   
     // Encrypt and prepare for API
-    const encryptedCredential = await prepareCredentialForStorage(formData, vKey);
+    const encryptedCredential = await prepareCredentialForStorage(updatedFormData, vKey);
 
     // const decryptedCredential = await decryptCredentialForClient(encryptedCredential, vKey);
 
@@ -287,8 +323,8 @@ const AddItemModal = ({
     }
     
     } catch (error) {
-      console.error("Error saving item:", error);
-      toast.error('Failed to save credential. Please try again.');
+  console.error("Error saving item:", error);
+  toast.error('Failed to save credential. Please try again.');
     }
   }
   // Function to encrypt and upload a file
@@ -367,10 +403,39 @@ const AddItemModal = ({
 
   
   const calculatePasswordStrength = (pwd) => {
-    if (pwd.length === 0) return { strength: 0, label: "" }
-    if (pwd.length < 6) return { strength: 1, label: "Weak" }
-    if (pwd.length < 10) return { strength: 3, label: "Medium" }
-    return { strength: 5, label: "Strong" }
+    // if (pwd.length === 0) return { strength: 0, label: "" }
+    // if (pwd.length < 6) return { strength: 1, label: "Weak" }
+    // if (pwd.length < 10) return { strength: 3, label: "Medium" }
+    // return { strength: 5, label: "Strong" }
+
+
+  if (!pwd || pwd.length === 0) return { strength: 0, label: "" };
+
+  let strength = 0;
+
+  // Criteria checks
+  const hasLower = /[a-z]/.test(pwd);
+  const hasUpper = /[A-Z]/.test(pwd);
+  const hasNumber = /\d/.test(pwd);
+  const hasSymbol = /[^A-Za-z0-9]/.test(pwd);
+  const hasLength = pwd.length >= 8;
+
+  // Add points for each criterion
+  if (hasLower) strength++;
+  if (hasUpper) strength++;
+  if (hasNumber) strength++;
+  if (hasSymbol) strength++;
+  if (hasLength) strength++;
+
+  // Determine label
+  let label = "";
+  if (strength <= 1) label = "Weak";
+  else if (strength === 2 ) label = "Medium";
+  else if (strength === 3 ) label = "Good";
+  else if (strength > 3) label = "Strong";
+  console.log(strength, label)
+  return { strength, label };
+
   }
 
   const passwordStrength = calculatePasswordStrength(formData.password)
@@ -429,7 +494,7 @@ const AddItemModal = ({
             >
               General
             </button>
-            <button type="button"
+            {/* <button type="button"
             disabled={formData.category !== 'Login'}
               onClick={() => setActiveTab("security")}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-all ${
@@ -439,7 +504,7 @@ const AddItemModal = ({
               }`}
             >
               Security
-            </button>
+            </button> */}
             <button type="button"
               onClick={() => setActiveTab("attachments")}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-all ${
@@ -625,7 +690,7 @@ const AddItemModal = ({
                       </span>
                     </div>
                     <div className="flex gap-1.5">
-                      {[1, 2, 3, 4, 5].map((level) => (
+                      {[1, 2, 3, 4,  ].map((level) => (
                         <div
                           key={level}
                           className={`h-1.5 flex-1 rounded-full transition-all ${
@@ -847,7 +912,7 @@ const AddItemModal = ({
         </div>
         }
 
-        {activeTab === "security" && 
+        {/* {activeTab === "security" && 
         // <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-240px)]">
         //   <p className="text-lg text-black">Two-Factor Authentification</p>
         //   <div className="flex flex-col items-center justify-center gap-3 border rounded-lg p-4 ">
@@ -866,7 +931,7 @@ const AddItemModal = ({
 
         <Security />
 
-        }
+        } */}
 
         {activeTab === "attachments" && 
         <Attachments 

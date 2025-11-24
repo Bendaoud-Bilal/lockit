@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import FilterAddBar from '../components/vault/FilterAddBar';
 import PasswordCard from '../components/vault/PasswordCard';
+import { decryptCredentialForClient } from '../utils/credentialHelpers';
 import { useAuth } from '../context/AuthContext';
 import ApiService from '../services/apiService';
 
 const Vault = ({ activeFilter, onCredentialsChange }) => {
-  const { user } = useAuth();
+  const { user, vaultKey } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [passwords, setPasswords] = useState([]);
@@ -14,6 +15,9 @@ const Vault = ({ activeFilter, onCredentialsChange }) => {
 
   const userId = user?.id;
 
+
+  const [listPasswords, setListPasswords] = useState([])
+
 const fetchCredentials = async (notifyParent = false) => {
   if (!userId) return;
   
@@ -21,9 +25,27 @@ const fetchCredentials = async (notifyParent = false) => {
   setError(null);
   
   try {
+    setListPasswords([]); // Clear previous passwords
     const res = await ApiService.getUserCredentials(userId);
     const creds = res.credentials || [];
+    // console.log('Fetched credentials:', creds);
     setPasswords(creds);
+
+    for (const cred of creds) {
+      console.log(vaultKey)
+      if (cred.dataEnc && cred.dataIv && cred.dataAuthTag  && cred.hasPassword) {
+        try {
+          const decrypted = await decryptCredentialForClient(cred, vaultKey);
+          if (decrypted?.password) {
+            setListPasswords(prev => [...prev, decrypted.password]);
+            console.log(listPasswords)
+          }
+
+        } catch (decryptionError) {
+          console.error(`Error decrypting credential id ${cred.id}:`, decryptionError);
+        }
+      }
+    }
 
     if (notifyParent && onCredentialsChange) {
       onCredentialsChange();
@@ -40,7 +62,9 @@ const fetchCredentials = async (notifyParent = false) => {
 // Initial load - don't notify parent
 useEffect(() => {
   if (!userId) return;
+  setListPasswords([]); // Clear previous passwords
   fetchCredentials(false); // Don't notify on mount
+  // console.log(listPasswords)
 }, [userId]);
 
   const filteredPasswords = passwords.filter((item) => {
@@ -49,7 +73,7 @@ useEffect(() => {
     'all-items': null, // Show all
     'favorites': null, // Handle separately
     'logins': 'login',
-    'credit-cards': 'card',
+    'credit_card': 'credit_card',
     'secure-notes': 'note',
     'identities': 'identity',
   };
@@ -113,6 +137,7 @@ useEffect(() => {
         searchQuery={searchQuery} 
         setSearchQuery={setSearchQuery} 
         onCredentialAdded={() => fetchCredentials(true)}
+        listPasswords={listPasswords}
       />
       
       <div className="w-full flex-1 overflow-y-scroll flex flex-col items-center mb-5 gap-y-4 mt-10">
@@ -127,7 +152,8 @@ useEffect(() => {
         ) : (
           filteredPasswords.map((p) => (
             <div key={p.id} className="w-[70%] ">
-              <PasswordCard credential={p} onCredentialDeleted={() => fetchCredentials(true)} onCredentialUpdated={() => fetchCredentials(true)}/>
+              
+              <PasswordCard credential={p} onCredentialDeleted={() => fetchCredentials(true)} onCredentialUpdated={() => fetchCredentials(true)} listPasswords={listPasswords} setListPasswords={setListPasswords}/>
             </div>
           ))
         )}

@@ -6,11 +6,12 @@ import { useLocation } from 'react-router-dom'
 import { decryptCredentialForClient } from '../../utils/credentialHelpers';
 import { useAuth } from '../../context/AuthContext';
 import ApiService from '../../services/apiService'
+import apiService from '../../services/apiService'
 import AddItemModal from './AddItemModal'
 import { notifyCredentialsMutated } from '../../utils/credentialEvents';
 
 
-const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) => {
+const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, listPasswords, setListPasswords }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [showCardNumber, setShowCardNumber] = useState(false)
   const [showCvv, setShowCvv] = useState(false)
@@ -77,7 +78,12 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
     const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
     if (!idToUse || !ownerToUse) return
     try {
-  await ApiService.restoreCredential(ownerToUse, idToUse)
+      if (credential.has2fa) {
+        const response = await ApiService.getTotpId(idToUse)
+        const totpId = response.data.id
+        await apiService.updateTotpState(totpId, "active")
+      }
+      await ApiService.restoreCredential(ownerToUse, idToUse)
       toast.success('credential restored')
   notifyCredentialsMutated({ source: 'PasswordCard', kind: 'restore', credentialId: idToUse })
       if (onCredentialUpdated) onCredentialUpdated()
@@ -94,7 +100,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
       try {
         const decrypted = await decryptCredentialForClient(credential, vaultKey)
         setDecryptedData(decrypted)
-        setPasswordLength(decrypted?.password?.length ?? 0)
+        setPasswordLength(decrypted?.passwordStrength ?? 0)
       } catch {
         setDecryptedData(null)
         toast.error('Impossible de déchiffrer les données')
@@ -141,7 +147,21 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 
   const handleDelete = async (state = 'soft') => {
     try {
-      await ApiService.deleteCredential(userId, credId, state)
+  
+         if(credential.has2fa){
+          const response= await ApiService.getTotpId(credId);
+          const totpId=response.data.id;
+
+        if(state ==='soft'){
+          await ApiService.updateTotpState(totpId,"archived");
+        }
+        else{
+          await ApiService.deleteTotpEntry(totpId);
+        }
+      }
+      await ApiService.deleteCredential(userId, credId, state);
+      
+   
       toast.success(state === 'deleted' ? 'Item deleted' : 'Item moved to archive', {
         position: 'top-center'
       })
@@ -176,10 +196,9 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
 
   return (
     <>
-      {isShow2FA && <Show2FA onClose={handleToggle2FA} />}
-      <div className="w-full bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col">
+      <div className="w-full hover:shadow-lg bg-white border border-gray-200 rounded-lg px-3 py-4 flex flex-col">
         <div className="flex flex-col md:flex-row md:justify-between gap-3">
-          <div className="flex gap-x-3 items-start sm:items-center flex-1">
+          <div className="flex gap-x-3 items-center flex-1">
             <Icon className="w-5" strokeWidth={1} />
             <div className="flex flex-col gap-y-2 min-w-0 flex-1">
               <div className="flex flex-wrap gap-x-2 gap-y-1.5 items-center">
@@ -198,21 +217,38 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
                     <span className="mt-[1px]">2FA</span>
                   </div>
                 )}
-                {passwordLength < 6 && credential.category==='login' && (
+                {passwordLength == 0 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-red-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-red-600">Weak</span>
                   </div>
                 )}
-                {passwordLength < 10 && passwordLength >=6 && credential.category==='login' && (
-                  <div className="flex justify-center items-center text-xs bg-orange-100 rounded-lg px-2 sm:px-3 py-0.5">
-                    <span className="text-orange-600">medium</span>
+                {passwordLength == 1 &&  credential.category==='login' && (
+                  <div className="flex justify-center items-center text-xs bg-yellow-100 rounded-lg px-2 sm:px-3 py-0.5">
+                    <span className="text-yellow-600">medium</span>
                   </div>
                 )}
-                {passwordLength >=10 && credential.category==='login' && (
+                {passwordLength == 2 &&  credential.category==='login' && (
+                  <div className="flex justify-center items-center text-xs bg-orange-100 rounded-lg px-2 sm:px-3 py-0.5">
+                    <span className="text-orange-600">Good</span>
+                  </div>
+                )}
+                {passwordLength >2 && credential.category==='login' && (
                   <div className="flex justify-center items-center text-xs bg-green-100 rounded-lg px-2 sm:px-3 py-0.5">
                     <span className="text-green-600">strong</span>
                   </div>
                 )}
+                {/* {credential.passwordReused && credential.category==='login' && (
+                  <div className="flex justify-center items-center text-xs bg-yellow-100 rounded-lg px-2 sm:px-3 py-0.5">
+                    <RefreshCcw className="w-3 mr-1" strokeWidth={2} />
+                    <span className="text-yellow-700">Reused</span>
+                  </div>
+                )}
+                {credential.compromised && credential.category==='login' && (
+                  <div className="flex justify-center items-center text-xs bg-red-100 rounded-lg px-2 sm:px-3 py-0.5">
+                    <Shield className="w-3 mr-1" strokeWidth={2} />
+                    <span className="text-red-600">Compromised</span>
+                  </div>
+                )} */}
               </div>
               <div className="flex flex-wrap gap-2 items-center">
                 {hasFolder && (
@@ -228,13 +264,13 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row md:flex-col sm:items-center md:items-end gap-2 sm:gap-y-1 flex-shrink-0">
-            <p className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+          <div className="flex  flex-row sm:flex-row md:flex-col sm:items-center md:items-end gap-2 sm:gap-y-1 flex-shrink-0">
+            <p className="text-sm  sm:text-sm text-gray-500 whitespace-nowrap">
               Last Update: {new Date(credential.updatedAt).toLocaleDateString()}
             </p>
             <div className="relative" ref={menuRef}>
               <Ellipsis
-                className="w-5 sm:w-4 cursor-pointer"
+                className="w-5 sm:w-4  cursor-pointer"
                 strokeWidth={1}
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               />
@@ -293,7 +329,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
           </div>
         </div>
 
-        <div className="flex flex-wrap sm:flex-nowrap text-sm gap-x-3 gap-y-2 mt-3 text-gray-500 items-center">
+        <div className="flex flex-wrap sm:flex-nowrap text-sm gap-x-3 gap-y-2 mt-1 md:mt-3 text-gray-500 items-center">
           <div className="flex items-center gap-x-2 sm:gap-x-3 flex-wrap sm:flex-nowrap">
             {credential.category === 'login' && (
               <>
@@ -370,6 +406,12 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
             )}
           </div>
         </div>
+
+                      {isShow2FA && (
+      <div className="mt-1 ml-2 mr-2">
+        <Show2FA credentialId={credId} onHide={handleToggle2FA} />
+      </div>
+    )}
       </div>
 
       {showDeleteConfirm && isArchived && (
@@ -389,7 +431,6 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
                   </div>
                 </div>
               </div>
-
               <div className="mt-6 flex justify-end gap-x-3">
                 <button
                   type="button"
@@ -417,6 +458,8 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
           setShow={setShowEditModal} 
           credentialToEdit={decryptedData} 
           onCredentialAdded={onCredentialUpdated}
+          listPasswords={listPasswords}
+          setListPasswords={setListPasswords}
         />
       )}
       {showAttachments && (
@@ -426,6 +469,8 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated }) 
           credentialToEdit={decryptedData} 
           attachmentsOnly={true}
           onCredentialAdded={onCredentialUpdated}
+          listPasswords={listPasswords}
+          setListPasswords={setListPasswords}
         />
       )}
     </>

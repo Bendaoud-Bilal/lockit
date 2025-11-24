@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { buffer } from 'stream/consumers'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react()
+  ],
   base: './',
   build: {
     outDir: 'dist',

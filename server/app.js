@@ -10,6 +10,7 @@ import legacyUsersRouter from "./routes/users.js";
 import passwordCardsRouter from "./routes/passwordCards.js";
 import securityRouter from "./routes/security.js";
 import breachRouter from "./routes/breach.js";
+import authenticatorRoutes from "./routes/authenticator.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -58,6 +59,8 @@ app.use("/api", limiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/vault", vaultRoutes);
+app.use("/api/totp", authenticatorRoutes);
+//  
 
 app.use("/api/credentials", credentialsRouter);
 app.use("/api/users", legacyUsersRouter);
