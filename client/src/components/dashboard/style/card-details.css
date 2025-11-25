@@ -1,0 +1,210 @@
+/* Import shared styles */
+@import './dashboard.css';
+
+
+/* Overlay */
+.card-details-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal Container */
+.card-details-container {
+  background: #fff;
+  border-radius: 1rem;
+  width: 90%;
+  max-width: 42rem;
+  max-height: 90vh;
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.card-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem;
+  border-bottom: 0.0625rem solid var(--color-grey-border);
+}
+
+.details-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.details-title h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-black);
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--color-grey-writing);
+  cursor: pointer;
+  padding: 0.5rem;
+  line-height: 1;
+}
+
+/* Content */
+.card-details-content {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  flex: 0 1 auto;
+}
+
+.card-details-password-shell {
+  width: 100%;
+  min-width: 0;
+}
+
+.password-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 0.0625rem solid var(--color-grey-border);
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.site-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.site-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+}
+
+.site-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.site-name {
+  font-weight: 600;
+  color: var(--color-black);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tag {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.tag.weak {
+  background: #ffe5ed;
+  color: var(--color-red);
+}
+
+.site-login {
+  font-size: 0.875rem;
+  color: var(--color-grey-writing);
+}
+
+/* Password Actions */
+.password-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input {
+  width: 10rem;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 0.0625rem solid var(--color-grey-border);
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-black);
+}
+
+.toggle-visibility,
+.copy-button,
+.edit-button {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-grey-writing);
+}
+
+.toggle-visibility {
+  position: absolute;
+  right: 0.25rem;
+}
+
+/* ...existing code... */
+
+/* Empty State */
+.empty-state {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-grey-writing);
+}
+
+.password-item .empty-state {
+  width: 100%;
+  padding: 2rem;
+  background: #f9f9f9;
+  border-radius: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .password-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .password-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .password-field {
+    flex: 1;
+  }
+  
+  .password-input {
+    width: 100%;
+  }
+}

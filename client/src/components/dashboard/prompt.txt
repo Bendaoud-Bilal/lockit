@@ -1,0 +1,2 @@
+now we will devide the major parts , since the PasswordCards and BreachAlerts components implment the cards using map 
+so it is already doesn't repeat any code , now for the securityScoreCard each metric must be in a components

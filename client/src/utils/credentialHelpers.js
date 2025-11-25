@@ -307,7 +307,7 @@ export function sortCredentials(credentials, sortBy = 'title', order = 'asc') {
  */
 export function getWeakPasswordCredentials(credentials) {
   return credentials.filter(
-    credential => credential.hasPassword && credential.passwordStrength < 3
+    credential => credential.hasPassword && Number(credential.passwordStrength ?? 0) < 60
   );
 }
 

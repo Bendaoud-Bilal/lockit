@@ -1,0 +1,486 @@
+/* ---------- Theme ---------- */
+:root {
+  --color-red: #d4183d;
+  --color-orange: #ff5500;
+  --color-light-yellow: #fff243;
+  --color-yellow: #d08700;
+  --color-blue: #407bfc;
+  --color-black: #030213;
+  --color-light-green: #4cc478;
+  --color-grey-writing: #9c9ca9;
+  --color-grey-border: #eaeaea;
+  --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* ---------- Reset ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #fff;
+  color: var(--color-black);
+}
+
+/* ---------- Page Container ---------- */
+.container {
+  width: 70%;
+  max-width: 1320px;
+  margin: 5% auto 12%;
+  padding: 0 1.6%;
+}
+
+/* ---------- Shared Card ---------- */
+.card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px;
+  margin-bottom: 22px;
+  border: 2px solid var(--color-grey-border);
+}
+
+/* ===================================================================== */
+/*                          SECURITY SCORE CARD                          */
+/* ===================================================================== */
+.score-card {
+  display: grid;
+  grid-template-columns: 220px 1fr; /* fixed left column like design */
+  gap: 24px;
+  align-items: center;
+}
+
+.score-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.security-score-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shield-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.security-score-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.score-number {
+  font-size: clamp(42px, 6vw, 72px);
+  font-weight: 800;
+  line-height: 0.95;
+  color: var(--color-yellow);
+}
+
+.score-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-grey-writing);
+  font-size: 13px;
+}
+
+.score-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff3e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-badge svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--color-yellow);
+  stroke-width: 1.5;
+}
+
+.score-right {
+  width: 100%;
+}
+
+.progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.progress-line {
+  height: 14px;
+  width: 100%;
+  background: var(--color-grey-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: var(--progress-width, 60%);
+  background: var(--color-black);
+  border-radius: 10px;
+}
+
+.progress-caption {
+  color: var(--color-grey-writing);
+  font-size: 13px;
+}
+
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin-top: 8px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 150px;
+}
+
+.metric-number {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: var(--color-grey-writing);
+  margin-top: 6px;
+}
+
+.metric.weak .metric-number { color: var(--color-red); }
+.metric.reused .metric-number { color: var(--color-light-yellow); }
+.metric.exposed .metric-number { color: var(--color-orange); }
+
+/* ===================================================================== */
+/*                          PASSWORD ALERT CARDS                         */
+/* ===================================================================== */
+.password-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin: 10px 0 22px;
+}
+
+.password-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+  border: 2px solid var(--color-grey-border);
+}
+
+.password-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.password-card-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-circle {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-circle.red    { background: #ffe5ed; }
+.icon-circle.yellow { background: #fff8e8; }
+.icon-circle.orange { background: #fff3e8; }
+.icon-circle.blue   { background: #e8f1ff; }
+
+.password-card-title h3 {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.eye-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-grey-writing);
+}
+
+.password-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.password-count {
+  font-size: 28px;
+  font-weight: 700;
+  min-width: 44px;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.badge.action-needed { background: var(--color-red); color: #fff; }
+.badge.review        { background: var(--color-grey-border); color: var(--color-black); }
+.badge.update        { background: #e8f1ff; color: var(--color-blue); }
+
+/* ===================================================================== */
+/*                          DATA BREACH ALERTS                           */
+/* ===================================================================== */
+.breach-alerts-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.breach-alerts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.breach-alerts-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.breach-title-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.check-breaches-button {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-grey-border);
+  background: #fff;
+  color: var(--color-grey-writing);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.check-breaches-button:hover:not(:disabled) {
+  border-color: var(--color-black);
+  color: var(--color-black);
+}
+
+.check-breaches-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.breach-alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.breach-alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-grey-border);
+  border-radius: 14px;
+  background: #fff;
+  transition: box-shadow 0.2s;
+}
+
+.breach-alert-item:hover {
+  box-shadow: var(--shadow-card);
+}
+
+.breach-item-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1;
+}
+
+.breach-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.breach-icon-circle.pending   { background: #ffe5ed; border-color: #f8d7dc; }
+.breach-icon-circle.resolved  { background: #e8f7ed; border-color: #c7e9d2; }
+.breach-icon-circle.dismissed { background: #f4f4f5; border-color: #e4e4e7; }
+
+.breach-emoji-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.breach-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.breach-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.breach-item-header h4 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.breach-description {
+  color: var(--color-grey-writing);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.breach-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-grey-writing);
+  font-size: 13px;
+}
+
+.breach-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.breach-checkbox-label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.breach-checkbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.breach-checkbox-custom {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--color-grey-border);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.breach-checkbox:checked + .breach-checkbox-custom {
+  background: var(--color-light-green);
+  border-color: var(--color-light-green);
+  color: #fff;
+}
+
+.breach-checkbox:checked + .breach-checkbox-custom::after {
+  content: "✓";
+}
+
+.breach-checkbox[disabled] + .breach-checkbox-custom {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.breach-dismiss-button {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-grey-border);
+  background: #fff;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 36px;
+}
+
+.breach-dismiss-button.dismiss:hover {
+  border-color: var(--color-red);
+  color: var(--color-red);
+  background: #fff5f6;
+}
+
+.breach-dismiss-button.undismiss:hover {
+  border-color: var(--color-light-green);
+  color: var(--color-light-green);
+  background: #f1fcf5;
+}
+
+.badge.resolved       { background: #e8f7ed; color: var(--color-light-green); }
+.badge.action-required{ background: var(--color-red); color: #fff; }
+.badge.dismissed      { background: #f4f4f5; color: var(--color-grey-writing); }
+
+.breach-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--color-grey-writing);
+  font-size: 15px;
+}
+
+/* ===================================================================== */
+/*                              RESPONSIVE                               */
+/* ===================================================================== */
+@media (max-width: 1150px) {
+  .container    { width: 84%; }
+  .score-card   { grid-template-columns: 190px 1fr; }
+  .password-cards { grid-template-columns: repeat(2, 1fr); }
+  .metrics      { gap: 16px; }
+}
+
+@media (max-width: 760px) {
+  .container      { width: 92%; margin: 6% auto 16%; }
+  .score-card     { grid-template-columns: 1fr; gap: 16px; }
+  .password-cards { grid-template-columns: 1fr; }
+  .password-card  { min-height: 140px; }
+  .breach-alert-item { flex-direction: column; }
+  .breach-item-actions { margin-left: 0; }
+}

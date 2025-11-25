@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { checkCompromised, checkReuse } from '../services/credentialStatusService.js';
 
 const prisma = new PrismaClient();
 
@@ -18,22 +19,30 @@ export const addCredential = async (req, res) => {
       });
     }
 
+  const normalizedUserId = parseInt(userId);
+  const normalizedFolderId = folderId ? parseInt(folderId) : null;
+  const normalizedHasPassword = hasPassword !== undefined ? hasPassword : true;
+  const normalizedPasswordStrength = passwordStrength ?? null;
+  const computedReuse = await checkReuse(prisma, normalizedUserId, { dataEnc, dataIv, dataAuthTag });
+  const reuseFlag = passwordReused ? true : computedReuse;
+  const compromisedFlag = (typeof compromised === 'boolean' ? compromised : false) || checkCompromised(normalizedPasswordStrength);
+
     // Create credential
     const credential = await prisma.credential.create({
       data: {
-        userId: parseInt(userId),
-        folderId: folderId ? parseInt(folderId) : null,
+        userId: normalizedUserId,
+        folderId: normalizedFolderId,
         category: category || 'login',
         title,
         icon: icon || null,
-        dataEnc,
-        dataIv,
-        dataAuthTag,
-        hasPassword: hasPassword !== undefined ? hasPassword : true,
-        passwordStrength: passwordStrength || null,
-        passwordReused: passwordReused || false,
-        compromised: compromised || false,
-        passwordLastChanged: hasPassword ? new Date() : null,
+  dataEnc,
+  dataIv,
+  dataAuthTag,
+  hasPassword: normalizedHasPassword,
+  passwordStrength: normalizedPasswordStrength,
+  passwordLastChanged: normalizedHasPassword ? new Date() : null,
+  passwordReused: reuseFlag,
+  compromised: compromisedFlag,
       },
       include: {
         folder: true,
@@ -243,6 +252,22 @@ export const updateCredential = async (req, res) => {
       return res.status(404).json({ error: 'Credential not found or unauthorized' });
     }
 
+    const normalizedUserId = parseInt(userId);
+    const effectivePasswordStrength = passwordStrength !== undefined ? passwordStrength : existing.passwordStrength;
+    const effectiveHasPassword = hasPassword !== undefined ? hasPassword : existing.hasPassword;
+    const effectiveDataEnc = dataEnc ?? existing.dataEnc;
+    const effectiveDataIv = dataIv ?? existing.dataIv;
+    const effectiveDataAuthTag = dataAuthTag ?? existing.dataAuthTag;
+
+    const computedReuse = await checkReuse(
+      prisma,
+      normalizedUserId,
+      { dataEnc: effectiveDataEnc, dataIv: effectiveDataIv, dataAuthTag: effectiveDataAuthTag },
+      existing.id
+    );
+    const reuseFlag = passwordReused ? true : computedReuse;
+    const compromisedFlag = (typeof compromised === 'boolean' ? compromised : false) || checkCompromised(effectivePasswordStrength);
+
     // Prepare update data
     const updateData = {};
     if (title !== undefined) updateData.title = title;
@@ -262,10 +287,13 @@ export const updateCredential = async (req, res) => {
       updateData.dataAuthTag = dataAuthTag;
       
       // If password changed, update timestamp
-      if (hasPassword) {
+      if (effectiveHasPassword) {
         updateData.passwordLastChanged = new Date();
       }
     }
+
+  updateData.passwordReused = reuseFlag;
+  updateData.compromised = compromisedFlag;
 
     const credential = await prisma.credential.update({
       where: { id: parseInt(id) },

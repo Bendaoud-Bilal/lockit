@@ -93,12 +93,25 @@ export async function checkMultiplePasswords(passwords) {
 /**
  * Common weak passwords list (subset - for quick offline check)
  */
-const COMMON_WEAK_PASSWORDS = [
-  'password', '123456', '12345678', 'qwerty', 'abc123', 'monkey', '1234567',
-  'letmein', 'trustno1', 'dragon', 'baseball', 'iloveyou', 'master', 'sunshine',
-  'ashley', 'bailey', 'passw0rd', 'shadow', '123123', '654321', 'superman',
-  'qazwsx', 'michael', 'football', 'password1', 'admin', 'welcome', 'login'
+const EXPOSED_PASSWORDS = [
+  '123456', '123456789', 'qwerty', 'password', '12345', '12345678', '111111',
+  '123123', '1234567890', '1234567', 'qwerty123', '000000', '1q2w3e', 'aa123456',
+  'abc123', 'password1', '1234', 'qwertyuiop', '123321', 'password123',
+  '1q2w3e4r5t', 'iloveyou', '654321', '666666', '987654321', '123', '123qwe',
+  '7777777', '1qaz2wsx', '123abc', '112233', '987654321', 'qazwsx', '121212',
+  'dragon', 'sunshine', 'princess', 'letmein', 'monkey', 'football', 'baseball',
+  'shadow', 'superman', 'michael', 'whatever', 'trustno1', 'freedom', 'flower',
+  'cheese', 'computer', 'asdfgh', 'jordan23', '11111', 'password!', 'zaq12wsx',
+  'qwerty1', 'starwars', 'merlin', 'abcd1234', '98765', '888888', '12345a',
+  'donald', 'qwert', 'pokemon', 'killer', '123456a', 'zaq1zaq1', 'ginger',
+  'michelle', 'pepper', 'happy', 'whatever1', '777777', 'passw0rd', 'network',
+  'welcome1', 'secret', 'aaa111', 'lovely', 'orange', 'tinkerbell', '212121',
+  'a123456', 'test1', 'asdfghjkl', '1g2w3e4r', 'ninja', 'mustang', 'maggie',
+  'matrix', 'samantha', 'charlie', 'cookie', 'internet', 'letmein1', 'george',
+  'andrew', 'pepper', 'pepper123'
 ];
+
+const EXPOSED_PASSWORD_SET = new Set(EXPOSED_PASSWORDS);
 
 /**
  * Quick offline check for common weak passwords
@@ -107,11 +120,17 @@ const COMMON_WEAK_PASSWORDS = [
  */
 export function isCommonWeakPassword(password) {
   if (!password) return false;
-  return COMMON_WEAK_PASSWORDS.includes(password.toLowerCase());
+  return EXPOSED_PASSWORD_SET.has(password.toLowerCase());
+}
+
+export function isExposedPassword(password) {
+  if (!password) return false;
+  return EXPOSED_PASSWORD_SET.has(password.toLowerCase());
 }
 
 export default {
   checkPasswordCompromised,
   checkMultiplePasswords,
-  isCommonWeakPassword
+  isCommonWeakPassword,
+  isExposedPassword
 };

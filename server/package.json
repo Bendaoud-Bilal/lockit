@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "seed": "node prisma/seed.cjs",
     "dev": "nodemon index.js",
     "start": "node index.js",
     "prisma:generate": "prisma generate",
@@ -12,19 +13,22 @@
   "dependencies": {
     "@prisma/client": "^6.19.0",
     "argon2": "^0.44.0",
+    "axios": "^1.7.7",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
+    "dayjs": "^1.11.18",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
     "express-rate-limit": "^8.2.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "nodemon": "^3.1.11",
+    "node-schedule": "^2.1.1",
     "qrcode": "^1.5.3",
     "speakeasy": "^2.0.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "nodemon": "^3.1.11",
     "prisma": "^5.22.0"
   }
 }

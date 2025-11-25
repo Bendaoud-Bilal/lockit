@@ -2,12 +2,10 @@ import React, { useEffect, useState } from 'react';
 import FilterAddBar from '../components/vault/FilterAddBar';
 import PasswordCard from '../components/vault/PasswordCard';
 import { decryptCredentialForClient } from '../utils/credentialHelpers';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import ApiService from '../services/apiService';
 
 const Vault = ({ activeFilter, onCredentialsChange }) => {
-  const API_BASE_URL = 'http://localhost:3000/api';
   const { user, vaultKey } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');

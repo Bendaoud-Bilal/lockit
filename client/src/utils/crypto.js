@@ -1,239 +1,245 @@
-/**
- * Client-side Encryption/Decryption Utilities for Lockit Password Manager
- * Uses Web Crypto API (browser-native) for AES-256-GCM encryption
- * 
- * Note: This module assumes the vault key is managed externally
- * (received from authentication/server after login)
- */
+// client/src/utils/crypto.js
+// Hardened WebCrypto AES-256-GCM helpers used across the dashboard and legacy flows.
 
-// Constants
-const ALGORITHM = 'AES-GCM';
-const IV_LENGTH = 12; // bytes (96 bits for GCM)
+const AES_ALGORITHM = 'AES-GCM';
+const IV_BYTE_LENGTH = 12; // 96-bit IV required by GCM
+const AUTH_TAG_BYTE_LENGTH = 16; // WebCrypto appends a 128-bit auth tag
 
-/**
- * Convert ArrayBuffer to Base64 string
- * @param {ArrayBuffer} buffer 
- * @returns {string}
- */
-function arrayBufferToBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+const cryptoApi = globalThis.crypto ?? (typeof window !== 'undefined' ? window.crypto : undefined);
+
+function ensureWebCrypto() {
+  if (!cryptoApi?.subtle) {
+    throw new Error('WebCrypto API is not available in this environment');
+  }
+  return cryptoApi;
+}
+
+function base64ToUint8Array(base64) {
+  try {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  } catch (error) {
+    throw new Error('Invalid base64 string');
+  }
+}
+
+function uint8ArrayToBase64(bytes) {
   let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
+  for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
 }
 
-/**
- * Convert Base64 string to ArrayBuffer
- * @param {string} base64 
- * @returns {ArrayBuffer}
- */
-function base64ToArrayBuffer(base64) {
+function looksLikeBase64(value) {
+  if (typeof value !== 'string') return false;
+  if (!/^[A-Za-z0-9+/=\s]+$/.test(value)) return false;
   try {
-    // Log what we're trying to decode
-    // console.log('Attempting to decode Base64:', base64);
-    // console.log('Type:', typeof base64);
-    // console.log('Length:', base64?.length);
-    
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes.buffer;
-  } catch (error) {
-    console.error('Base64 decode failed for:', base64);
-    throw new Error(`Invalid Base64 string: ${error.message}`);
+    atob(value);
+    return true;
+  } catch {
+    return false;
   }
 }
 
-/**
- * Generate a random initialization vector (IV)
- * @returns {Uint8Array}
- */
-function generateIV() {
-  return crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-}
-
-/**
- * Import vault key from Base64 string (received from server/auth)
- * @param {string} base64Key - Base64 encoded vault key
- * @returns {Promise<CryptoKey>}
- */
-export async function importVaultKey(base64Key) {
-//   console.log('importVaultKey called with:', base64Key);
-//   console.log('Type:', typeof base64Key);
-//   console.log('Value:', JSON.stringify(base64Key));
-  
-  const keyBuffer = base64ToArrayBuffer(base64Key);
-  
-//   console.log('Key buffer length:', keyBuffer.byteLength, 'bytes');
-  
-  return await crypto.subtle.importKey(
-    'raw',
-    keyBuffer,
-    {
-      name: ALGORITHM,
-      length: 256
-    },
-    true,
-    ['encrypt', 'decrypt']
+function looksLikeHex(value) {
+  return (
+    typeof value === 'string' &&
+    /^[0-9a-fA-F]+$/.test(value) &&
+    value.length % 2 === 0
   );
 }
 
-/**
- * Encrypt credential data
- * @param {Object} data - Plain credential data object
- * @param {string} vaultKeyBase64 - Base64 encoded vault key (from server/auth)
- * @returns {Promise<Object>} { dataEnc, dataIv, dataAuthTag } - All base64 encoded
- */
+function nodeBufferJsonToBase64(objOrStr) {
+  try {
+    const parsed = typeof objOrStr === 'string' ? JSON.parse(objOrStr) : objOrStr;
+    if (parsed && Array.isArray(parsed.data)) {
+      return uint8ArrayToBase64(new Uint8Array(parsed.data));
+    }
+  } catch (error) {
+    // ignore
+  }
+  return null;
+}
+
+function hexToBase64(hex) {
+  if (!looksLikeHex(hex)) return null;
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return uint8ArrayToBase64(bytes);
+}
+
+function normalizeToBase64(input) {
+  if (input === null || input === undefined) return null;
+  if (looksLikeBase64(input)) return input;
+
+  const fromNodeJson = nodeBufferJsonToBase64(input);
+  if (fromNodeJson) return fromNodeJson;
+
+  const fromHex = hexToBase64(input);
+  if (fromHex) return fromHex;
+
+  if (input instanceof Uint8Array) return uint8ArrayToBase64(input);
+  if (input instanceof ArrayBuffer) return uint8ArrayToBase64(new Uint8Array(input));
+
+  return null;
+}
+
+async function importAesKey(base64Like, usages) {
+  const cryptoRef = ensureWebCrypto();
+  const base64 = normalizeToBase64(base64Like);
+  if (!base64) {
+    throw new Error('Vault key not convertible to base64 (expected base64, hex, Node Buffer JSON, or Uint8Array)');
+  }
+
+  const rawKey = base64ToUint8Array(base64);
+  return cryptoRef.subtle.importKey(
+    'raw',
+    rawKey,
+    { name: AES_ALGORITHM },
+    false,
+    usages
+  );
+}
+
+export default async function decryptAesGcmBrowser(keyLike, ciphertextLike, ivLike, authTagLike) {
+  try {
+    const cryptoRef = ensureWebCrypto();
+
+    const ciphertextBase64 = normalizeToBase64(ciphertextLike);
+    const ivBase64 = normalizeToBase64(ivLike);
+    const authTagBase64 = normalizeToBase64(authTagLike);
+
+    if (!ciphertextBase64 || !ivBase64 || !authTagBase64) {
+      throw new Error('Ciphertext, IV, or auth tag not convertible to base64');
+    }
+
+    const cryptoKey = await importAesKey(keyLike, ['decrypt']);
+
+    const ciphertext = base64ToUint8Array(ciphertextBase64);
+    const iv = base64ToUint8Array(ivBase64);
+    const authTag = base64ToUint8Array(authTagBase64);
+
+    const combined = new Uint8Array(ciphertext.length + authTag.length);
+    combined.set(ciphertext, 0);
+    combined.set(authTag, ciphertext.length);
+
+    const decrypted = await cryptoRef.subtle.decrypt(
+      { name: AES_ALGORITHM, iv },
+      cryptoKey,
+      combined
+    );
+
+    return decoder.decode(decrypted);
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    throw new Error(`Failed to decrypt data: ${error.message || error}`);
+  }
+}
+
+export async function encryptAesGcmBrowser(keyLike, plaintext) {
+  const cryptoRef = ensureWebCrypto();
+  const cryptoKey = await importAesKey(keyLike, ['encrypt']);
+  const iv = cryptoRef.getRandomValues(new Uint8Array(IV_BYTE_LENGTH));
+
+  const encryptedBuffer = await cryptoRef.subtle.encrypt(
+    { name: AES_ALGORITHM, iv },
+    cryptoKey,
+    encoder.encode(plaintext)
+  );
+
+  const encryptedBytes = new Uint8Array(encryptedBuffer);
+  const ciphertext = encryptedBytes.slice(0, -AUTH_TAG_BYTE_LENGTH);
+  const authTag = encryptedBytes.slice(-AUTH_TAG_BYTE_LENGTH);
+
+  return {
+    ciphertext: uint8ArrayToBase64(ciphertext),
+    iv: uint8ArrayToBase64(iv),
+    authTag: uint8ArrayToBase64(authTag),
+  };
+}
+
+export async function importVaultKey(keyLike) {
+  return importAesKey(keyLike, ['encrypt', 'decrypt']);
+}
+
 export async function encryptCredential(data, vaultKeyBase64) {
-  try {
-    // Import vault key
-    const vaultKey = await importVaultKey(vaultKeyBase64);
-
-    // Generate IV
-    const iv = generateIV();
-
-    // Convert data to JSON string then to ArrayBuffer
-    const encoder = new TextEncoder();
-    const dataBuffer = encoder.encode(JSON.stringify(data));
-
-    // Encrypt
-    const encryptedBuffer = await crypto.subtle.encrypt(
-      {
-        name: ALGORITHM,
-        iv: iv
-      },
-      vaultKey,
-      dataBuffer
-    );
-
-    // Split encrypted data and auth tag
-    // In AES-GCM, the last 16 bytes are the auth tag
-    const encrypted = new Uint8Array(encryptedBuffer);
-    const dataEnc = encrypted.slice(0, -16);
-    const authTag = encrypted.slice(-16);
-
-    return {
-      dataEnc: arrayBufferToBase64(dataEnc),
-      dataIv: arrayBufferToBase64(iv),
-      dataAuthTag: arrayBufferToBase64(authTag)
-    };
-  } catch (error) {
-    throw new Error(`Encryption failed: ${error.message}`);
-  }
+  const plaintext = JSON.stringify(data ?? {});
+  const { ciphertext, iv, authTag } = await encryptAesGcmBrowser(vaultKeyBase64, plaintext);
+  return {
+    dataEnc: ciphertext,
+    dataIv: iv,
+    dataAuthTag: authTag,
+  };
 }
 
-/**
- * Decrypt credential data
- * @param {string} dataEnc - Base64 encoded encrypted data
- * @param {string} dataIv - Base64 encoded IV
- * @param {string} dataAuthTag - Base64 encoded auth tag
- * @param {string} vaultKeyBase64 - Base64 encoded vault key (from server/auth)
- * @returns {Promise<Object>} Decrypted credential data object
- */
 export async function decryptCredential(dataEnc, dataIv, dataAuthTag, vaultKeyBase64) {
+  const plaintext = await decryptAesGcmBrowser(vaultKeyBase64, dataEnc, dataIv, dataAuthTag);
   try {
-    // Import vault key
-    const vaultKey = await importVaultKey(vaultKeyBase64);
-
-    // Convert from Base64
-    const iv = base64ToArrayBuffer(dataIv);
-    const encrypted = base64ToArrayBuffer(dataEnc);
-    const authTag = base64ToArrayBuffer(dataAuthTag);
-
-    // Combine encrypted data and auth tag
-    const encryptedWithTag = new Uint8Array(encrypted.byteLength + authTag.byteLength);
-    encryptedWithTag.set(new Uint8Array(encrypted), 0);
-    encryptedWithTag.set(new Uint8Array(authTag), encrypted.byteLength);
-
-    // Decrypt
-    const decryptedBuffer = await crypto.subtle.decrypt(
-      {
-        name: ALGORITHM,
-        iv: new Uint8Array(iv)
-      },
-      vaultKey,
-      encryptedWithTag
-    );
-
-    // Convert to string and parse JSON
-    const decoder = new TextDecoder();
-    const jsonString = decoder.decode(decryptedBuffer);
-    return JSON.parse(jsonString);
+    return JSON.parse(plaintext);
   } catch (error) {
-    throw new Error(`Decryption failed: ${error.message}`);
+    console.warn('Decrypted credential payload is not valid JSON – returning raw string');
+    return plaintext;
   }
 }
 
-/**
- * Calculate password strength score
- * @param {string} password - Password to evaluate
- * @returns {number} Strength score (0-4)
- */
 export function calculatePasswordStrength(password) {
   if (!password) return 0;
 
   let score = 0;
-  
-  // Length check
-  if (password.length >= 8) score += 1;
-  if (password.length >= 10) score += 1;
-  if (password.length >= 12) score += 1;
-  
-  // Character variety
-  if (/[a-z]/.test(password)) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/[0-9]/.test(password)) score += 1;
-  if (/[^a-zA-Z0-9]/.test(password)) score += 1;
-  
-  // Return 0-4 scale
-  return Math.min(4, Math.floor(score / 2));
+
+  // Length scoring (max 35)
+  if (password.length >= 16) score += 35;
+  else if (password.length >= 12) score += 25;
+  else if (password.length >= 8) score += 15;
+  else score += Math.max(0, (password.length - 4) * 3); // short passwords still get minimal credit
+
+  // Character variety (max 45)
+  if (/[a-z]/.test(password)) score += 10;
+  if (/[A-Z]/.test(password)) score += 10;
+  if (/[0-9]/.test(password)) score += 10;
+  if (/[^a-zA-Z0-9]/.test(password)) score += 15;
+
+  // Bonuses for combinations (max 20)
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 10;
+  if (/[0-9]/.test(password) && /[^a-zA-Z0-9]/.test(password)) score += 10;
+
+  return Math.min(100, score);
 }
 
-/**
- * Generate a random password
- * @param {number} length - Password length (default: 16)
- * @param {Object} options - Character set options
- * @returns {string} Generated password
- */
 export function generatePassword(length = 16, options = {}) {
   const {
     uppercase = true,
     lowercase = true,
     numbers = true,
-    symbols = true
+    symbols = true,
   } = options;
 
-  let chars = '';
-  if (uppercase) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  if (lowercase) chars += 'abcdefghijklmnopqrstuvwxyz';
-  if (numbers) chars += '0123456789';
-  if (symbols) chars += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+  let charset = '';
+  if (uppercase) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if (lowercase) charset += 'abcdefghijklmnopqrstuvwxyz';
+  if (numbers) charset += '0123456789';
+  if (symbols) charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
 
-  if (chars.length === 0) {
+  if (charset.length === 0) {
     throw new Error('At least one character type must be selected');
   }
 
-  const randomValues = crypto.getRandomValues(new Uint8Array(length));
+  const cryptoRef = ensureWebCrypto();
+  const randomValues = cryptoRef.getRandomValues(new Uint8Array(length));
   let password = '';
-  
+
   for (let i = 0; i < length; i++) {
-    password += chars.charAt(randomValues[i] % chars.length);
+    password += charset.charAt(randomValues[i] % charset.length);
   }
 
   return password;
 }
-
-export default {
-  // Credential encryption/decryption (vault key comes from server/auth)
-  importVaultKey,
-  encryptCredential,
-  decryptCredential,
-  
-  // Utilities
-  calculatePasswordStrength,
-  generatePassword
-};
