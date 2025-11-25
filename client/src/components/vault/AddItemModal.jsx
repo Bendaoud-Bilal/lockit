@@ -29,8 +29,9 @@ import Security from "./Security"
 import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
+import { calculatePasswordStrength as scorePassword } from '../../utils/crypto';
 import APP_CONFIG from "../../utils/config";
-import { checkPasswordCompromised } from '../../utils/pwnedPassword';
+import { checkPasswordCompromised, isExposedPassword } from '../../utils/pwnedPassword';
 import axios from "axios"
 import { notifyCredentialsMutated } from '../../utils/credentialEvents';
 import { useAuth } from '../../context/AuthContext';
@@ -255,21 +256,34 @@ const AddItemModal = ({
         // Check if password exists in other credentials
         const isReused = otherPasswords.includes(formData.password);
         updatedFormData.passwordReused = isReused;
-        
-        // Check if password has been compromised in data breaches
+
+        const passwordScore = passwordStrength.score;
+        const isUltraWeak = passwordScore > 0 && passwordScore < 35;
+        const inExposedWordlist = isExposedPassword(formData.password);
+        let compromisedFlag = isUltraWeak || inExposedWordlist;
+
+        if (inExposedWordlist) {
+          toast.error('This password appears on a highly exposed wordlist. Please choose another one.', {
+            duration: 5000
+          });
+        }
+
+        // Check if password has been compromised in data breaches (online lookup) if needed
         try {
-          const { compromised, occurrences } = await checkPasswordCompromised(formData.password);
-          updatedFormData.compromised = compromised;
-          
-          if (compromised) {
-            console.log(`🚨 Warning: This password has been found in ${occurrences} data breaches!`);
-            toast.error(`This password has been found in ${occurrences.toLocaleString()} data breaches! Consider changing it.`, {
-              duration: 5000
-            });
+          if (!compromisedFlag) {
+            const { compromised, occurrences } = await checkPasswordCompromised(formData.password);
+            compromisedFlag = compromised;
+            if (compromised) {
+              console.log(`🚨 Warning: This password has been found in ${occurrences} data breaches!`);
+              toast.error(`This password has been found in ${occurrences.toLocaleString()} data breaches! Consider changing it.`, {
+                duration: 5000
+              });
+            }
           }
+          updatedFormData.compromised = compromisedFlag;
         } catch (error) {
           console.error('Error checking password compromise:', error);
-          updatedFormData.compromised = false;
+          updatedFormData.compromised = compromisedFlag;
         }
       } else {
         // Password hasn't changed, keep original values
@@ -419,37 +433,32 @@ const AddItemModal = ({
   ]
 
   
-  const calculatePasswordStrength = (pwd) => {
-    if (!pwd) return { strength: 0, label: "" };
+  const getPasswordStrengthMeta = (pwd) => {
+    if (!pwd) return { strength: 0, label: "", color: "text-gray-500", score: 0 };
 
-    let score = 0;
-    
-    // Length check
-    if (pwd.length >= 8) score += 1;
-    if (pwd.length >= 10) score += 1;
-    if (pwd.length >= 12) score += 1;
-    
-    // Character variety
-    if (/[a-z]/.test(pwd)) score += 1;
-    if (/[A-Z]/.test(pwd)) score += 1;
-    if (/[0-9]/.test(pwd)) score += 1;
-    if (/[^a-zA-Z0-9]/.test(pwd)) score += 1;
-    
-    // Calculate strength on 0-4 scale
-    const strength = Math.min(4, Math.floor(score / 2));
-    
-    // Determine label
-    let label = "";
-    if (strength === 0) label = "Weak";
-    else if (strength === 1) label = "Medium";
-    else if (strength === 2) label = "Good";
-    else if (strength === 3) label = "Strong";
-    else if (strength === 4) label = "Strong";
-    
-    return { strength, label };
+    const score = scorePassword(pwd);
+    let label = "Weak";
+    let color = "text-red-600";
+    let strengthBars = 1;
+
+    if (score >= 80) {
+      label = "Strong";
+      color = "text-green-600";
+      strengthBars = 4;
+    } else if (score >= 60) {
+      label = "Good";
+      color = "text-emerald-600";
+      strengthBars = 3;
+    } else if (score >= 40) {
+      label = "Medium";
+      color = "text-yellow-600";
+      strengthBars = 2;
+    }
+
+    return { strength: strengthBars, label, color, score };
   }
 
-  const passwordStrength = calculatePasswordStrength(formData.password)
+  const passwordStrength = getPasswordStrengthMeta(formData.password)
 
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
@@ -693,25 +702,21 @@ const AddItemModal = ({
                   <div className="mt-3">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-xs font-semibold text-gray-700">
-                        Strength: <span className={`${
-                          passwordStrength.strength <= 1 ? 'text-red-600' : 
-                          passwordStrength.strength <= 2 ? 'text-yellow-600' : 
-                          'text-green-600'
-                        }`}>{passwordStrength.label}</span>
+                        Strength: <span className={`${passwordStrength.color}`}>{passwordStrength.label}</span>
                       </span>
                     </div>
                     <div className="flex gap-1.5">
-                      {[0, 1, 2, 3 ].map((level) => (
+                      {[1, 2, 3, 4].map((level) => (
                         <div
                           key={level}
                           className={`h-1.5 flex-1 rounded-full transition-all ${
                             level <= passwordStrength.strength 
                               ? passwordStrength.strength <= 1 
                                 ? 'bg-red-600' 
-                                : passwordStrength.strength <= 2 
-                                ? 'bg-yellow-600' 
+                                : passwordStrength.strength === 2 
+                                ? 'bg-yellow-500' 
                                 : 'bg-green-600'
-                              : "bg-gray-200"
+                              : 'bg-gray-200'
                           }`}
                         />
                       ))}

@@ -196,18 +196,23 @@ export function calculatePasswordStrength(password) {
 
   let score = 0;
 
-  if (password.length >= 8) score += 1;
-  if (password.length >= 10) score += 1;
-  if (password.length >= 12) score += 1;
-  if (password.length >= 16) score += 1;
-  
-  // Character variety
-  if (/[a-z]/.test(password)) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/[0-9]/.test(password)) score += 1;
-  if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+  // Length scoring (max 35)
+  if (password.length >= 16) score += 35;
+  else if (password.length >= 12) score += 25;
+  else if (password.length >= 8) score += 15;
+  else score += Math.max(0, (password.length - 4) * 3); // short passwords still get minimal credit
 
-  return Math.min(4, Math.floor(score / 2));
+  // Character variety (max 45)
+  if (/[a-z]/.test(password)) score += 10;
+  if (/[A-Z]/.test(password)) score += 10;
+  if (/[0-9]/.test(password)) score += 10;
+  if (/[^a-zA-Z0-9]/.test(password)) score += 15;
+
+  // Bonuses for combinations (max 20)
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 10;
+  if (/[0-9]/.test(password) && /[^a-zA-Z0-9]/.test(password)) score += 10;
+
+  return Math.min(100, score);
 }
 
 export function generatePassword(length = 16, options = {}) {

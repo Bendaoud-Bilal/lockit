@@ -4,13 +4,13 @@
  * @returns {boolean} - True if compromised (strength < 30), false otherwise.
  */
 export function checkCompromised(passwordStrength) {
-  // Ensure strength is a number before comparison
   const strengthScore = Number(passwordStrength);
-  if (isNaN(strengthScore)) {
-    // Default to not compromised if strength is not a valid number
-    return false; 
+  if (Number.isNaN(strengthScore)) {
+    return false;
   }
-  return strengthScore < 30;
+
+  // Treat anything below 40/100 as high risk for legacy clients that don't flag compromised themselves.
+  return strengthScore > 0 && strengthScore < 40;
 }
 
 /**

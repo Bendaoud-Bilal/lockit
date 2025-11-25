@@ -25,7 +25,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
   const [showAttachments, setShowAttachments] = useState(false)
   const credId = credential.id
   const ownerIdFromCredential = credential.userId
-  const [passwordLength, setPasswordLength] = useState(0)
+  const [passwordScore, setPasswordScore] = useState(null)
   const menuRef = useRef(null)
   const location = useLocation()
   const { user, vaultKey } = useAuth()
@@ -100,7 +100,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
       try {
         const decrypted = await decryptCredentialForClient(credential, vaultKey)
         setDecryptedData(decrypted)
-        setPasswordLength(decrypted?.passwordStrength ?? 0)
+        setPasswordScore(typeof decrypted?.passwordStrength === 'number' ? decrypted.passwordStrength : null)
       } catch {
         setDecryptedData(null)
         toast.error('Impossible de déchiffrer les données')
@@ -110,6 +110,19 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
     }
     decryptData()
   }, [credential, vaultKey])
+
+  const getPasswordBadge = (score) => {
+    if (!credential.hasPassword || credential.category !== 'login' || typeof score !== 'number') {
+      return null;
+    }
+
+    if (score >= 80) return { label: 'Strong', className: 'bg-green-100 text-green-700' };
+    if (score >= 60) return { label: 'Good', className: 'bg-emerald-100 text-emerald-700' };
+    if (score >= 40) return { label: 'Medium', className: 'bg-yellow-100 text-yellow-700' };
+    return { label: 'Weak', className: 'bg-red-100 text-red-700' };
+  }
+
+  const passwordBadge = getPasswordBadge(passwordScore);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -217,24 +230,9 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
                     <span className="mt-[1px]">2FA</span>
                   </div>
                 )}
-                {passwordLength == 0 && credential.category==='login' && (
-                  <div className="flex justify-center items-center text-xs bg-red-100 rounded-lg px-2 sm:px-3 py-0.5">
-                    <span className="text-red-600">Weak</span>
-                  </div>
-                )}
-                {passwordLength == 1 &&  credential.category==='login' && (
-                  <div className="flex justify-center items-center text-xs bg-yellow-100 rounded-lg px-2 sm:px-3 py-0.5">
-                    <span className="text-yellow-600">medium</span>
-                  </div>
-                )}
-                {passwordLength == 2 &&  credential.category==='login' && (
-                  <div className="flex justify-center items-center text-xs bg-orange-100 rounded-lg px-2 sm:px-3 py-0.5">
-                    <span className="text-orange-600">Good</span>
-                  </div>
-                )}
-                {passwordLength >2 && credential.category==='login' && (
-                  <div className="flex justify-center items-center text-xs bg-green-100 rounded-lg px-2 sm:px-3 py-0.5">
-                    <span className="text-green-600">strong</span>
+                {passwordBadge && (
+                  <div className={`flex justify-center items-center text-xs rounded-lg px-2 sm:px-3 py-0.5 ${passwordBadge.className}`}>
+                    <span className="capitalize">{passwordBadge.label}</span>
                   </div>
                 )}
                 {/* {credential.passwordReused && credential.category==='login' && (
