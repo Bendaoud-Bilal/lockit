@@ -34,13 +34,13 @@ const fetchCredentials = async (notifyParent = false) => {
     setPasswords(creds);
 
     for (const cred of creds) {
-      console.log(vaultKey)
+      // console.log(vaultKey)
       if (cred.dataEnc && cred.dataIv && cred.dataAuthTag  && cred.hasPassword) {
         try {
           const decrypted = await decryptCredentialForClient(cred, vaultKey);
           if (decrypted?.password) {
             setListPasswords(prev => [...prev, decrypted.password]);
-            console.log(listPasswords)
+            // console.log(listPasswords)
           }
 
         } catch (decryptionError) {

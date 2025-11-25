@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react"
+import { useState, useEffect, useContext, use } from "react"
 import { 
   X, 
   Globe, 
@@ -32,6 +32,7 @@ import { prepareCredentialForStorage, decryptCredentialForClient } from '../../u
 import { checkPasswordCompromised } from '../../utils/pwnedPassword';
 import axios from "axios"
 import { useAuth } from '../../context/AuthContext';
+import { useFolderList, useAddCredentialToFolder, useRemoveCredentialFromFolder } from "../../hooks/useFolder"
 import apiService from "../../services/apiService"
 import toast from "react-hot-toast"
 
@@ -44,6 +45,11 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
   const { user, vaultKey } = useAuth();
   const userId = user?.id;
   const isEditMode = !!credentialToEdit;
+  
+  // Fetch folders
+  const { folders, isLoading: foldersLoading } = useFolderList(userId);
+  const { addCredentialToFolder } = useAddCredentialToFolder();
+  const { removeCredentialFromFolder } = useRemoveCredentialFromFolder();
   
   // Store original password when editing to detect changes
   const [originalPassword] = useState(credentialToEdit?.password || "");
@@ -64,7 +70,28 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
   
   useEffect(() => {
     setVKey(vaultKey);
-  }, );
+  }, [vaultKey]);
+  
+  // Update folder field when editing and folders are loaded
+  useEffect(() => {
+    if (isEditMode && credentialToEdit && folders && folders.length > 0) {
+      // Check if credential has a folder
+      if (credentialToEdit.folder?.name) {
+        // Verify the folder exists in the loaded folders list
+        const folderExists = folders.some(f => f.name === credentialToEdit.folder.name);
+        if (folderExists && formData.folder !== credentialToEdit.folder.name) {
+          setFormData(prev => ({ ...prev, folder: credentialToEdit.folder.name }));
+        }
+      } else if (credentialToEdit.folderId) {
+        // If we only have folderId, find the folder by ID
+        const folder = folders.find(f => f.id === credentialToEdit.folderId);
+        if (folder && formData.folder !== folder.name) {
+          setFormData(prev => ({ ...prev, folder: folder.name }));
+        }
+      }
+    }
+  }, [isEditMode, credentialToEdit, folders, foldersLoading]);
+  
   const [showIcon, setShowIcon] = useState(false)
   const [errors, setErrors] = useState({})
   const [savedCredentialId, setSavedCredentialId] = useState(credentialToEdit?.id || null) // Store saved credential ID
@@ -73,7 +100,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
     userId: credentialToEdit?.userId || userId,
     title: credentialToEdit?.title || "",
     category: normalizeCategory(credentialToEdit?.category) || "Login",
-    folder: credentialToEdit?.folder?.name || "Work",
+    folder: credentialToEdit?.folder?.name || "",
     // Login fields
     username: credentialToEdit?.username || "",
     email: credentialToEdit?.email || "",
@@ -228,6 +255,14 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
     // Check if password is reused and compromised before encryption
     let updatedFormData = { ...formData };
     
+    // Find the folder ID from folder name
+    const selectedFolder = formData.folder 
+      ? folders?.find(f => f.name === formData.folder) 
+      : null;
+    
+    // Add folderId to the credential data
+    updatedFormData.folderId = selectedFolder?.id || null;
+    
     // Only check password reuse/compromise if password has changed or it's a new credential
     const passwordHasChanged = !isEditMode || formData.password !== originalPassword;
     
@@ -238,8 +273,8 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
           ? listPasswords.filter(pwd => pwd !== originalPassword)
           : listPasswords;
 
-        console.log('Other passwords:', otherPasswords);
-        console.log('Current password:', formData.password);
+        // console.log('Other passwords:', otherPasswords);
+        // console.log('Current password:', formData.password);
         
         // Check if password exists in other credentials
         const isReused = otherPasswords.includes(formData.password);
@@ -251,7 +286,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
           updatedFormData.compromised = compromised;
           
           if (compromised) {
-            console.log(`🚨 Warning: This password has been found in ${occurrences} data breaches!`);
+            // console.log(`🚨 Warning: This password has been found in ${occurrences} data breaches!`);
             toast.error(`This password has been found in ${occurrences.toLocaleString()} data breaches! Consider changing it.`, {
               duration: 5000
             });
@@ -262,7 +297,7 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
         }
       } else {
         // Password hasn't changed, keep original values
-        console.log('Password unchanged, keeping original values');
+        // console.log('Password unchanged, keeping original values');
         updatedFormData.passwordReused = originalPasswordReused;
         updatedFormData.compromised = originalCompromised;
       }
@@ -296,6 +331,44 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
     // const credentialId = response.data.credential?.id || credentialToEdit?.id;
     
     const credentialId = response.credential?.id || credentialToEdit?.id;
+    
+    // Handle folder assignment
+    if (selectedFolder && credentialId) {
+      try {
+        // Check if we need to update folder assignment (for edit mode)
+        const originalFolderId = credentialToEdit?.folderId || credentialToEdit?.folder?.id;
+        
+        if (isEditMode && originalFolderId && originalFolderId !== selectedFolder.id) {
+          // Remove from old folder first
+          await removeCredentialFromFolder({ 
+            folderId: originalFolderId, 
+            credentialId 
+          });
+        }
+        
+        // Add to new folder (or add for first time)
+        if (!isEditMode || originalFolderId !== selectedFolder.id) {
+          await addCredentialToFolder({ 
+            folderId: selectedFolder.id, 
+            credentialId 
+          });
+        }
+      } catch (folderError) {
+        console.error('Error managing folder assignment:', folderError);
+        toast.error('Credential saved but folder assignment failed');
+      }
+    } else if (isEditMode && !selectedFolder && credentialToEdit?.folderId) {
+      // Remove from folder if folder was cleared
+      try {
+        await removeCredentialFromFolder({ 
+          folderId: credentialToEdit.folderId, 
+          credentialId 
+        });
+      } catch (folderError) {
+        console.error('Error removing from folder:', folderError);
+      }
+    }
+    
     // Upload attachments if any were selected
     if (selectedFiles.length > 0 && credentialId) {
       let successCount = 0
@@ -591,12 +664,19 @@ const AddItemModal= ({show, setShow, onCredentialAdded, credentialToEdit = null,
               <select
                 value={formData.folder}
                 onChange={(e) => setFormData({ ...formData, folder: e.target.value })}
-                className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none cursor-pointer"
+                disabled={foldersLoading}
+                className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:ring-2 focus:ring-black focus:border-transparent focus:bg-white transition-all outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option>Work</option>
-                <option>Personal</option>
-                <option>Finance</option>
-                
+                <option value="">No Folder</option>
+                {folders && folders.length > 0 ? (
+                  folders.map((folder) => (
+                    <option key={folder.id} value={folder.name}>
+                      {folder.name}
+                    </option>
+                  ))
+                ) : (
+                  <option disabled>No folders available</option>
+                )}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
