@@ -1,60 +1,66 @@
 import { PrismaClient } from '@prisma/client';
 import { checkCompromised, checkReuse } from '../services/credentialStatusService.js';
 
-const prisma = new PrismaClient();
+const basePrisma = new PrismaClient();
 
-// --- PRISMA MIDDLEWARE FOR CREDENTIALS ---
-prisma.$use(async (params, next) => {
-  // Intercept 'create' and 'update' operations on the 'Credential' model
-  if (params.model === 'Credential' && (params.action === 'create' || params.action === 'update')) {
-    
-    // params.args.data contains the data being written
-    const credentialData = params.args.data;
-    
-    // --- 1. Call Compromised Check Service ---
-    // Ensure passwordStrength is present before calling
-    if (credentialData.passwordStrength !== undefined) {
-        credentialData.compromised = checkCompromised(credentialData.passwordStrength);
-    } else if (credentialData.hasPassword === true) {
-         // If it's a password credential but strength is missing, log a warning
-         console.warn(`Credential ID ${params.args.where?.id || '(new)'} is missing passwordStrength. 'compromised' status might be inaccurate.`);
-         // Decide on a default: perhaps assume compromised if strength is unknown?
-         // credentialData.compromised = true; // Or false, depending on desired default
-    } else {
-         credentialData.compromised = false; // Not a password credential
-    }
+// --- PRISMA CLIENT EXTENSION FOR CREDENTIALS ---
+const prisma = basePrisma.$extends({
+  query: {
+    credential: {
+      async create({ args, query }) {
+        return handleCredentialOperation(args, query, 'create');
+      },
+      async update({ args, query }) {
+        return handleCredentialOperation(args, query, 'update');
+      },
+    },
+  },
+});
 
-    // --- 2. Call Reuse Check Service ---
-    // Check if necessary data is available for the reuse check
-    if (credentialData.userId && credentialData.dataEnc && credentialData.dataIv && credentialData.dataAuthTag) {
-      const encryptedData = {
-        dataEnc: credentialData.dataEnc,
-        dataIv: credentialData.dataIv,
-        dataAuthTag: credentialData.dataAuthTag,
-      };
-      // Get the ID if it's an update operation
-      const currentCredentialId = params.action === 'update' ? params.args.where?.id : undefined;
-      
-      // Call the service function (awaits the promise)
-      credentialData.passwordReused = await checkReuse(prisma, credentialData.userId, encryptedData, currentCredentialId);
+// Helper function to handle credential operations
+async function handleCredentialOperation(args, query, action) {
+  const credentialData = args.data;
 
-    } else if (credentialData.hasPassword === true) {
-        // If it should have encrypted data but doesn't, log a warning
-        console.warn(`Credential ID ${params.args.where?.id || '(new)'} is missing encrypted data. 'passwordReused' check skipped.`);
-        // Default to false if check cannot be performed
-        credentialData.passwordReused = false; 
-    } else {
-        credentialData.passwordReused = false; // Not a password credential
-    }
-
-    // Update the arguments that will be used in the actual Prisma operation
-    params.args.data = credentialData;
+  // --- 1. Call Compromised Check Service ---
+  if (credentialData.passwordStrength !== undefined) {
+    credentialData.compromised = checkCompromised(credentialData.passwordStrength);
+  } else if (credentialData.hasPassword === true) {
+    console.warn(`Credential ID ${args.where?.id || '(new)'} is missing passwordStrength. 'compromised' status might be inaccurate.`);
+    // credentialData.compromised = true; // Or your preferred default
+  } else {
+    credentialData.compromised = false;
   }
 
-  // Continue the Prisma operation (either next middleware or the database action)
-  return next(params);
-});
-// --- END PRISMA MIDDLEWARE ---
+  // --- 2. Call Reuse Check Service ---
+  if (credentialData.userId && credentialData.dataEnc && credentialData.dataIv && credentialData.dataAuthTag) {
+    const encryptedData = {
+      dataEnc: credentialData.dataEnc,
+      dataIv: credentialData.dataIv,
+      dataAuthTag: credentialData.dataAuthTag,
+    };
+    const currentCredentialId = action === 'update' ? args.where?.id : undefined;
+    
+    credentialData.passwordReused = await checkReuse(
+      basePrisma, // Use the base client for queries inside the extension
+      credentialData.userId,
+      encryptedData,
+      currentCredentialId
+    );
+  } else if (credentialData.hasPassword === true) {
+    console.warn(`Credential ID ${args.where?.id || '(new)'} is missing encrypted data. 'passwordReused' check skipped.`);
+    credentialData.passwordReused = false;
+  } else {
+    credentialData.passwordReused = false;
+  }
 
-// Export the configured prisma instance
+  // Update args with modified data
+  args.data = credentialData;
+
+  // Execute the query with modified data
+  return query(args);
+}
+
+// --- END PRISMA CLIENT EXTENSION ---
+
+// Export the extended prisma instance
 export default prisma;
