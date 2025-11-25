@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import link from "../services/link";
 
-
 // Hook for fetching folders list
 export const useFolderList = (userId) => {
   const {
@@ -12,9 +11,7 @@ export const useFolderList = (userId) => {
   } = useQuery({
     queryKey: ["folders", userId],
     queryFn: async () => {
-      
       const response = await link.Get("/api/folder/" + userId + "/all");
-  
       
       // Handle different response structures
       const folders = response?.folders || response?.data || response || [];
@@ -39,21 +36,31 @@ export const useSearchFolder = () => {
   const mutation = useMutation({
     mutationFn: async (searchQuery) => {
       if (searchQuery === "") {
-        
-        const folders = await link.Get("/api/folder/" , 
+        const folders = await link.Get("/api/folder/", 
           {name: searchQuery}
         );
-        return folders;
+        
+        // Normalize immediately
+        const foldersArray = folders?.folders || folders?.data || folders || [];
+        return foldersArray.map(folder => ({
+          ...folder,
+          passwordCount: folder.passwordCount ?? 0
+        }));
       } else {
-        //@ts-ignore
         const folders = await link.Get("/api/folder/search", 
           {name: searchQuery}
         );
-        return folders;
+        
+        // Normalize immediately
+        const foldersArray = folders?.folders || folders?.data || folders || [];
+        return foldersArray.map(folder => ({
+          ...folder,
+          passwordCount: folder.passwordCount ?? 0
+        }));
       }
     },
     onSuccess: (data) => {
-      // Update the folders cache with search results
+      // Update the folders cache with search results (already normalized)
       queryClient.setQueryData(["folders"], data);
     },
   });
@@ -71,9 +78,12 @@ export const useCreateFolder = (userId) => {
 
   const mutation = useMutation({
     mutationFn: async (folderName) => {
-      console.log("user id = " , userId);
+      console.log("user id = ", userId);
       
-      const newFolder = await link.Post("/api/folder", { name: folderName , userId: userId });
+      const newFolder = await link.Post("/api/folder", { 
+        name: folderName, 
+        userId: userId 
+      });
       return newFolder;
     },
     onSuccess: () => {
@@ -120,8 +130,9 @@ export const useUpdateFolder = () => {
 
   const mutation = useMutation({
     mutationFn: async ({ folderId, newFolderName }) => {
-      //@ts-ignore
-      return await link.Put("/api/folder/" + folderId, { name: newFolderName });
+      return await link.Put("/api/folder/" + folderId, { 
+        name: newFolderName 
+      });
     },
     onSuccess: () => {
       // Invalidate and refetch
@@ -146,7 +157,6 @@ export const useDeleteFolder = () => {
 
   const mutation = useMutation({
     mutationFn: async (folderId) => {
-      //@ts-ignore
       return await link.Delete("/api/folder/" + folderId);
     },
     onSuccess: () => {
@@ -170,15 +180,15 @@ export const useAddCredentialToFolder = () => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async ({ folderId, credentialId }) => {
-      //@ts-ignore
-      return await link.Post("/api/folder/Credential", { folderId, credentialId });
-    }
-    ,
+      return await link.Post("/api/folder/Credential", { 
+        folderId, 
+        credentialId 
+      });
+    },
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["folders"] });
-    }
-    ,
+    },
     onError: (error) => {
       console.log("Failed to add credential to folder:", error);
     },
@@ -190,19 +200,20 @@ export const useAddCredentialToFolder = () => {
     isError: mutation.isError,
   };
 };
+
 export const useRemoveCredentialFromFolder = () => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async ({ folderId, credentialId }) => {
-      //@ts-ignore
-      return await link.Delete("/api/folder/Credentials", { folderId, credentialId });
-    }
-    ,
+      return await link.Delete("/api/folder/Credentials", { 
+        folderId, 
+        credentialId 
+      });
+    },
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["folders"] });
-    }
-    ,
+    },
     onError: (error) => {
       console.log("Failed to remove credential from folder:", error);
     },
@@ -235,8 +246,3 @@ export const useGetCredentialsInFolder = (folderId) => {
     refetch,
   };
 };
-
-
-
-
-

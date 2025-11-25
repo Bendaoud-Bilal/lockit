@@ -1,87 +1,59 @@
-import { Edit } from "lucide-react";
-import EditFolderName from "./EditFolderName";
-
-
+import { SquarePen } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 const EditDeleteModal = ({
   folderId,
   folderName,
   onEdit,
   onDelete,
+  isOpen,
+  onClose
 }) => {
-  const modalId = `editDeleteModal-${folderId}`;
-  const editFolderModalId = `editFolderModal-${folderId}`;
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isOpen && menuRef.current && !menuRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
 
   const handleDelete = () => {
     onDelete(folderId);
+    onClose();
   };
 
-  const handleSave = (newFolderName) => {
-    onEdit(folderId, newFolderName);
-  };
+  const editFolderModalId = `editFolderModal-${folderId}`;
+
+  if (!isOpen) return null;
 
   return (
-    <>
-      <div
-        className="modal fade"
-        id={modalId}
-        tabIndex={-1}
-        aria-labelledby={`${modalId}Label`}
-        aria-hidden="true"
-        style={{
-          padding: "0",
-        }}
+    <div 
+      ref={menuRef}
+      className="absolute bg-white right-0 top-8 border border-gray-200 shadow-lg w-36 rounded-lg z-50"
+    >
+      <button
+        type="button"
+        className="w-full text-left text-sm text-gray-700 hover:bg-black rounded-t-lg pl-2 hover:text-white flex gap-x-2 py-1.5 items-center"
+        data-bs-toggle="modal"
+        data-bs-target={`#${editFolderModalId}`}
+        onClick={onClose}
       >
-        <div className="modal-dialog">
-          <div className="modal-content" style={{ width: "15rem" }}>
-            <div className="modal-body">
-              <Edit size={"1rem"} />
-              <button
-                type="button"
-                className="btn"
-                data-bs-toggle="modal"
-                data-bs-target={`#${editFolderModalId}`}
-                style={{
-                  width: "80%",
-                  textAlign: "left",
-                }}
-              >
-                Edit item
-              </button>
-              <hr
-                style={{
-                  marginTop: "0",
-                  marginBottom: "0",
-                }}
-              />
-              <button
-                type="button"
-                className="btn"
-                onClick={handleDelete}
-                data-bs-dismiss="modal"
-                style={{
-                  backgroundColor: "transparent",
-                  color: "red",
-                  marginTop: "0",
-                  marginBottom: "0",
-                  padding: "0rem",
-                  paddingTop: "0.5rem",
-                  width: "100%",
-                  textAlign: "left",
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <EditFolderName
-        onSave={handleSave}
-        folderId={folderId}
-        initialFolderName={folderName}
-      />
-    </>
+        <SquarePen className="w-4" strokeWidth={2} />
+        <div>Edit item</div>
+      </button>
+      
+      <button
+        type="button"
+        onClick={handleDelete}
+        className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2"
+      >
+        <p className="text-red-600 m-0">Delete</p>
+      </button>
+    </div>
   );
 };
 

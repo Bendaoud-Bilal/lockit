@@ -1,3 +1,4 @@
+import React from "react";
 import SearchBar from "./SearchBar";
 import Folder from "./Folder";
 import useCurrent_SearchFolderQueryStore from "../../stores/SearchFolder";
@@ -12,12 +13,9 @@ import {
   useDeleteFolder,
 } from "../../hooks/useFolder";
 import { useAuth } from "../../context/AuthContext";
-import { useState, useEffect } from "react";
-
+import EditFolderName from "./EditFolderName";
 
 const FolderList = () => {
-
-
   const { user } = useAuth();
   const userId = user?.id;
 
@@ -27,31 +25,33 @@ const FolderList = () => {
   const { updateFolder } = useUpdateFolder();
   const { deleteFolder } = useDeleteFolder();
 
-  const [displayFolders, setDisplayFolders] = useState([]);
+  const folderCountMap = React.useMemo(() => {
+    const map = {};
+    (Folders || []).forEach(folder => {
+      map[folder.id] = folder.passwordCount || 0;
+    });
+    return map;
+  }, [Folders]);
 
-  // Update displayed folders when Folders data changes
-  useEffect(() => {
-    if (!error && !isLoading && Folders && Folders.length > 0) {
-      setDisplayFolders(Folders);
-    }
-  }, [Folders, error, isLoading]);
-
-  // Update displayed folders when search results change
-  useEffect(() => {
+  const displayFolders = React.useMemo(() => {
     if (searchResults) {
       const results = searchResults?.folders || searchResults?.data || searchResults || [];
-      setDisplayFolders(Array.isArray(results) ? results : []);
+      return results.map(folder => ({
+        ...folder,
+        passwordCount: folderCountMap[folder.id] ?? 0
+      }));
     }
-  }, [searchResults]);
+    return Folders || [];
+  }, [searchResults, Folders, folderCountMap]);
 
   const handleSearch = async () => {
     const searchQuery =
       useCurrent_SearchFolderQueryStore.getState().SearchFolderText || "";
-    
+
     if (searchQuery !== "") {
       searchFolders(searchQuery);
     } else {
-      setDisplayFolders(Folders || []);
+      searchFolders("");
     }
   };
 
@@ -64,68 +64,81 @@ const FolderList = () => {
   };
 
   const handleAddFolder = async (folderName) => {
-    console.log("user id= " , user.id);
     createFolder(folderName);
   };
 
-
-
   return (
     <>
-      <div className="container-fluid" style={{marginTop:"2rem"}}>
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <div style={{ flex: 1 }}>
-            <SearchBar onSearch={handleSearch} />
-          </div>
+      <div className="w-full h-screen bg-white flex flex-col">
+        <div className="w-full flex items-center gap-3 h-16 bg-white border-b border-gray-100 px-4">
+          <SearchBar onSearch={handleSearch} />
+          
           <button
             type="button"
-            data-bs-dismiss="modal"
-            className="btn btn-dark"
             data-bs-toggle="modal"
             data-bs-target="#addFolderModal"
+            className="flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2"
           >
-            <Plus size={18} className="me-2" />
-            Add Folder
+            <Plus className="w-4" strokeWidth={1} />
+            <span className="hidden sm:inline">Add Folder</span>
           </button>
         </div>
 
-        {(isLoading || isSearching) && (
-          <div className="text-center my-4">
-            <div className="spinner-border" role="status">
-              <span className="visually-hidden">Loading...</span>
+        {/* Content area */}
+        <div style={{ padding: "2rem 3rem", flex: 1, overflowY: "auto" }}>
+          {(isLoading || isSearching) && (
+            <div className="text-center my-4">
+              <div className="spinner-border" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-       
-
-        {!isLoading && !isSearching && !error && displayFolders.length === 0 ? (
-          <EmptyFolder />
-        ) : (
-          !isLoading &&
-          !isSearching &&
-          !error && (
-            <div style={{ marginTop: "3rem" }}>
-              {displayFolders.map((folder, index) => (
-                <div
-                  key={index}
-                  className="col-xl-2 col-lg-3 col-md-4 col-sm-6"
-                >
-                  <Folder
-                    folderID={folder.id}
-                    folderName={folder.name}
-                    passwordCount={folder.passwordCount}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                </div>
-              ))}
-            </div>
-          )
-        )}
+          {!isLoading && !isSearching && !error && displayFolders.length === 0 ? (
+            <EmptyFolder />
+          ) : (
+            !isLoading &&
+            !isSearching &&
+            !error && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+                  gap: "1.5rem",
+                  marginTop: "1rem"
+                }}
+              >
+                {displayFolders.map((folder) => (
+                  <div key={folder.id}>
+                    <Folder
+                      folderID={folder.id}
+                      folderName={folder.name}
+                      passwordCount={folder.passwordCount || 0}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
       </div>
-      <AddFolder onSave={handleAddFolder} />
+      
+      <AddFolder onSave={handleAddFolder} existingFolders={displayFolders} />
+      
+      {/* Render all EditFolderName modals here at the top level */}
+      {displayFolders.map((folder) => (
+        <EditFolderName
+          key={`edit-modal-${folder.id}`}
+          onSave={(newName) => handleEdit(folder.id, newName)}
+          folderId={folder.id}
+          initialFolderName={folder.name}
+          existingFolders={displayFolders}
+        />
+      ))}
     </>
   );
 };
+
 export default FolderList;
