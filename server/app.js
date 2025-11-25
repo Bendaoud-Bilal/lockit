@@ -6,6 +6,8 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import vaultRoutes from "./routes/Vault.js";
 import authenticatorRoutes from "./routes/authenticator.routes.js"
+import sendRoute from "./routes/sendRoute.js";
+import folderRoute from "./routes/folderRoute.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -22,7 +24,12 @@ app.use(helmet());
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: [
+      process.env.CLIENT_URL,
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175"
+    ].filter(Boolean),
     credentials: true,
   })
 );
@@ -49,6 +56,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/vault", vaultRoutes);
 app.use("/api/totp",authenticatorRoutes)
 //  
+app.use("/api/send", sendRoute);
+app.use("/api/folder", folderRoute);
 
 
 // Error handling middleware

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import Sidebar from "./components/shared/Sidebar";
@@ -18,6 +18,10 @@ import Authenticator from "./components/authenticator/Authenticator";
 import { X } from "lucide-react";
 
 
+import FolderList from "./components/folders/FolderList"
+import Send from "./components/send/Send";
+import SendContent from "./components/send/SendContent";
+import CredentialListInFolder from "./components/folders/CredentialListInFolder"
 
 function MainLayout({
   activeFilter,
@@ -65,9 +69,14 @@ function MainLayout({
             path="/authenticator"
             element={<div className=" p-8">{<Authenticator />}</div>}
           />
-          <Route path="/send" element={<div className="p-8">Send</div>} />
-          <Route path="/folders" element={<div className="p-8">Folders</div>} />
+
           <Route path="/archive" element={<Archive onCredentialsChange={onCredentialsChange}/>} />
+          <Route path="/folders" element={<FolderList></FolderList>} />
+
+          <Route path="/folders/:folderId" element={<CredentialListInFolder></CredentialListInFolder>} />
+        <Route path="/send" element={<Send></Send>} />
+
+          <Route path="/send/:sendId" element={<SendContent></SendContent>} />
 
           {/* Catch all - redirect to my vault */}
           <Route path="*" element={<Navigate to="/my-vault" replace />} />
@@ -189,12 +198,12 @@ function AppContent() {
 // Main App component - wraps everything with providers
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AuthProvider>
         <Toaster position="top-center" />
         <AppContent />
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
