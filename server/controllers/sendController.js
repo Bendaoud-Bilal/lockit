@@ -356,6 +356,111 @@ const updateAccessCount = async ( req, res ) => {
 }
 
 
+const GetSendForReceiver = async (req, res) => {
+    let { id } = req.params;
+    const { password } = req.query;
+    
+    const send = await getSendById(id);
+    
+    if (!send) {
+        return res.status(404).json({ error: 'Send not found or has been deleted' });
+    }
+    
+    // Check if expired
+    if (send.expiresAt && new Date(send.expiresAt) < new Date()) {
+        return res.status(410).json({ error: 'This send has expired' });
+    }
+    
+    // Check if deleted
+    if (send.deletedAt) {
+        return res.status(410).json({ error: 'This send has been deleted' });
+    }
+    
+    // Check if inactive
+    if (!send.isActive) {
+        return res.status(403).json({ error: 'This send is no longer active' });
+    }
+    
+    // Check access count
+    if (send.maxAccessCount && send.currentAccessCount >= send.maxAccessCount) {
+        return res.status(403).json({ error: 'Maximum access count reached' });
+    }
+    
+    // If password protected but no password provided, return metadata only
+    if (send.passwordProtected && !password) {
+        return res.status(200).json({
+            id: send.id,
+            name: send.name,
+            type: send.type,
+            passwordProtected: true,
+            expiresAt: send.expiresAt,
+            maxAccessCount: send.maxAccessCount,
+            currentAccessCount: send.currentAccessCount,
+            createdAt: send.createdAt,
+            isActive: send.isActive
+        });
+    }
+    
+    // Decrypt content
+    let keyMaterial = "";
+    if (password) {
+        keyMaterial = password;
+    }
+    
+    // Derive a proper 32-byte key using SHA-256
+    const key = crypto.createHash('sha256').update(keyMaterial).digest();
+    
+    let encryptContent;
+    
+    switch(send.type) {
+        case "file":
+            // For files, retrieve the encrypted file from storage
+            const filePath = send.encryptedContent;
+            try {
+                const encryptedFile = await GetFileFromPath(filePath);
+                encryptContent = await encryptedFile.arrayBuffer().then(buffer => {
+                    return Buffer.from(buffer).toString('base64');
+                });
+            } catch (error) {
+                return res.status(500).json({ error: 'Failed to retrieve file' });
+            }
+            break;
+        case "text":
+        case "credential":
+            encryptContent = send.encryptedContent;
+            break;
+        default:
+            return res.status(400).json({ error: "Invalid send type" });
+    }
+    
+    // Decrypt the content
+    let decryptedContent;
+    try {
+        decryptedContent = decryptContent(encryptContent, send.contentIv, send.contentAuthTag, key);
+    } catch (error) {
+        return res.status(401).json({ error: 'Invalid password or corrupted content' });
+    }
+    
+    // Increment access count
+    await updateSendAccessCount(send.id, send.currentAccessCount + 1);
+    
+    // Return decrypted content
+    if (send.type === "file") {
+        const decryptedBuffer = Buffer.from(decryptedContent, 'base64');
+        return res.status(200).json({ 
+            ...send, 
+            content: Array.from(decryptedBuffer),
+            extension: send.encryptedContent.split('.').pop(),
+            filename: send.encryptedContent.split('/').pop()
+        });
+    }
+    
+    return res.status(200).json({ 
+        ...send, 
+        content: decryptedContent 
+    });
+};
+
 export {
     CreateSend,
     GetSendsByUserId,
@@ -363,5 +468,6 @@ export {
     DeleteSendById,
     updateAccessCount,
     CreateSendForReceiver,
-    GetEncryptedSendById
+    GetEncryptedSendById,
+    GetSendForReceiver
 }

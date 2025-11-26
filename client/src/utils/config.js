@@ -4,6 +4,8 @@ export const APP_CONFIG = {
   API_BASE_URL: import.meta.env.VITE_API_URL || "http://localhost:3000",
   API_TIMEOUT: 30000, // 30 seconds
 
+  RELAY_SERVER_URL: "https://lockit-relay-server.onrender.com",
+
   // Security Configuration
   SECURITY: {
     // Auto-lock timeout in milliseconds

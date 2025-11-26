@@ -21,8 +21,8 @@ import apiService from './services/apiService';
 
 import FolderList from "./components/folders/FolderList"
 import Send from "./components/send/Send";
-import SendContent from "./components/send/SendContent";
 import CredentialListInFolder from "./components/folders/CredentialListInFolder"
+import ReceiveSend from "./pages/ReceiveSend";
 
 function MainLayout({
 	activeFilter,
@@ -75,7 +75,6 @@ function MainLayout({
           <Route path="/folders/:folderId" element={<CredentialListInFolder></CredentialListInFolder>} />
         <Route path="/send" element={<Send></Send>} />
 
-          <Route path="/send/:sendId" element={<SendContent></SendContent>} />
 
 					<Route path="*" element={<Navigate to="/my-vault" replace />} />
 				</Routes>
@@ -155,6 +154,7 @@ function AppContent() {
 			<Route path="/signup" element={<SignUp />} />
 			<Route path="/unlock" element={<Unlock />} />
 			<Route path="/reset-password" element={<ResetPassword />} />
+			<Route path="/receive/:sendId" element={<ReceiveSend />} />
 
 			<Route
 				path="/*"

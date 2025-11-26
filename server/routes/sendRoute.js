@@ -1,7 +1,9 @@
 import express from "express";
-import { CreateSend , GetSendsByUserId , GetSendById, DeleteSendById , updateAccessCount , CreateSendForReceiver , GetEncryptedSendById } from '../controllers/sendController.js';
+import { CreateSend , GetSendsByUserId , GetSendById, DeleteSendById , updateAccessCount , CreateSendForReceiver , GetEncryptedSendById, GetSendForReceiver } from '../controllers/sendController.js';
 
 const router = express.Router();
+
+router.get('/receive/:id', GetSendForReceiver);
 
 router.post('/', CreateSend);
 router.post('/createSendForReceiver', CreateSendForReceiver);
