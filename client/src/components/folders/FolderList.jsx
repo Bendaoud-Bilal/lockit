@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import SearchBar from "./SearchBar";
 import Folder from "./Folder";
 import useCurrent_SearchFolderQueryStore from "../../stores/SearchFolder";
@@ -18,6 +18,8 @@ import EditFolderName from "./EditFolderName";
 const FolderList = () => {
   const { user } = useAuth();
   const userId = user?.id;
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editModalState, setEditModalState] = useState({});
 
   const { folders: Folders, isLoading, error } = useFolderList(userId);
   const { searchFolders, searchResults, isSearching } = useSearchFolder();
@@ -57,6 +59,7 @@ const FolderList = () => {
 
   const handleEdit = async (folderId, newFolderName) => {
     updateFolder({ folderId, newFolderName });
+    setEditModalState(prev => ({ ...prev, [folderId]: false }));
   };
 
   const handleDelete = async (folderId) => {
@@ -65,6 +68,15 @@ const FolderList = () => {
 
   const handleAddFolder = async (folderName) => {
     createFolder(folderName);
+    setIsAddModalOpen(false);
+  };
+
+  const openEditModal = (folderId) => {
+    setEditModalState(prev => ({ ...prev, [folderId]: true }));
+  };
+
+  const closeEditModal = (folderId) => {
+    setEditModalState(prev => ({ ...prev, [folderId]: false }));
   };
 
   return (
@@ -75,9 +87,8 @@ const FolderList = () => {
           
           <button
             type="button"
-            data-bs-toggle="modal"
-            data-bs-target="#addFolderModal"
-            className="flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2"
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center bg-black text-white gap-x-2 rounded-md py-1 px-3 ml-2 hover:bg-gray-800 transition-colors"
           >
             <Plus className="w-4" strokeWidth={1} />
             <span className="hidden sm:inline">Add Folder</span>
@@ -85,11 +96,11 @@ const FolderList = () => {
         </div>
 
         {/* Content area */}
-        <div style={{ padding: "2rem 3rem", flex: 1, overflowY: "auto" }}>
+        <div className="p-8 md:px-12 flex-1 overflow-y-auto">
           {(isLoading || isSearching) && (
             <div className="text-center my-4">
-              <div className="spinner-border" role="status">
-                <span className="visually-hidden">Loading...</span>
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
+                <span className="sr-only">Loading...</span>
               </div>
             </div>
           )}
@@ -100,14 +111,7 @@ const FolderList = () => {
             !isLoading &&
             !isSearching &&
             !error && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-                  gap: "1.5rem",
-                  marginTop: "1rem"
-                }}
-              >
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-6 mt-4">
                 {displayFolders.map((folder) => (
                   <div key={folder.id}>
                     <Folder
@@ -116,6 +120,7 @@ const FolderList = () => {
                       passwordCount={folder.passwordCount || 0}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      onOpenEdit={() => openEditModal(folder.id)}
                     />
                   </div>
                 ))}
@@ -125,12 +130,19 @@ const FolderList = () => {
         </div>
       </div>
       
-      <AddFolder onSave={handleAddFolder} existingFolders={displayFolders} />
+      <AddFolder 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSave={handleAddFolder}
+        existingFolders={displayFolders}
+      />
       
-      {/* Render all EditFolderName modals here at the top level */}
+      {/* Render all EditFolderName modals */}
       {displayFolders.map((folder) => (
         <EditFolderName
           key={`edit-modal-${folder.id}`}
+          isOpen={editModalState[folder.id] || false}
+          onClose={() => closeEditModal(folder.id)}
           onSave={(newName) => handleEdit(folder.id, newName)}
           folderId={folder.id}
           initialFolderName={folder.name}

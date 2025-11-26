@@ -6,6 +6,7 @@ const EditDeleteModal = ({
   folderName,
   onEdit,
   onDelete,
+  onOpenEdit,
   isOpen,
   onClose
 }) => {
@@ -26,7 +27,10 @@ const EditDeleteModal = ({
     onClose();
   };
 
-  const editFolderModalId = `editFolderModal-${folderId}`;
+  const handleEdit = () => {
+    onOpenEdit();
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -37,10 +41,8 @@ const EditDeleteModal = ({
     >
       <button
         type="button"
-        className="w-full text-left text-sm text-gray-700 hover:bg-black rounded-t-lg pl-2 hover:text-white flex gap-x-2 py-1.5 items-center"
-        data-bs-toggle="modal"
-        data-bs-target={`#${editFolderModalId}`}
-        onClick={onClose}
+        className="w-full text-left text-sm text-gray-700 hover:bg-black rounded-t-lg pl-2 hover:text-white flex gap-x-2 py-1.5 items-center transition-colors"
+        onClick={handleEdit}
       >
         <SquarePen className="w-4" strokeWidth={2} />
         <div>Edit item</div>
@@ -49,7 +51,7 @@ const EditDeleteModal = ({
       <button
         type="button"
         onClick={handleDelete}
-        className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2"
+        className="w-full text-left pb-1.5 border-t border-gray-200 items-center pl-3 text-sm flex gap-x-2 hover:bg-red-100 rounded-b-lg pt-2 transition-colors"
       >
         <p className="text-red-600 m-0">Delete</p>
       </button>

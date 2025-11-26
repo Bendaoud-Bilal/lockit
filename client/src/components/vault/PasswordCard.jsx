@@ -250,7 +250,7 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
               </div>
               <div className="flex flex-wrap gap-2 items-center">
                 {hasFolder && (
-                  <div className="flex items-center text-xs bg-gray-100 rounded-lg px-2 py-1">
+                  <div className="flex items-center gap-x-1.5 text-xs bg-gray-100 rounded-lg px-2 py-0.5">
                     <Folder className="w-3" strokeWidth={1} />
                     <span>{credential.folder.name}</span>
                   </div>

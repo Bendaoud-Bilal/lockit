@@ -37,7 +37,7 @@ function MainLayout({
 	setShowRecoveryKeyModal,
 }) {
 	return (
-  <div className="flex h-screen bg-gray-50">
+  <div className="flex h-screen">
 			<Sidebar
 				activeFilter={activeFilter}
 				onFilterChange={setActiveFilter}

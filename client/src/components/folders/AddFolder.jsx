@@ -1,39 +1,25 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Save } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Save, X } from "lucide-react";
 
-const AddFolder = ({ onSave, existingFolders = [] }) => {
+const AddFolder = ({ isOpen, onClose, onSave, existingFolders = [] }) => {
   const [folderName, setFolderName] = useState("");
   const [error, setError] = useState("");
-  const closeButtonRef = useRef(null);
   
-  // Reset form when modal is opened
   useEffect(() => {
-    const modalElement = document.getElementById('addFolderModal');
-    
-    const handleModalShow = () => {
+    if (isOpen) {
       setFolderName("");
       setError("");
-    };
-    
-    if (modalElement) {
-      modalElement.addEventListener('show.bs.modal', handleModalShow);
-      return () => {
-        modalElement.removeEventListener('show.bs.modal', handleModalShow);
-      };
     }
-  }, []);
+  }, [isOpen]);
 
   const validateAndSave = () => {
-    // Trim whitespace
     const trimmedName = folderName.trim();
     
-    // Check if empty
     if (!trimmedName) {
       setError("Folder name cannot be empty");
       return;
     }
     
-    // Check if duplicate (case-insensitive)
     const isDuplicate = existingFolders.some(
       folder => folder.name.toLowerCase() === trimmedName.toLowerCase()
     );
@@ -43,59 +29,47 @@ const AddFolder = ({ onSave, existingFolders = [] }) => {
       return;
     }
     
-    // If validation passes, save and close
     onSave(trimmedName);
     setFolderName("");
     setError("");
-    
-    // Close modal by clicking the close button
-    if (closeButtonRef.current) {
-      closeButtonRef.current.click();
-    }
   };
+
+  if (!isOpen) return null;
   
   return (
-    <div
-      className="modal fade"
-      id="addFolderModal"
-      tabIndex={-1}
-      aria-labelledby="addFolderModalLabel"
-      aria-hidden="true"
-    >
-      <div className="modal-dialog modal-dialog-centered">
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div 
-          className="modal-content" 
-          style={{ 
-            borderRadius: "1rem", 
-            border: "none",
-            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
-          }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+          onClick={(e) => e.stopPropagation()}
         >
-          <div style={{ padding: "1.5rem", paddingBottom: "0.5rem", border: "none" }}>
-            <div className="d-flex justify-content-between align-items-center">
-              <h5 style={{ fontSize: "1.25rem", fontWeight: "600", margin: 0 }}>
+          <div className="p-6 pb-2">
+            <div className="flex justify-between items-center">
+              <h5 className="text-xl font-semibold m-0">
                 Add Folder
               </h5>
               <button
                 type="button"
-                className="btn-close"
-                data-bs-dismiss="modal"
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
                 aria-label="Close"
-                ref={closeButtonRef}
-              />
+              >
+                <X size={24} />
+              </button>
             </div>
           </div>
           
-          <div style={{ padding: "0 1.5rem 1.5rem" }}>
+          <div className="px-6 pb-6">
             <label 
               htmlFor="folderName" 
-              style={{
-                display: "block",
-                marginBottom: "0.5rem",
-                fontWeight: "600",
-                fontSize: "0.875rem",
-                color: "#374151"
-              }}
+              className="block mb-2 font-semibold text-sm text-gray-700"
             >
               Folder Name
             </label>
@@ -105,77 +79,40 @@ const AddFolder = ({ onSave, existingFolders = [] }) => {
               value={folderName}
               onChange={(e) => {
                 setFolderName(e.target.value);
-                setError(""); // Clear error on input change
+                setError("");
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   validateAndSave();
+                } else if (e.key === "Escape") {
+                  onClose();
                 }
               }}
               placeholder="Enter folder name"
-              className="form-control"
-              style={{
-                padding: "0.75rem",
-                backgroundColor: "#f3f4f6",
-                border: error ? "1px solid #ef4444" : "none",
-                borderRadius: "0.5rem",
-                fontSize: "0.875rem"
-              }}
+              className={`w-full p-3 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black ${
+                error ? "border border-red-500" : "border-none"
+              }`}
+              autoFocus
             />
             {error && (
-              <div 
-                style={{
-                  marginTop: "0.5rem",
-                  fontSize: "0.875rem",
-                  color: "#ef4444"
-                }}
-              >
+              <div className="mt-2 text-sm text-red-500">
                 {error}
               </div>
             )}
           </div>
           
-          <div 
-            style={{
-              padding: "1rem 1.5rem",
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "0.75rem",
-              borderTop: "none"
-            }}
-          >
+          <div className="px-6 py-4 flex justify-end gap-3">
             <button
               type="button"
-              className="btn"
-              data-bs-dismiss="modal"
-              style={{
-                padding: "0.625rem 1.5rem",
-                backgroundColor: "white",
-                border: "1px solid #e5e7eb",
-                borderRadius: "0.5rem",
-                fontWeight: "500",
-                fontSize: "0.875rem",
-                color: "#374151"
-              }}
+              onClick={onClose}
+              className="px-6 py-2.5 bg-white border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={validateAndSave}
-              className="btn"
-              style={{
-                padding: "0.625rem 1.5rem",
-                backgroundColor: "#000",
-                color: "white",
-                border: "none",
-                borderRadius: "0.5rem",
-                fontWeight: "500",
-                fontSize: "0.875rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem"
-              }}
+              className="px-6 py-2.5 bg-black text-white rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-gray-800 transition-colors"
             >
               <Save size={16} />
               Save
@@ -183,7 +120,7 @@ const AddFolder = ({ onSave, existingFolders = [] }) => {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -5,7 +5,6 @@ import { useParams } from "react-router-dom";
 const CredentialListInFolder = () => {
   const params = useParams();
   const folderId = params.folderId;
-  console.log("folder id = ", folderId);
 
   const {
     folder,
@@ -19,8 +18,8 @@ const CredentialListInFolder = () => {
   if (FolderIsLoading) {
     return (
       <div className="text-center my-4">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
+          <span className="sr-only">Loading...</span>
         </div>
       </div>
     );
@@ -33,8 +32,8 @@ const CredentialListInFolder = () => {
   if (isLoading) {
     return (
       <div className="text-center my-4">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status">
+          <span className="sr-only">Loading...</span>
         </div>
       </div>
     );
@@ -45,32 +44,15 @@ const CredentialListInFolder = () => {
   }
 
   return (
-    <div className="w-full h-screen bg-white flex flex-col" style={{ padding: "2rem 3rem" }}>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2
-          style={{
-            fontSize: "1.875rem",
-            fontWeight: "700",
-            margin: 0,
-            color: "#111827"
-          }}
-        >
+    <div className="w-full h-screen bg-white flex flex-col p-8 md:px-12">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-3xl font-bold m-0 text-gray-900">
           {folder.name}
         </h2>
       </div>
       
       {credentials.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "3rem",
-            color: "#6b7280",
-            backgroundColor: "#f9fafb",
-            borderRadius: "0.75rem",
-            border: "1px solid #e5e7eb",
-            marginTop: "2rem"
-          }}
-        >
+        <div className="text-center p-12 text-gray-500 bg-gray-50 rounded-xl border border-gray-300 mt-8">
           <p className="mb-0">No credentials found in this folder.</p>
         </div>
       ) : (

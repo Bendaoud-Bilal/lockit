@@ -9,10 +9,13 @@ import {
   useCreateSendForReceiver,
 } from "../../hooks/useSend";
 import { useAuth } from "../../context/AuthContext";
+import { useState } from "react";
 
 const Send = () => {
   const {user} = useAuth();
   const userId = user?.id;
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isReceiverModalOpen, setIsReceiverModalOpen] = useState(false);
 
   const { sends: Sends, isLoading, error } = useSendList(userId);
   const { createSend } = useCreateSend(userId);
@@ -33,8 +36,8 @@ const Send = () => {
 
   const handleCreateSend = async (sendData) => {
     console.log("send object = ", sendData);
-
     createSend(sendData);
+    setIsCreateModalOpen(false);
   };
 
   const handleOnReceiveData = (Data) => {
@@ -44,52 +47,44 @@ const Send = () => {
   };
 
   return (
-    <div
-      className="container"
-      style={{ width: "60%", minWidth: "35rem", marginTop: "2rem" }}
-    >
-      <div className="d-flex justify-content-between align-items-center mb-1">
-        <h2>Send</h2>
+    <div className="w-full max-w-[60%] min-w-[35rem] mx-auto mt-8 px-4">
+      <div className="flex justify-between items-center mb-1">
+        <h2 className="text-3xl font-bold text-gray-900">Send</h2>
 
-        <div>
+        <div className="flex gap-3">
           <button
             type="button"
-            className="btn btn-white me-2 border-dark"
-            data-bs-toggle="modal"
-            data-bs-target="#sendReceiverModal"
-            style={{
-              marginRight: "1rem",
-            }}
+            onClick={() => setIsReceiverModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-900 border border-gray-900 rounded-lg hover:bg-gray-50 transition-colors font-medium"
           >
-            <Upload size={18} className="me-2" />
+            <Upload size={18} />
             Receiver
           </button>
           <button
             type="button"
-            className="btn btn-dark"
-            data-bs-toggle="modal"
-            data-bs-target="#createSendModal"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
           >
-            <Plus size={18} className="me-2" />
+            <Plus size={18} />
             New Send
           </button>
         </div>
       </div>
 
-      <p>
+      <p className="text-gray-600 mb-6">
         Securely share sensitive information with expiration and access controls
       </p>
 
       {isLoading && (
         <div className="text-center my-4">
-          <div className="spinner-border" role="status">
-            <span className="visually-hidden">Loading...</span>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]" role="status">
+            <span className="sr-only">Loading...</span>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="alert alert-danger" role="alert">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg" role="alert">
           Error loading sends. Please try again.
         </div>
       )}
@@ -112,8 +107,18 @@ const Send = () => {
             onDelete={() => handleOnDelete(send.id)}
           />
         ))}
-      <CreateSend onSave={handleCreateSend} userId={userId} />
-      <SendReceiver onReceiveData={handleOnReceiveData} />
+      
+      <CreateSend 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSave={handleCreateSend}
+        userId={userId}
+      />
+      <SendReceiver 
+        isOpen={isReceiverModalOpen}
+        onClose={() => setIsReceiverModalOpen(false)}
+        onReceiveData={handleOnReceiveData}
+      />
     </div>
   );
 };
