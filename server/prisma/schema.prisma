@@ -1,15 +1,11 @@
-datasource db {
-  provider = "sqlite"
-  url      = "file:./lockit.db"
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-// ============================================
-// USERS
-// ============================================
+datasource db {
+  provider = "sqlite"
+  url      = "file:./lockit.db"
+}
 
 model User {
   id       Int     @id @default(autoincrement())
@@ -46,10 +42,6 @@ model User {
   @@map("users")
 }
 
-// ============================================
-// RECOVERY KEYS
-// ============================================
-
 model RecoveryKey {
   id     Int  @id @default(autoincrement())
   userId Int  @map("user_id")
@@ -66,29 +58,18 @@ model RecoveryKey {
   @@map("recovery_keys")
 }
 
-// ============================================
-// FOLDERS
-// ============================================
-
 model Folder {
-  id     Int  @id @default(autoincrement())
-  userId Int  @map("user_id")
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations
+  id          Int          @id @default(autoincrement())
+  userId      Int          @map("user_id")
+  name        String
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
   credentials Credential[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
   @@map("folders")
 }
-
-// ============================================
-// CREDENTIALS (Vault Items)
-// ============================================
 
 model Credential {
   id       Int     @id @default(autoincrement())
@@ -131,10 +112,6 @@ model Credential {
   @@map("credentials")
 }
 
-// ============================================
-// TOTP SECRETS (Two-Factor Authentication)
-// ============================================
-
 model TotpSecret {
   id           Int        @id @default(autoincrement())
   credentialId Int        @unique @map("credential_id")
@@ -162,10 +139,6 @@ model TotpSecret {
   @@map("totp_secrets")
 }
 
-// ============================================
-// ATTACHMENTS
-// ============================================
-
 model Attachment {
   id           Int        @id @default(autoincrement())
   credentialId Int        @map("credential_id")
@@ -184,10 +157,6 @@ model Attachment {
 
   @@map("attachments")
 }
-
-// ============================================
-// SENDS (Secure Sharing)
-// ============================================
 
 model Send {
   id     String @id @default(uuid()) // UUID
@@ -217,10 +186,6 @@ model Send {
 
   @@map("sends")
 }
-
-// ============================================
-// BREACH ALERTS
-// ============================================
 
 model BreachAlert {
   id           Int         @id @default(autoincrement())

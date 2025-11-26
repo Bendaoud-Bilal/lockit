@@ -47,6 +47,7 @@ const AddItemModal = ({
   credentialToEdit = null,
   attachmentsOnly = false,
   listPasswords = [],
+  setListPasswords
 }) => {
   const API_BASE_URL = APP_CONFIG.API_BASE_URL;
   const [activeTab, setActiveTab] = useState(attachmentsOnly ? "attachments" : "general")
@@ -429,8 +430,8 @@ const AddItemModal = ({
     }
     
     } catch (error) {
-  console.error("Error saving item:", error);
-  toast.error('Failed to save credential. Please try again.');
+      console.error("Error saving item:", error);
+      toast.error('This title is already in use.');
     }
   }
   // Function to encrypt and upload a file

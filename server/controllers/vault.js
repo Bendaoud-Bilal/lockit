@@ -313,45 +313,7 @@ export const updateCredential = async (req, res) => {
   }
 };
 
-// ============================================
-// DELETE CREDENTIAL (Soft Delete)
-// ============================================
-// export const deleteCredential = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { userId, permanent } = req.query;
 
-//     // Verify ownership
-//     const existing = await prisma.credential.findFirst({
-//       where: {
-//         id: parseInt(id),
-//         userId: parseInt(userId),
-//       }
-//     });
-
-//     if (!existing) {
-//       return res.status(404).json({ error: 'Credential not found or unauthorized' });
-//     }
-
-//     if (permanent === 'true') {
-//       // Permanent delete
-//       await prisma.credential.delete({
-//         where: { id: parseInt(id) }
-//       });
-//       res.status(200).json({ message: 'Credential permanently deleted' });
-//     } else {
-//       // Soft delete
-//       await prisma.credential.update({
-//         where: { id: parseInt(id) },
-//         data: { state: 'deleted' }
-//       });
-//       res.status(200).json({ message: 'Credential moved to trash' });
-//     }
-//   } catch (error) {
-//     console.error('Error deleting credential:', error);
-//     res.status(500).json({ error: 'Failed to delete credential', details: error.message });
-//   }
-// };
 export const deletePass = async (req, res) =>{
     const { userId, id } = req.params;
     const {state} = req.query;

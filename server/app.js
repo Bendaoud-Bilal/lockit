@@ -54,13 +54,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "Lockit API is running",
-    timestamp: new Date().toISOString(),
-  });
-});
+
 
 app.use("/api", limiter);
 

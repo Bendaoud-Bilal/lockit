@@ -78,11 +78,11 @@ const PasswordCard = ({ credential, onCredentialDeleted, onCredentialUpdated, li
     const ownerToUse = userId ?? ownerIdParam ?? ownerIdFromCredential
     if (!idToUse || !ownerToUse) return
     try {
-      if (credential.has2fa) {
-        const response = await ApiService.getTotpId(idToUse)
-        const totpId = response.data.id
-        await apiService.updateTotpState(totpId, "active")
-      }
+      if(credential.has2fa){
+        let response=await ApiService.getTotpId(idToUse);
+        let totpId=response.data.id;
+        await apiService.updateTotpState(totpId,"active");
+            }
       await ApiService.restoreCredential(ownerToUse, idToUse)
       toast.success('credential restored')
   notifyCredentialsMutated({ source: 'PasswordCard', kind: 'restore', credentialId: idToUse })
