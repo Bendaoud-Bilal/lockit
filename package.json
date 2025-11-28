@@ -3,45 +3,116 @@
   "version": "1.0.0",
   "description": "Lockit Password Manager - Desktop Application",
   "main": "electron/main.js",
+  "author": "Lockit Team",
+  "license": "MIT",
   "scripts": {
     
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
     "dev:client": "cd client && npm run dev",
     "dev:server": "cd server && npm run dev",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run electron:dev\"",
-    "build:client": "cd client && npm run build",
-    "build": "npm run build:client",
     "electron:dev": "electron .",
-    "electron:build": "npm run build && electron-builder",
-    "start": "npm run build:client && npm run electron:dev"
+    "prebuild": "node scripts/prebuild.js",
+    "build": "npm run prebuild && electron-builder build --win --linux",
+    "build:win": "npm run prebuild && electron-builder build --win",
+    "build:linux": "npm run prebuild && electron-builder build --linux",
+    "postinstall": "electron-builder install-app-deps"
+    
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"
   },
   "build": {
     "appId": "com.lockit.app",
     "productName": "Lockit",
+    "copyright": "Copyright © 2024 Lockit Team",
     "directories": {
       "output": "dist"
     },
     "files": [
       "electron/**/*",
       "client/dist/**/*",
-      "server/**/*",
-      "!server/node_modules/**/*",
-      "node_modules/**/*"
+      "!client/src",
+      "!client/node_modules",
+      "!server/node_modules/.prisma/client/libquery_engine-*",
+      "!**/*.{ts,map,md}"
     ],
+    "extraResources": [
+      {
+        "from": "server",
+        "to": "server",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "client/public/icons/icon.ico",
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lockit",
+      "installerIcon": "client/public/icons/icon.ico",
+      "uninstallerIcon": "client/public/icons/icon.ico",
+      "installerHeaderIcon": "client/public/icons/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "perMachine": false,
+      "allowElevation": true
+    },
     "linux": {
-      "target": ["AppImage", "deb"],
-      "icon": "client/public/icons/shield.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "client/public/icons",
       "category": "Utility",
+      "synopsis": "Secure Password Manager",
+      "description": "Lockit is a secure, local-first password manager with end-to-end encryption",
+      "artifactName": "${productName}-${version}.${ext}",
       "desktop": {
         "Name": "Lockit",
-        "Comment": "Password Manager",
-        "Categories": "Utility;Security;"
+        "Comment": "Secure Password Manager",
+        "Categories": "Utility;Security;",
+        "Keywords": "password;security;encryption;"
       }
+    },
+    "deb": {
+      "depends": [
+        "gconf2",
+        "gconf-service",
+        "libnotify4",
+        "libappindicator1",
+        "libxtst6",
+        "libnss3"
+      ]
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}.${ext}"
     }
   },
   "dependencies": {

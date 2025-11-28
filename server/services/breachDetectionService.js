@@ -8,8 +8,6 @@ import { findBreachesForCredentials } from './hibpService.js';
  */
 export async function checkUserBreaches(userId) {
   try {
-    console.log(`🔍 Checking breaches for user ${userId}...`);
-
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -38,11 +36,7 @@ export async function checkUserBreaches(userId) {
       },
     });
 
-    console.log(`📝 Found ${credentials.length} credentials to check`);
-
     const potentialBreaches = await findBreachesForCredentials(credentials, user.email || user.username);
-
-    console.log(`⚠️ Found ${potentialBreaches.length} potential breaches`);
 
     const existingBreaches = await prisma.breachAlert.findMany({
       where: {
@@ -64,8 +58,6 @@ export async function checkUserBreaches(userId) {
     const newBreaches = potentialBreaches.filter(
       breach => !existingBreachKeys.has(`${breach.breachSource}-${breach.affectedEmail}`)
     );
-
-    console.log(`✅ ${newBreaches.length} new breaches to add`);
 
     if (newBreaches.length > 0) {
       await prisma.breachAlert.createMany({
@@ -91,13 +83,10 @@ export async function checkUserBreaches(userId) {
  */
 export async function checkAllUsersBreaches() {
   try {
-    console.log('🌐 Starting breach check for all users...');
 
     const users = await prisma.user.findMany({
       select: { id: true },
     });
-
-    console.log(`👥 Found ${users.length} users to check`);
 
     const results = [];
 
@@ -119,7 +108,6 @@ export async function checkAllUsersBreaches() {
     }
 
     const totalNew = results.reduce((sum, r) => sum + (r.newBreaches || 0), 0);
-    console.log(`✅ Breach check complete. Found ${totalNew} new breaches across all users.`);
 
     return results;
   } catch (error) {

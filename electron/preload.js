@@ -1,6 +1,12 @@
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron')
 
-// Expose des APIs sécurisées au renderer process
 contextBridge.exposeInMainWorld('electron', {
-  platform: process.platform,
-}); 
+  // Get dynamic server URL
+  getServerUrl: () => ipcRenderer.invoke('get-server-url'),
+  
+  // Print recovery key
+  printRecoveryKey: (content) => ipcRenderer.invoke('print-recovery-key', content),
+  
+  // Platform info
+  platform: process.platform
+})

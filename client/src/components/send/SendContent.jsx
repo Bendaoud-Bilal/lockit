@@ -34,7 +34,6 @@ const SendContent = () => {
         });
         setFileObject(file);
       } catch (error) {
-        console.log("Error creating file:", error);
         setFileObject(null);
       }
     } else {
@@ -51,7 +50,7 @@ const SendContent = () => {
       if (typeof send.content === "string") {
         navigator.clipboard.writeText(send.content);
       }
-      console.log("Content copied to clipboard!");
+
     }
   };
 
@@ -125,27 +124,6 @@ const SendContent = () => {
         <div className="p-6">
           {/* Metadata Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="flex items-center gap-2 text-gray-500">
-              <Hash size={18} />
-              <div>
-                <small className="block text-sm">Accesses</small>
-                <strong className="text-gray-900">
-                  {send.currentAccessCount || 0}
-                  {send.maxAccessCount ? ` / ${send.maxAccessCount}` : ""}
-                </strong>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-gray-500">
-              <Clock size={18} />
-              <div>
-                <small className="block text-sm">Time Remaining</small>
-                <strong className="text-gray-900">
-                  {send.expiresAt
-                    ? Math.max(0, Math.floor((new Date(send.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) + " days"
-                    : "No Expiry"}
-                </strong>
-              </div>
-            </div>
             <div className="flex items-center gap-2 text-gray-500">
               <FileText size={18} />
               <div>

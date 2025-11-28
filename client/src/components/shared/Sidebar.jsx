@@ -5,6 +5,7 @@ import {
   BarChart3,
   Smartphone,
   Send,
+  Download,
   Folder,
   Archive,
   Globe,

@@ -70,7 +70,6 @@ function encryptCredentialPayload(payload, vaultKeyBase64) {
 }
 
 async function main() {
-  console.log('🌱 Starting database seed...');
 
   // Clean existing data
   await prisma.breachAlert.deleteMany({});
@@ -78,8 +77,6 @@ async function main() {
   await prisma.credential.deleteMany({});
   await prisma.folder.deleteMany({});
   await prisma.user.deleteMany({});
-
-  console.log('✅ Cleaned existing data');
 
   // Create test user with secure defaults
   const masterPassword = 'TestPassword123!';
@@ -119,8 +116,6 @@ async function main() {
     },
   });
 
-  console.log('✅ Created test user:', user.username);
-
   // Create folders
   const workFolder = await prisma.folder.create({
     data: {
@@ -135,9 +130,6 @@ async function main() {
       name: 'Personal',
     },
   });
-
-  console.log('✅ Created folders');
-
   const now = new Date();
   const twoYearsAgo = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
 
@@ -278,8 +270,6 @@ async function main() {
     credentials.push(credential);
   }
 
-  console.log('✅ Created', credentials.length, 'credentials');
-
   const breachAlerts = await Promise.all([
     prisma.breachAlert.create({
       data: {
@@ -306,16 +296,6 @@ async function main() {
       },
     }),
   ]);
-
-  console.log('✅ Created', breachAlerts.length, 'breach alerts');
-
-  console.log('🎉 Seeding completed successfully!');
-  console.log('\nTest User Credentials:');
-  console.log('  Username:', user.username);
-  console.log('  Email:', user.email);
-  console.log('  Password:', masterPassword);
-  console.log('  Recovery Key:', recoveryKeyPlain);
-  console.log('  User ID:', user.id);
 }
 
 main()

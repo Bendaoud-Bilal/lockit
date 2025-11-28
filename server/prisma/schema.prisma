@@ -159,31 +159,20 @@ model Attachment {
 }
 
 model Send {
-  id     String @id @default(uuid()) // UUID
-  userId Int    @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name      String
-  type      String // text, file, credential
-  direction String // sent, received
-
-  // Encrypted Content
-  encryptedContent String @map("encrypted_content")
-  contentIv        String @map("content_iv")
-  contentAuthTag   String @map("content_auth_tag")
-
-  // Access Control
-  passwordProtected  Boolean   @default(false) @map("password_protected")
-  maxAccessCount     Int?      @map("max_access_count")
-  currentAccessCount Int       @default(0) @map("current_access_count")
-  expiresAt          DateTime? @map("expires_at")
-
-  // State
-  isActive  Boolean   @default(true) @map("is_active")
-  deletedAt DateTime? @map("deleted_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-
+  id                 String   @id // UUID from client
+  userId             Int      @map("user_id")
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name               String
+  type               String   // "text" or "file"
+  passwordProtected  Boolean  @default(false) @map("password_protected")
+  
+  // Store the entire encrypted package as JSON
+  encryptedPackage   String   @map("encrypted_package")
+  
+  createdAt          DateTime @default(now()) @map("created_at")
+  
+  @@unique([userId, name])
   @@map("sends")
 }
 

@@ -78,7 +78,7 @@ export const useCreateFolder = (userId) => {
 
   const mutation = useMutation({
     mutationFn: async (folderName) => {
-      console.log("user id = ", userId);
+
       
       const newFolder = await link.Post("/api/folder", { 
         name: folderName, 
@@ -88,9 +88,6 @@ export const useCreateFolder = (userId) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["folders"] });
-    },
-    onError: (error) => {
-      console.log("Failed to create folder:", error);
     },
   });
 
@@ -138,9 +135,6 @@ export const useUpdateFolder = () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["folders"] });
     },
-    onError: (error) => {
-      console.log("Failed to update folder:", error);
-    },
   });
 
   return {
@@ -162,9 +156,6 @@ export const useDeleteFolder = () => {
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["folders"] });
-    },
-    onError: (error) => {
-      console.log("Failed to delete folder:", error);
     },
   });
 
@@ -189,9 +180,6 @@ export const useAddCredentialToFolder = () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["folders"] });
     },
-    onError: (error) => {
-      console.log("Failed to add credential to folder:", error);
-    },
   });
   return {
     addCredentialToFolder: mutation.mutate,
@@ -213,9 +201,6 @@ export const useRemoveCredentialFromFolder = () => {
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["folders"] });
-    },
-    onError: (error) => {
-      console.log("Failed to remove credential from folder:", error);
     },
   });
   return {

@@ -5,9 +5,6 @@ import  { getFolders , getFolderById , createFolder , deleteFolderById , updateF
 
 const GetFolders = async (req, res) => {
 
-    console.log("we are inside GetFolders controller");
-    
-
     let { userId } = req.params;
     userId = parseInt(userId);
     const folders = await getFolders( userId );
@@ -33,8 +30,6 @@ const CreateFolder = async ( req, res ) => {
 
     let { name , userId } = req.body;
     userId = parseInt(userId);
-
-    console.log("hello from CreateFolder controller");
     
     const folder = await createFolder( name , userId );
     if( folder ) {
@@ -48,7 +43,6 @@ const DeleteFolderById = async (req, res) => {
 
     let { id } = req.params;
     id = parseInt(id);
-    console.log("we are inside DeleteFolderById controller with id = " , id);
     const result = await deleteFolderById(id);
     if( result === true ) {
         return res.status(200).json({ message: 'Folder deleted successfully' });
@@ -69,7 +63,6 @@ const UpdateFolderById = async (req, res) => {
 
 const SearchFolderByName = async ( req, res ) => {
     const { name } = req.query;
-    console.log("we are inside SearchFolderByName controller with name = " , name);
     
     const folders = await searchFolderByName( name );
     if( folders ) {

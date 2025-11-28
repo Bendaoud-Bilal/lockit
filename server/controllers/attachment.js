@@ -8,8 +8,6 @@ const prisma = new PrismaClient();
 export const addAttachment = async (req, res) => {
   try {
     const { credentialId, filename, fileSize, mimeType, encryptedData, dataIv, dataAuthTag } = req.body;
-
-    console.log('Received attachment data:', { credentialId, filename, fileSize, mimeType });
     
     // Validate required fields
     if (!credentialId || !filename || !fileSize || !encryptedData || !dataIv || !dataAuthTag) {

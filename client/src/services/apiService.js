@@ -268,6 +268,29 @@ async updateTotpState(totpId, state) {
     return this.client.put(`/api/vault/credentials/${credentialId}`,{encryptedCredential})
 
    }
+
+
+   // Send endpoints
+async createSend(sendData) {
+  return this.client.post("/api/send", sendData);
+}
+
+async getUserSends(userId) {
+  return this.client.get(`/api/send/user/${userId}`);
+}
+
+async getSendById(sendId) {
+  // Note: This doesn't require authentication for sharing
+  return axios.create({
+    baseURL: APP_CONFIG.API_BASE_URL,
+    timeout: APP_CONFIG.API_TIMEOUT,
+  }).get(`/api/send/${sendId}`);
+}
+
+async deleteSend(sendId) {
+  return this.client.delete(`/api/send/${sendId}`);
+}
+
   get axiosInstance() {
     return this.client;
   }

@@ -6,7 +6,6 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import vaultRoutes from "./routes/Vault.js";
 
-import sendRoute from "./routes/sendRoute.js";
 import folderRoute from "./routes/folderRoute.js";
 import credentialsRouter from "./routes/credentials.js";
 import legacyUsersRouter from "./routes/users.js";
@@ -15,6 +14,7 @@ import securityRouter from "./routes/security.js";
 import breachRouter from "./routes/breach.js";
 import authenticatorRoutes from "./routes/authenticator.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import sendRoutes from "./routes/send.routes.js";
 
 const app = express();
 
@@ -63,8 +63,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/vault", vaultRoutes);
 app.use("/api/totp", authenticatorRoutes);
 //  
-app.use("/api/send", sendRoute);
 app.use("/api/folder", folderRoute);
+app.use("/api/send", sendRoutes);
 
 app.use("/api/credentials", credentialsRouter);
 app.use("/api/users", legacyUsersRouter);

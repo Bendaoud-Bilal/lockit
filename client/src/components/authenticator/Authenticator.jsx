@@ -46,9 +46,7 @@ const Authenticator = () => {
     if (isAuthenticated && !isLocked) {
       fetchAccounts();
       fetchCredentials();
-    } else {
-      console.log("En attente d'authentification avant de fetch les TOTPs...");
-    }
+    } 
   }, [isAuthenticated, isLocked]);
 
   useEffect(() => {

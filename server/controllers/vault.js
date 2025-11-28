@@ -9,8 +9,6 @@ const prisma = new PrismaClient();
 export const addCredential = async (req, res) => {
   try {
     const { userId, folderId, category, title, icon, dataEnc, dataIv, dataAuthTag, hasPassword, passwordStrength, passwordReused, compromised } = req.body.encryptedCredential;
-
-    console.log('Received credential data:', req.body);
     
     // Validate required fields
     if (!userId || !title || !dataEnc || !dataIv || !dataAuthTag) {
@@ -237,7 +235,6 @@ export const getCredentialById = async (req, res) => {
 export const updateCredential = async (req, res) => {
   try {
     const { id } = req.params;
-    // console.log(req.body)
     const { userId, title, icon, folderId, category, dataEnc, dataIv, dataAuthTag, favorite, passwordStrength, hasPassword, passwordReused, compromised } = req.body.encryptedCredential;
 
     // Verify ownership

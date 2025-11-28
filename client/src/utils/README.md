@@ -67,8 +67,6 @@ const decrypted = await decryptCredentialForClient(
   encryptedCredentials[0],
   vaultKey
 );
-
-console.log(decrypted);
 // { id: 1, title: "GitHub", username: "johndoe", password: "MyPassword123!", ... }
 ```
 

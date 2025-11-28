@@ -17,12 +17,9 @@ import PasswordGenerator from "./components/tools/passwordGenerator";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import apiService from './services/apiService';
-
-
-import FolderList from "./components/folders/FolderList"
+import FolderList from "./components/folders/FolderList";
 import Send from "./components/send/Send";
-import CredentialListInFolder from "./components/folders/CredentialListInFolder"
-import ReceiveSend from "./pages/ReceiveSend";
+import CredentialListInFolder from "./components/folders/CredentialListInFolder";
 
 function MainLayout({
 	activeFilter,
@@ -37,7 +34,7 @@ function MainLayout({
 	setShowRecoveryKeyModal,
 }) {
 	return (
-  <div className="flex h-screen">
+		<div className="flex h-screen">
 			<Sidebar
 				activeFilter={activeFilter}
 				onFilterChange={setActiveFilter}
@@ -59,43 +56,41 @@ function MainLayout({
 						}
 					/>
 
-          <Route path="/security-dashboard" element={<Dashboard />} />
-          <Route
-            path="/authenticator"
-            element={
-              <div className="p-8">
-                <Authenticator />
-              </div>
-            }
-          />
+					<Route path="/security-dashboard" element={<Dashboard />} />
+					<Route
+						path="/authenticator"
+						element={
+							<div className="p-8">
+								<Authenticator />
+							</div>
+						}
+					/>
 
-          <Route path="/archive" element={<Archive onCredentialsChange={onCredentialsChange}/>} />
-          <Route path="/folders" element={<FolderList></FolderList>} />
-
-          <Route path="/folders/:folderId" element={<CredentialListInFolder></CredentialListInFolder>} />
-        <Route path="/send" element={<Send></Send>} />
-
+					<Route path="/archive" element={<Archive onCredentialsChange={onCredentialsChange}/>} />
+					<Route path="/folders" element={<FolderList />} />
+					<Route path="/folders/:folderId" element={<CredentialListInFolder />} />
+					<Route path="/send" element={<Send />} />
 
 					<Route path="*" element={<Navigate to="/my-vault" replace />} />
 				</Routes>
 			</div>
 
-      {showPasswordGenerator && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="relative w-full max-w-md">
-            <button
-              onClick={() => setShowPasswordGenerator(false)}
-              className="absolute top-2 right-2 text-gray-600 hover:text-black"
-            >
-              <X size={20} />
-            </button>
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-2xl font-bold mb-4">Password Generator</h2>
-              <PasswordGenerator />
-            </div>
-          </div>
-        </div>
-      )}
+			{showPasswordGenerator && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="relative w-full max-w-md">
+						<button
+							onClick={() => setShowPasswordGenerator(false)}
+							className="absolute top-2 right-2 text-gray-600 hover:text-black"
+						>
+							<X size={20} />
+						</button>
+						<div className="bg-white rounded-lg p-6 max-w-md w-full">
+							<h2 className="text-2xl font-bold mb-4">Password Generator</h2>
+							<PasswordGenerator />
+						</div>
+					</div>
+				</div>
+			)}
 
 			<ProfileModal
 				isOpen={showProfileModal}
@@ -154,7 +149,6 @@ function AppContent() {
 			<Route path="/signup" element={<SignUp />} />
 			<Route path="/unlock" element={<Unlock />} />
 			<Route path="/reset-password" element={<ResetPassword />} />
-			<Route path="/receive/:sendId" element={<ReceiveSend />} />
 
 			<Route
 				path="/*"
@@ -182,14 +176,14 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <HashRouter>
-      <AuthProvider>
-        <Toaster position="top-center" />
-        <AppContent />
-      </AuthProvider>
-    </HashRouter>
-  );
+	return (
+		<HashRouter>
+			<AuthProvider>
+				<Toaster position="top-center" />
+				<AppContent />
+			</AuthProvider>
+		</HashRouter>
+	);
 }
 
 export default App;

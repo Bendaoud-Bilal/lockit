@@ -169,44 +169,98 @@ Generated on: ${new Date().toLocaleString()}
     toast.success("Recovery key downloaded!");
   };
 
-  const printRecoveryKey = () => {
-    const printWindow = window.open("", "", "height=600,width=800");
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Lockit Recovery Key</title>
-          <style>
-            body { font-family: monospace; padding: 40px; }
-            h1 { color: #4A5FE5; }
-            .key { font-size: 24px; letter-spacing: 2px; background: #f3f4f6; padding: 20px; margin: 20px 0; border: 2px dashed #9ca3af; }
-            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <h1>LOCKIT PASSWORD MANAGER</h1>
-          <h2>Account Recovery Key</h2>
-          <p><strong>Username:</strong> ${formData.username}</p>
-          <p><strong>Email:</strong> ${formData.email}</p>
-          <div class="key">${recoveryKey}</div>
-          <div class="warning">
-            <h3>IMPORTANT SECURITY INFORMATION</h3>
-            <ul>
-              <li>Keep this recovery key in a safe place</li>
-              <li>This key can be used ONCE to reset your master password</li>
-              <li>Never share this key with anyone</li>
-              <li>If someone gets this key, they can access your vault</li>
-            </ul>
-          </div>
-          <p><small>Generated on: ${new Date().toLocaleString()}</small></p>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+  // Replace the printRecoveryKey function in SignUp.jsx with this:
 
-    setHasDownloaded(true);
-    toast.success("Opening print dialog...");
-  };
+const printRecoveryKey = async () => {
+  const content = `
+    <h1>LOCKIT PASSWORD MANAGER</h1>
+    <h2>Account Recovery Key</h2>
+    <div class="info-row"><strong>Username:</strong> ${formData.username}</div>
+    <div class="info-row"><strong>Email:</strong> ${formData.email}</div>
+    <div class="key">${recoveryKey}</div>
+    <div class="warning">
+      <h3>IMPORTANT SECURITY INFORMATION</h3>
+      <ul>
+        <li>Keep this recovery key in a safe place</li>
+        <li>This key can be used ONCE to reset your master password</li>
+        <li>Never share this key with anyone</li>
+        <li>If someone gets this key, they can access your vault</li>
+      </ul>
+    </div>
+    <p><small>Generated on: ${new Date().toLocaleString()}</small></p>
+  `;
+
+  // Check if running in Electron (correct property name)
+  if (window.electron?.printRecoveryKey) {
+    console.log('Using Electron print API');
+    try {
+      const result = await window.electron.printRecoveryKey(content);
+      console.log('Print result:', result);
+      
+      if (result.success) {
+        setHasDownloaded(true);
+        toast.success("Print dialog opened successfully!");
+      } else {
+        console.error('Print failed:', result.error);
+        toast.error(`Print failed: ${result.error || 'Unknown error'}. Please try downloading instead.`);
+      }
+    } catch (error) {
+      console.error('Electron print error:', error);
+      toast.error("Print failed. Please try downloading instead.");
+    }
+  } else {
+    console.log('Running in browser, using window.print()');
+    // Fallback for browser
+    const printWindow = window.open("", "", "height=600,width=800");
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Lockit Recovery Key</title>
+            <style>
+              body { font-family: monospace; padding: 40px; }
+              h1 { color: #4A5FE5; margin-bottom: 10px; }
+              h2 { color: #333; margin-top: 0; margin-bottom: 20px; }
+              .info-row { margin: 10px 0; font-size: 14px; }
+              .key { 
+                font-size: 24px; 
+                letter-spacing: 2px; 
+                background: #f3f4f6; 
+                padding: 20px; 
+                margin: 20px 0; 
+                border: 2px dashed #9ca3af;
+                text-align: center;
+              }
+              .warning { 
+                background: #fef3c7; 
+                border-left: 4px solid #f59e0b; 
+                padding: 15px; 
+                margin: 20px 0; 
+              }
+              .warning h3 {
+                margin-top: 0;
+                color: #92400e;
+              }
+              .warning ul {
+                margin: 10px 0;
+                padding-left: 20px;
+              }
+              p { margin: 10px 0; }
+              strong { font-weight: bold; }
+            </style>
+          </head>
+          <body>${content}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+      setHasDownloaded(true);
+      toast.success("Opening print dialog...");
+    } else {
+      toast.error("Could not open print window. Please try downloading instead.");
+    }
+  }
+};
 
   const finishSetup = async () => {
     if (!hasDownloaded) {

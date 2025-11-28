@@ -95,7 +95,7 @@ export default function AddTOTP({ onAddTOTP, onCancel, credentials=[]}) {
 
       <div className="flex flex-col space-y-1">
         <label className="text-sm font-semibold text-gray-800">
-          Link to Credential (optional)
+          Link to Credential
         </label>
 
 

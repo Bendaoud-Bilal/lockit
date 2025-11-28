@@ -465,7 +465,6 @@ const response = await fetch("http://localhost:3000/api/vault/credentials", {
 });
 
 const result = await response.json();
-console.log(result.credential);
 ```
 
 **Step 3: Retrieve and decrypt**
@@ -486,7 +485,6 @@ const decrypted = await decryptCredential(
   vaultKey
 );
 
-console.log(decrypted);
 // { username: "john@example.com", password: "MySecurePassword123!", ... }
 ```
 

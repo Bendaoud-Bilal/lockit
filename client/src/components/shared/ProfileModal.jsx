@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { X, Eye, EyeOff, RotateCw, Save } from "lucide-react";
+import { X, Eye, EyeOff, RefreshCw, Save } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import cryptoService from "../../services/cryptoService.js";
+import { calculatePasswordStrength as scorePassword } from '../../utils/crypto';
 
 const ProfileModal = ({ isOpen, onClose }) => {
   const { user, updateProfile, changeMasterPassword, resetInactivityTimer } =
@@ -74,32 +75,32 @@ const ProfileModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, resetInactivityTimer]);
 
-  const passwordStrength = useMemo(() => {
-    if (!formData.newPassword) return { level: "", color: "", text: "" };
-
-    const password = formData.newPassword;
-    let strength = 0;
-
-    if (password.length >= 16) strength += 2;
-    else if (password.length >= 12) strength += 1;
-
-    if (/[A-Z]/.test(password)) strength += 1;
-    if (/[a-z]/.test(password)) strength += 1;
-    if (/[0-9]/.test(password)) strength += 1;
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 1;
-
-    if (strength <= 2)
-      return { level: "Weak", color: "text-red-500", bars: "bg-red-500" };
-    if (strength <= 4)
-      return {
-        level: "Medium",
-        color: "text-yellow-500",
-        bars: "bg-yellow-500",
-      };
-    if (strength <= 5)
-      return { level: "Good", color: "text-green-500", bars: "bg-green-500" };
-    return { level: "Strong", color: "text-green-600", bars: "bg-green-600" };
-  }, [formData.newPassword]);
+  const getPasswordStrengthMeta = (pwd) => {
+        if (!pwd) return { strength: 0, label: "", color: "text-gray-500", score: 0 };
+    
+        const score = scorePassword(pwd);
+        let label = "Weak";
+        let color = "text-red-600";
+        let strengthBars = 1;
+    
+        if (score >= 80) {
+          label = "Strong";
+          color = "text-green-600";
+          strengthBars = 4;
+        } else if (score >= 60) {
+          label = "Good";
+          color = "text-emerald-600";
+          strengthBars = 3;
+        } else if (score >= 40) {
+          label = "Medium";
+          color = "text-yellow-600";
+          strengthBars = 2;
+        }
+    
+        return { strength: strengthBars, label, color, score };
+      }
+  
+    const passwordStrength = getPasswordStrengthMeta(formData.newPassword)
 
   const passwordsMatch = useMemo(() => {
     if (!formData.confirmPassword) return true;
@@ -157,6 +158,11 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
     if (formData.newPassword && passwordStrength.level === "Weak") {
       toast.error("Please use a stronger password");
+      return;
+    }
+
+    if (formData.newPassword && passwordStrength.score < 80) {
+      toast.error("Password too weak. Use a stronger password (score: 80+ required)");
       return;
     }
 
@@ -376,43 +382,37 @@ const ProfileModal = ({ isOpen, onClose }) => {
                         className="text-gray-400 hover:text-gray-600"
                         title="Generate password"
                       >
-                        <RotateCw className="w-5 h-5" />
+                        <RefreshCw className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
 
                   {/* Password Strength Indicator */}
                   {formData.newPassword && (
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-gray-600">Strength:</span>
-                        <span
-                          className={`text-xs font-semibold ${passwordStrength.color}`}
-                        >
-                          {passwordStrength.level}
-                        </span>
-                      </div>
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((bar) => (
-                          <div
-                            key={bar}
-                            className={`h-1 flex-1 rounded-full ${
-                              bar <=
-                              (passwordStrength.level === "Weak"
-                                ? 1
-                                : passwordStrength.level === "Medium"
-                                ? 2
-                                : passwordStrength.level === "Good"
-                                ? 4
-                                : 5)
-                                ? passwordStrength.bars
-                                : "bg-gray-200"
-                            }`}
-                          />
-                        ))}
-                      </div>
+                  <div className="mt-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs font-semibold text-gray-700">
+                        Strength: <span className={`${passwordStrength.color}`}>{passwordStrength.label}</span>
+                      </span>
                     </div>
-                  )}
+                    <div className="flex gap-1.5">
+                      {[1, 2, 3, 4].map((level) => (
+                        <div
+                          key={level}
+                          className={`h-1.5 flex-1 rounded-full transition-all ${
+                            level <= passwordStrength.strength 
+                              ? passwordStrength.strength <= 1 
+                                ? 'bg-red-600' 
+                                : passwordStrength.strength === 2 
+                                ? 'bg-yellow-500' 
+                                : 'bg-green-600'
+                              : 'bg-gray-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 </div>
 
                 {/* Confirm Password */}

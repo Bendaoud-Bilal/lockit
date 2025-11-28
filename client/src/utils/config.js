@@ -1,10 +1,22 @@
+// Get API base URL dynamically
+function getApiBaseUrl() {
+  // In Electron, get the dynamic server URL
+  if (window.electron?.getServerUrl) {
+    return window.electron.getServerUrl().catch(error => {
+      console.warn('Failed to get server URL from Electron:', error);
+      return import.meta.env.VITE_API_URL || "http://localhost:3000";
+    });
+  }
+  
+  // Fallback to environment variable or default
+  return Promise.resolve(import.meta.env.VITE_API_URL || "http://localhost:3000");
+}
+
 // Application Configuration
 export const APP_CONFIG = {
-  // API Configuration
-  API_BASE_URL: import.meta.env.VITE_API_URL || "http://localhost:3000",
+  // API Configuration - will be set dynamically
+  API_BASE_URL: import.meta.env.VITE_API_URL || "http://localhost:3000", // Static default
   API_TIMEOUT: 30000, // 30 seconds
-
-  RELAY_SERVER_URL: "https://lockit-relay-server.onrender.com",
 
   // Security Configuration
   SECURITY: {
@@ -85,6 +97,29 @@ export const APP_CONFIG = {
     PASSWORDS_MISMATCH: "Passwords do not match.",
   },
 };
+
+// Initialize API URL dynamically (for Electron)
+let apiUrlInitialized = false;
+
+export async function initializeApiUrl() {
+  if (apiUrlInitialized) return;
+  
+  try {
+    const url = await getApiBaseUrl();
+    APP_CONFIG.API_BASE_URL = url;
+    console.log('[Lockit] API Base URL initialized:', APP_CONFIG.API_BASE_URL);
+    apiUrlInitialized = true;
+  } catch (error) {
+    console.error('[Lockit] Failed to initialize API URL:', error);
+  }
+}
+
+// Auto-initialize if in Electron environment
+if (window.electron?.getServerUrl) {
+  initializeApiUrl();
+} else {
+  console.log('[Lockit] API Base URL (static):', APP_CONFIG.API_BASE_URL);
+}
 
 // Helper functions
 export const validatePassword = (password) => {

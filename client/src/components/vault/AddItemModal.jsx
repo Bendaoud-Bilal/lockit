@@ -245,7 +245,6 @@ const AddItemModal = ({
   };
 
   const saveItem = async () => { 
-    // console.log('hehe:' vKey)
     let credentialId = null;
     try {
       // Validate form before saving
@@ -287,9 +286,6 @@ const AddItemModal = ({
         const otherPasswords = isEditMode && originalPassword 
           ? listPasswords.filter(pwd => pwd !== originalPassword)
           : listPasswords;
-
-        // console.log('Other passwords:', otherPasswords);
-        // console.log('Current password:', formData.password);
         
         // Check if password exists in other credentials
         const isReused = otherPasswords.includes(formData.password);
@@ -312,7 +308,6 @@ const AddItemModal = ({
             const { compromised, occurrences } = await checkPasswordCompromised(formData.password);
             compromisedFlag = compromised;
             if (compromised) {
-              console.log(`🚨 Warning: This password has been found in ${occurrences} data breaches!`);
               toast.error(`This password has been found in ${occurrences.toLocaleString()} data breaches! Consider changing it.`, {
                 duration: 5000
               });
@@ -325,7 +320,6 @@ const AddItemModal = ({
         }
       } else {
         // Password hasn't changed, keep original values
-        // console.log('Password unchanged, keeping original values');
         updatedFormData.passwordReused = originalPasswordReused;
         updatedFormData.compromised = originalCompromised;
       }

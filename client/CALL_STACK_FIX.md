@@ -289,7 +289,6 @@ encryptedData: btoa(String.fromCharCode(...ciphertext)),  // ❌ Bad
 **Step 3: Check browser console**
 
 ```javascript
-console.log(`Processing file: ${file.size} bytes`);
 // Should complete without errors
 ```
 
@@ -318,7 +317,6 @@ Upload 500KB file → Should work ✅
 const startTime = performance.now();
 const base64 = arrayBufferToBase64(data);
 const endTime = performance.now();
-console.log(`Encoding took ${endTime - startTime}ms`);
 ```
 
 ### 2. Add Progress Indicator

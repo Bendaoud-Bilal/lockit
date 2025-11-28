@@ -28,17 +28,14 @@ const fetchCredentials = async (notifyParent = false) => {
     setListPasswords([]); // Clear previous passwords
     const res = await ApiService.getUserCredentials(userId);
     const creds = res.credentials || [];
-    // console.log('Fetched credentials:', creds);
     setPasswords(creds);
 
     for (const cred of creds) {
-      // console.log(vaultKey)
       if (cred.dataEnc && cred.dataIv && cred.dataAuthTag  && cred.hasPassword) {
         try {
           const decrypted = await decryptCredentialForClient(cred, vaultKey);
           if (decrypted?.password) {
             setListPasswords(prev => [...prev, decrypted.password]);
-            // console.log(listPasswords)
           }
 
         } catch (decryptionError) {
@@ -64,7 +61,6 @@ useEffect(() => {
   if (!userId) return;
   setListPasswords([]); // Clear previous passwords
   fetchCredentials(false); // Don't notify on mount
-  // console.log(listPasswords)
 }, [userId]);
 
   const filteredPasswords = passwords.filter((item) => {

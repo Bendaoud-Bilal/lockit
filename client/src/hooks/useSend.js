@@ -1,12 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import link from "../services/link";
-import { APP_CONFIG } from "../utils/config";
+import { useState, useEffect } from "react";
+import { v4 as uuidv4 } from 'uuid';
+import apiService from '../services/apiService';
 
-// Browser-compatible encryption (from SendService)
+// Browser-compatible encryption
 const encryptContent = async (plainText, password) => {
   const encoder = new TextEncoder();
   
-  // Derive key from password
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     encoder.encode(password || 'default-key'),
@@ -28,10 +27,8 @@ const encryptContent = async (plainText, password) => {
     ['encrypt', 'decrypt']
   );
   
-  // Generate IV
   const iv = crypto.getRandomValues(new Uint8Array(12));
   
-  // Encrypt
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: iv },
     key,
@@ -41,7 +38,6 @@ const encryptContent = async (plainText, password) => {
   return {
     encryptedContent: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
     contentIv: btoa(String.fromCharCode(...iv)),
-    contentAuthTag: '' // GCM mode includes auth tag in encrypted data
   };
 };
 
@@ -49,7 +45,6 @@ const decryptContent = async (encryptedContent, contentIv, password) => {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   
-  // Derive key from password
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     encoder.encode(password || 'default-key'),
@@ -71,12 +66,10 @@ const decryptContent = async (encryptedContent, contentIv, password) => {
     ['encrypt', 'decrypt']
   );
   
-  // Decode base64
   const iv = Uint8Array.from(atob(contentIv), c => c.charCodeAt(0));
   const encrypted = Uint8Array.from(atob(encryptedContent), c => c.charCodeAt(0));
   
   try {
-    // Decrypt
     const decrypted = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: iv },
       key,
@@ -89,215 +82,494 @@ const decryptContent = async (encryptedContent, contentIv, password) => {
   }
 };
 
-
 export const useCreateSend = (userId) => {
-  const queryClient = useQueryClient();
+  const [isCreating, setIsCreating] = useState(false);
 
-  const mutation = useMutation({
-    mutationFn: async (sendData) => {
-      let contentToEncrypt;
-      let filename = null;
+  const createSend = async (sendData, callbacks = {}) => {
+  setIsCreating(true);
+  
+  try {
+    let contentToEncrypt;
+    let filename = null;
+    let originalFileExtension = null;
 
-      // Handle different content types
-      if (sendData.type === 'file' && sendData.content instanceof File) {
-        filename = sendData.content.name;
-        const arrayBuffer = await sendData.content.arrayBuffer();
-        // Convert file to base64 for encryption
-        const uint8Array = new Uint8Array(arrayBuffer);
-        contentToEncrypt = btoa(String.fromCharCode(...uint8Array));
-      } else {
-        // Text or credential content
-        contentToEncrypt = sendData.content;
+    // Handle different content types
+    if (sendData.type === 'credential') {
+      contentToEncrypt = sendData.content;
+    } else if (sendData.type === 'file' && sendData.content instanceof File) {
+      filename = sendData.content.name;
+      originalFileExtension = filename.split('.').pop();
+
+      const maxSize = 25 * 1024 * 1024; // 25MB limit
+      if (sendData.content.size > maxSize) {
+        const errorMessage = `File size (${(sendData.content.size / (1024 * 1024)).toFixed(2)}MB) exceeds maximum allowed size (25MB)`;
+        setIsCreating(false);
+        if (callbacks.onError) {
+          callbacks.onError(new Error(errorMessage));
+        }
+        throw new Error(errorMessage);
       }
 
-      // Encrypt content with password (or default if no password)
-      const password = sendData.accessPassword || 'default-key';
-      const encrypted = await encryptContent(contentToEncrypt, password);
-
-      // Prepare data for relay server
-      const relayData = {
-        name: sendData.name,
-        type: sendData.type,
-        encryptedContent: encrypted.encryptedContent,
-        contentIv: encrypted.contentIv,
-        contentAuthTag: encrypted.contentAuthTag,
-        passwordProtected: !!sendData.accessPassword,
-        maxAccessCount: sendData.maxAccessCount || null,
-        expiresAt: sendData.deleteAfterDays 
-          ? new Date(Date.now() + sendData.deleteAfterDays * 24 * 60 * 60 * 1000).toISOString()
-          : null,
-        filename: filename // Include filename for file sends
-      };
-
-      // Send to relay server
-      const response = await fetch(`${APP_CONFIG.RELAY_SERVER_URL}/api/relay/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(relayData)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create send on relay server');
-      }
-
-      const result = await response.json();
-      
-      // Save metadata locally for the sender to track their sends
-      saveSendMetadataLocally(userId, {
-        id: result.id,
-        name: sendData.name,
-        type: sendData.type,
-        direction: 'sent',
-        passwordProtected: !!sendData.accessPassword,
-        maxAccessCount: sendData.maxAccessCount,
-        currentAccessCount: 0,
-        expiresAt: sendData.deleteAfterDays 
-          ? new Date(Date.now() + sendData.deleteAfterDays * 24 * 60 * 60 * 1000).toISOString()
-          : null,
-        createdAt: new Date().toISOString(),
-        isActive: true
-      });
-      
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sends", userId] });
+      const arrayBuffer = await sendData.content.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      contentToEncrypt = btoa(String.fromCharCode(...uint8Array));
+    } else {
+      contentToEncrypt = sendData.content;
     }
-  });
+
+    // Encrypt content
+    const password = sendData.accessPassword || 'default-key';
+    const encrypted = await encryptContent(contentToEncrypt, password);
+
+    // Create send package
+    const sendId = uuidv4();
+    const sendPackage = {
+      version: '1.0',
+      id: sendId,
+      name: sendData.name,
+      type: sendData.type,
+      encryptedContent: encrypted.encryptedContent,
+      contentIv: encrypted.contentIv,
+      passwordProtected: !!sendData.accessPassword,
+      createdAt: new Date().toISOString(),
+      filename: filename,
+      fileExtension: originalFileExtension
+    };
+
+    // ✅ FIX: Check localStorage for duplicates BEFORE trying backend
+    const existingLocalSends = JSON.parse(localStorage.getItem(`sends_${sendData.userId}`) || '[]');
+    const duplicateLocal = existingLocalSends.find(s => s.name === sendData.name);
+    
+    if (duplicateLocal) {
+      const errorMessage = 'A send with this name already exists. Please use a different name.';
+      setIsCreating(false);
+      if (callbacks.onError) {
+        callbacks.onError(new Error(errorMessage));
+      }
+      throw new Error(errorMessage);
+    }
+
+    // Save to backend
+    try {
+      await apiService.createSend({
+        id: sendId,
+        name: sendData.name,
+        type: sendData.type,
+        passwordProtected: !!sendData.accessPassword,
+        encryptedPackage: sendPackage
+      });
+    } catch (apiError) {
+      console.warn('Backend save failed, using localStorage fallback:', apiError);
+      
+      // ✅ FIX: Don't save to localStorage if it's a duplicate error
+      if (apiError.message && apiError.message.includes('already exists')) {
+        setIsCreating(false);
+        if (callbacks.onError) {
+          callbacks.onError(apiError);
+        }
+        throw apiError;
+      }
+      
+      // Save to localStorage only if it's NOT a duplicate error
+      saveSendMetadataLocally(sendData.userId, {
+        id: sendId,
+        name: sendData.name,
+        type: sendData.type,
+        passwordProtected: !!sendData.accessPassword,
+        createdAt: sendPackage.createdAt,
+        isFileBased: true,
+        encryptedPackage: sendPackage
+      });
+    }
+
+    // Convert to JSON and create file
+    const jsonString = JSON.stringify(sendPackage, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const encryptedFile = new File(
+      [blob], 
+      `lockit-send-${sendData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.lockit`,
+      { type: 'application/json' }
+    );
+    
+    setIsCreating(false);
+    if (callbacks.onSuccess) {
+      callbacks.onSuccess({ id: sendId, file: encryptedFile });
+    }
+    
+    return encryptedFile;
+  } catch (error) {
+    console.error('Send creation failed:', error);
+    setIsCreating(false);
+    if (callbacks.onError) {
+      callbacks.onError(error);
+    }
+    throw error;
+  }
+};
+
+return {
+  createSend,
+  isCreating,
+};
+};
+
+export const useReceiveSend = (sendFile, password = null) => {
+  const [send, setSend] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [shouldDecrypt, setShouldDecrypt] = useState(false);
+
+  // Auto-load when file changes (initial load without password)
+  useEffect(() => {
+    if (sendFile) {
+      loadSendInitial();
+    } else {
+      // Clear state when no file
+      setSend(null);
+      setError(null);
+      setShouldDecrypt(false);
+    }
+  }, [sendFile]);
+
+  // Initial load - just to check if password is needed
+  const loadSendInitial = async () => {
+    if (!sendFile) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const fileText = await sendFile.text();
+      const sendPackage = JSON.parse(fileText);
+      
+      if (!sendPackage.version || sendPackage.version !== '1.0') {
+        throw new Error('Invalid or unsupported send file format');
+      }
+      
+      // If password protected, just show the password screen
+      if (sendPackage.passwordProtected) {
+        setSend({
+          ...sendPackage,
+          content: null,
+          needsPassword: true
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // If not password protected, decrypt immediately
+      await decryptAndSetContent(sendPackage, 'default-key');
+      
+    } catch (err) {
+      console.error('Failed to load send:', err);
+      setError(err.message || 'Failed to load send file');
+      setSend(null);
+      setIsLoading(false);
+    }
+  };
+
+  // Manual decryption with password
+  const loadSendWithPassword = async () => {
+    if (!sendFile || !password) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const fileText = await sendFile.text();
+      const sendPackage = JSON.parse(fileText);
+      
+      await decryptAndSetContent(sendPackage, password);
+      
+    } catch (err) {
+      console.error('Failed to decrypt send:', err);
+      setError(err.message || 'Invalid password or corrupted content');
+      setIsLoading(false);
+    }
+  };
+
+  // Helper function to decrypt and set content
+  const decryptAndSetContent = async (sendPackage, decryptPassword) => {
+    try {
+      const decryptedContent = await decryptContent(
+        sendPackage.encryptedContent,
+        sendPackage.contentIv,
+        decryptPassword
+      );
+      
+      // Handle file content
+      if (sendPackage.type === 'file') {
+        const binaryString = atob(decryptedContent);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        setSend({
+          ...sendPackage,
+          content: Array.from(bytes),
+          filename: sendPackage.filename || `download.${sendPackage.fileExtension || 'bin'}`,
+          extension: sendPackage.fileExtension || 'bin',
+          needsPassword: false
+        });
+      } 
+      // Handle credential content
+      else if (sendPackage.type === 'credential') {
+        try {
+          const credentialData = JSON.parse(decryptedContent);
+          setSend({
+            ...sendPackage,
+            content: decryptedContent,
+            credentialData: credentialData,
+            needsPassword: false
+          });
+        } catch (parseError) {
+          console.warn('Failed to parse credential JSON, treating as text:', parseError);
+          // If it's not JSON, treat as regular text
+          setSend({
+            ...sendPackage,
+            content: decryptedContent,
+            needsPassword: false
+          });
+        }
+      }
+      // Handle text content
+      else {
+        setSend({
+          ...sendPackage,
+          content: decryptedContent,
+          needsPassword: false
+        });
+      }
+      
+      setIsLoading(false);
+      
+    } catch (decryptError) {
+      console.error('Decryption error:', decryptError);
+      throw new Error("Invalid password or corrupted content");
+    }
+  };
+
+  return { send, isLoading, error, loadSend: loadSendWithPassword };
+};
+
+export const useSendList = (userId) => {
+  const [sends, setSends] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadSends = async () => {
+    setIsLoading(true);
+    try {
+      // Try backend first
+      const response = await apiService.getUserSends(userId);
+      setSends(response.sends || []);
+    } catch (error) {
+      console.warn('Backend fetch failed, using localStorage:', error);
+      // Fallback to localStorage
+      const key = `sends_${userId}`;
+      const stored = localStorage.getItem(key);
+      const localSends = stored ? JSON.parse(stored) : [];
+      setSends(localSends);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      loadSends();
+    }
+  }, [userId]);
+
+  const reload = () => {
+    if (userId) {
+      loadSends();
+    }
+  };
 
   return {
-    createSend: mutation.mutate,
-    isCreating: mutation.isPending,
-    sendData: mutation.data,
+    sends,
+    isLoading,
+    error: null,
+    reload
   };
 };
 
-export const useReceiveSend = (sendId, password = null) => {
-  const { data: send, isLoading, error, refetch } = useQuery({
-    queryKey: ["receive-send", sendId, password],
-    queryFn: async () => {
-      const params = password ? `?password=${encodeURIComponent(password)}` : '';
-      
-      // Fetch from relay server
-      const response = await fetch(
-        `${APP_CONFIG.RELAY_SERVER_URL}/api/relay/send/${sendId}${params}`
-      );
+export const useGetSendById = (sendId, password = null) => {
+  const [send, setSend] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to retrieve send');
+  useEffect(() => {
+    const loadSend = async () => {
+      if (!sendId) {
+        setIsLoading(false);
+        return;
       }
 
-      const data = await response.json();
-      
-      // If password protected and no content yet, return metadata only
-      if (data.passwordProtected && !data.encryptedContent) {
-        return data;
-      }
+      setIsLoading(true);
+      setError(null);
 
-      // Decrypt content if available
-      if (data.encryptedContent) {
+      try {
+        // Try backend first
+        const response = await apiService.getSendById(sendId);
+        const sendPackage = response.send.encryptedPackage;
+
+        // If password protected but no password provided
+        if (sendPackage.passwordProtected && !password) {
+          setSend({
+            ...sendPackage,
+            content: null,
+            needsPassword: true
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // Decrypt content
         try {
           const decryptedContent = await decryptContent(
-            data.encryptedContent,
-            data.contentIv,
+            sendPackage.encryptedContent,
+            sendPackage.contentIv,
             password || 'default-key'
           );
 
-          // Handle file vs text content
-          if (data.type === 'file') {
-            // Convert base64 back to byte array
+          if (sendPackage.type === 'file') {
             const binaryString = atob(decryptedContent);
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) {
               bytes[i] = binaryString.charCodeAt(i);
             }
-            return {
-              ...data,
-              content: Array.from(bytes), // Convert to regular array for React state
-              filename: data.name || 'download',
-              extension: data.name?.split('.').pop() || 'bin'
-            };
+
+            setSend({
+              ...sendPackage,
+              content: Array.from(bytes),
+              filename: sendPackage.filename || `download.${sendPackage.fileExtension || 'bin'}`,
+              extension: sendPackage.fileExtension || 'bin',
+              needsPassword: false,
+              isActive: true
+            });
           } else {
-            // Text or credential
-            return {
-              ...data,
-              content: decryptedContent
-            };
+            setSend({
+              ...sendPackage,
+              content: decryptedContent,
+              needsPassword: false,
+              isActive: true
+            });
           }
         } catch (decryptError) {
-          throw new Error("Invalid password or corrupted content");
+          setError("Invalid password or corrupted content");
+        }
+
+        setIsLoading(false);
+      } catch (apiError) {
+        // Fallback to localStorage
+        console.warn('Backend fetch failed, checking localStorage:', apiError);
+        try {
+          const storedSends = JSON.parse(localStorage.getItem('sends_global') || '[]');
+          const foundSend = storedSends.find(s => s.id === sendId);
+
+          if (!foundSend) {
+            setError('Send not found');
+            setIsLoading(false);
+            return;
+          }
+
+          const sendPackage = foundSend.encryptedPackage;
+
+          if (sendPackage.passwordProtected && !password) {
+            setSend({
+              ...sendPackage,
+              content: null,
+              needsPassword: true
+            });
+            setIsLoading(false);
+            return;
+          }
+
+          const decryptedContent = await decryptContent(
+            sendPackage.encryptedContent,
+            sendPackage.contentIv,
+            password || 'default-key'
+          );
+
+          if (sendPackage.type === 'file') {
+            const binaryString = atob(decryptedContent);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            setSend({
+              ...sendPackage,
+              content: Array.from(bytes),
+              filename: sendPackage.filename || `download.${sendPackage.fileExtension || 'bin'}`,
+              extension: sendPackage.fileExtension || 'bin',
+              needsPassword: false,
+              isActive: true
+            });
+          } else {
+            setSend({
+              ...sendPackage,
+              content: decryptedContent,
+              needsPassword: false,
+              isActive: true
+            });
+          }
+
+          setIsLoading(false);
+        } catch (localError) {
+          setError('Failed to load send');
+          setIsLoading(false);
         }
       }
-      
-      return data;
-    },
-    enabled: !!sendId,
-    retry: false,
-  });
+    };
 
-  return { send, isLoading, error, refetch };
-};
+    loadSend();
+  }, [sendId, password]);
 
-export const useSendList = (userId) => {
-  const {
-    data: sends = [],
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["sends", userId],
-    queryFn: async () => {
-      // Get sends from local storage (metadata only)
-      const key = `sends_${userId}`;
-      const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : [];
-    },
-  });
-
-  return {
-    sends,
-    isLoading,
-    error,
-  };
+  return { send, isLoading, error };
 };
 
 export const useDeleteSend = (userId) => {
-  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const mutation = useMutation({
-    mutationFn: async (sendId) => {
-      // Delete from relay server
-      const response = await fetch(
-        `${APP_CONFIG.RELAY_SERVER_URL}/api/relay/send/${sendId}`,
-        { method: 'DELETE' }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to delete send');
+  const deleteSend = async (sendId, callbacks = {}) => {
+    setIsDeleting(true);
+    
+    try {
+      // Try backend first
+      try {
+        await apiService.deleteSend(sendId);
+      } catch (apiError) {
+        console.warn('Backend delete failed, using localStorage:', apiError);
+        // Fallback to localStorage
+        const key = `sends_${userId}`;
+        const stored = localStorage.getItem(key);
+        
+        if (stored) {
+          const sends = JSON.parse(stored);
+          const filtered = sends.filter(s => s.id !== sendId);
+          localStorage.setItem(key, JSON.stringify(filtered));
+        }
       }
-
-      // Remove from local storage
-      const key = `sends_${userId}`;
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        const sends = JSON.parse(stored);
-        const filtered = sends.filter(s => s.id !== sendId);
-        localStorage.setItem(key, JSON.stringify(filtered));
+      
+      setIsDeleting(false);
+      if (callbacks.onSuccess) {
+        callbacks.onSuccess();
       }
-
-      return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sends", userId] });
-    },
-  });
+    } catch (error) {
+      console.error('Failed to delete send:', error);
+      setIsDeleting(false);
+      if (callbacks.onError) {
+        callbacks.onError(error);
+      }
+    }
+  };
 
   return {
-    deleteSend: mutation.mutate,
-    isDeleting: mutation.isPending,
-    isSuccess: mutation.isSuccess,
-    isError: mutation.isError,
+    deleteSend,
+    isDeleting,
   };
 };
 

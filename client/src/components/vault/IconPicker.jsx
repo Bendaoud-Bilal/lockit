@@ -92,7 +92,6 @@ const IconPicker = ({showIcon, setShowIcon, formData, setFormData}) => {
                 onClick={() => {
                   // Handle icon selection
                   setFormData({...formData, icon: item.id})
-                  console.log(`Selected icon: ${item.label}`)
                   closeModal()
                 }}
               >

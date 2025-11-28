@@ -34,8 +34,6 @@ async function exampleSaveCredential() {
 
   // Encrypt and prepare for API
   const encryptedCredential = await prepareCredentialForStorage(formData, vaultKey);
-  
-  console.log('Encrypted credential ready for API:', encryptedCredential);
   /*
   {
     title: "GitHub",
@@ -64,7 +62,6 @@ async function exampleSaveCredential() {
   });
 
   const savedCredential = await response.json();
-  console.log('Credential saved:', savedCredential);
 }
 
 /**
@@ -89,8 +86,6 @@ async function exampleLoadCredentials() {
     const decrypted = await decryptCredentialForClient(encrypted, vaultKey);
     decryptedCredentials.push(decrypted);
   }
-
-  console.log('Decrypted credentials:', decryptedCredentials);
   /*
   [
     {
