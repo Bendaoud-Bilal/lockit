@@ -85,15 +85,18 @@ const getSendById = async (id) => {
     return null;
 }
 
-const updateSendAccessCount = async (sendId, newCount) => {
+const updateSendAccessCount = async (sendId) => {
 
     const updatedSend = await prisma.send.updateMany({
         where: {
             id: sendId
         },
         data: {
-            currentAccessCount: newCount
+            currentAccessCount: {
+                increment: 1
+            }
         }
+        
     });
     if(updatedSend)
     {
@@ -103,6 +106,8 @@ const updateSendAccessCount = async (sendId, newCount) => {
 }
 
 const deleteSend = async (id) => {
+
+    
     const deletedSend = await prisma.send.delete({
         where: {
             id: id
@@ -116,4 +121,28 @@ const deleteSend = async (id) => {
     return false;
 }
 
-export { createSend  , getSendsByUserId , getSendById , updateSendAccessCount , deleteSend  };
+
+const setSendInactive = async (id) => {
+    try {
+    const updatedSend = await prisma.send.updateMany({
+        where: {
+            id: id
+        },
+        data: {
+            isActive: false
+        }
+    });
+    if(updatedSend)
+    {
+        return true;
+    }
+    } catch (error) {
+        console.error("Error setting send inactive:", error);
+        return false;
+    }
+    
+}
+
+
+
+export { createSend  , getSendsByUserId , getSendById , updateSendAccessCount , deleteSend , setSendInactive };

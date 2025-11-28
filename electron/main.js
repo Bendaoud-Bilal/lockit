@@ -13,7 +13,7 @@ function createWindow() {
           "default-src 'self'; " +
           "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
           "style-src 'self' 'unsafe-inline'; " +
-          "connect-src 'self' http://localhost:5173 http://localhost:5174 http://localhost:5175 http://localhost:3000; " +
+          "connect-src 'self' http://localhost:5173 http://localhost:5174 http://localhost:5175 http://localhost:3000 ws://localhost:3030; " +
           "img-src 'self' data: https:;"
         ]
       }
@@ -35,7 +35,7 @@ function createWindow() {
   })
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    const allowed = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'file://'];
+    const allowed = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000' , 'file://'];
     if (!allowed.some(origin => url.startsWith(origin))) {
       event.preventDefault();
     }

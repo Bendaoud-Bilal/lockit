@@ -45,7 +45,6 @@ export const useSearchFolder = () => {
         );
         return folders;
       } else {
-        //@ts-ignore
         const folders = await link.Get("/api/folder/search", 
           {name: searchQuery}
         );

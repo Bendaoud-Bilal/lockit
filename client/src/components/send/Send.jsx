@@ -9,6 +9,7 @@ import {
   useCreateSendForReceiver,
 } from "../../hooks/useSend";
 import { useAuth } from "../../context/AuthContext";
+import { useState } from "react";
 
 const Send = () => {
   const {user} = useAuth();
@@ -18,6 +19,8 @@ const Send = () => {
   const { createSend } = useCreateSend(userId);
   const { deleteSend } = useDeleteSend(userId);
   const { createSendForReceiver } = useCreateSendForReceiver(userId);
+  
+
 
   const handleOnCopyLink = (sendId) => {
     console.log("Copy link for send ID:", sendId);
@@ -107,6 +110,7 @@ const Send = () => {
             expireAt={send.expiresAt ? new Date(send.expiresAt) : undefined}
             direction={send.direction}
             createdDate={send.createdAt ? new Date(send.createdAt).toDateString() : ""}
+            isActive={send.isActive}
             onCopyLink={() => handleOnCopyLink(send.id)}
             onInvisibleClicked={() => handleOnEnVisible(send.id)}
             onDelete={() => handleOnDelete(send.id)}

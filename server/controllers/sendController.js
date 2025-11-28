@@ -1,7 +1,8 @@
-import { createSend , getSendById , getSendsByUserId , deleteSend , updateSendAccessCount} from "../db/sendDb.js";
+import { createSend , getSendById , getSendsByUserId , deleteSend , updateSendAccessCount , setSendInactive} from "../db/sendDb.js";
 
 import crypto from 'crypto';
 import { SaveFileAndReturnPath , GetFileFromPath } from "../util/FileUtil.js"
+import { log } from "console";
 
 
 const encryptContent = (plainText, secretKey)=> {
@@ -42,7 +43,8 @@ const decryptContent = (encryptedContent, contentIv, contentAuthTag, secretKey) 
         return decrypted.toString("utf8");
     } catch (error) {
 
-        throw new Error("Authentication verification failed - content may have been tampered with or corrupted");
+        console,log("Authentication verification failed - content may have been tampered with or corrupted");
+        return null;
     }
 }
 
@@ -155,7 +157,7 @@ const CreateSend = async (req, res) =>
 
 const CreateSendForReceiver = async ( req, res ) =>
 {
-    let {userId , name ,  encryptedContent , contentIv , contentAuthTag , maxCount
+    let {userId , name ,  encryptedContent , contentIv , contentAuthTag , maxAccessCount:maxCount
     , expiresAfter ,  type 
     , passwordProtected , direction, filename} = req.body;
     userId = parseInt(userId);
@@ -174,7 +176,9 @@ const CreateSendForReceiver = async ( req, res ) =>
     let expiresAt = null;
     if(expiresAfter)
     {
-        expiresAt = new Date(Date.now() + expiresAfter * 1000  * 60 * 60 * 24);
+        expiresAfter = parseInt(expiresAfter);
+        
+        expiresAt = new Date(Date.now() + expiresAfter);
     }
 
     console.log("expire in = " , expiresAt);
@@ -252,9 +256,22 @@ const GetSendsByUserId = async (req, res) => {
 
 const GetSendById = async ( req, res ) => {
     let { id } = req.params;
+
+    
     
     const { password } = req.query;
     const send = await getSendById( id );
+
+    if(send.currentAccessCount >= send.maxAccessCount && send.maxAccessCount > 0)
+    {
+        await setSendInactive( id );
+        return res.status(403).json({ error: 'Maximum access count reached for this send' });
+    }
+
+    else if (send.expiresAt && new Date() > send.expiresAt) {
+        await setSendInactive( id );
+        return res.status(403).json({ error: 'This send has expired' });
+    }
 
     if( send ) {
 
@@ -299,6 +316,10 @@ const GetSendById = async ( req, res ) => {
         }
         
         const decryptedContent = decryptContent( encryptContent , send.contentIv , send.contentAuthTag , key );
+        if(!decryptedContent)
+        {
+            return res.status(400).json({ error: "Failed to decrypt content - possible wrong password or data tampering" });
+        }
         if(send.type === "file")
         {
             // Reconstruct the File object for file sends
@@ -315,6 +336,18 @@ const GetSendById = async ( req, res ) => {
 const GetEncryptedSendById = async (req, res ) => {
     let { id } = req.params;
     const send = await getSendById( id );
+
+    console.log("we are inside GetEncryptedSendById controller for id = " , id );
+    
+
+    if(send.currentAccessCount >= send.maxAccessCount && send.maxAccessCount > 0)
+    {
+        await setSendInactive( id );
+    }
+
+    else if (send.expiresAt && new Date() > send.expiresAt) {
+        await setSendInactive( id );
+    }
 
     if( send?.type === "file" )
     { 
@@ -348,6 +381,8 @@ const DeleteSendById = async ( req, res ) => {
 
 const updateAccessCount = async ( req, res ) => {
     let { sendId } = req.params;
+    console.log("send id = " , sendId);
+    
     const result = await updateSendAccessCount( sendId );
     if( result ) {
         return res.status(200).json({ message: 'Access count updated successfully' });

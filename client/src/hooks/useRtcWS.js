@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 class RtcWSConnection {
 
-    constructor(SessionId, Suffix) { 
+constructor(SessionId, Suffix) { 
         this.ws = null;
         this.isConnected = false;
         this.sessionId = null;
@@ -15,14 +15,16 @@ class RtcWSConnection {
         this.openConnectionCallback = null;
 
         this.sessionId = SessionId;
+
+    
         if(Suffix) {
             this.suffix = Suffix;
         }
         this.connect();
-    }
+}
 
 
-    connect = () => {
+connect = () => {
     // Check if WebSocket is available
     if (typeof WebSocket === 'undefined') {
         console.log('❌ WebSocket is not supported in this environment', 'error');
@@ -42,6 +44,8 @@ class RtcWSConnection {
             this.isConnected = true;
             console.log('WebSocket connected');
         };
+
+        
 
         // Single message handler for all incoming messages
         this.ws.onmessage = (event) => {
@@ -107,17 +111,23 @@ class RtcWSConnection {
 }
 
 
+
 getOffer = (onGetOffer) => {
+    if (!this.checkConnection()) {
+        this.connect();
+        this.ws.onopen = () => {
+            this.isConnected = true;
+            this.getOffer(onGetOffer);
+        };
+        return;
+    }
 
-    
-    if (!this.checkConnection()) return;
-
-   
-
-    if ( !this.sessionId) {
+    if (!this.sessionId) {
         return;
     }
     
+
+    this.IsOpeningP2PConnection = true;
     // Store the callback to be called when response arrives
     this.offerCallback = onGetOffer || null;
     
@@ -150,13 +160,21 @@ deleteOffer = () => {
     console.log('deleting offer...');
 }
 
-getAnswer = (user, onGetAnswer) =>{
-    if (!this.checkConnection()) return;
-
-
-    if ( !this.sessionId) {
+getAnswer = (user, onGetAnswer) => {
+    if (!this.checkConnection()) {
+        this.connect();
+        this.ws.onopen = () => {
+            this.isConnected = true;
+            this.getAnswer(user, onGetAnswer);
+        };
         return;
     }
+
+    if (!this.sessionId) {
+        return;
+    }
+
+     this.IsOpeningP2PConnection = true;
     
     // Store the callback to be called when response arrives
     this.answerCallback = onGetAnswer || null;
@@ -172,8 +190,15 @@ getAnswer = (user, onGetAnswer) =>{
 }
 
 
-sendOffer = (Offer) =>{
-    if (!this.checkConnection()) return;
+sendOffer = (Offer) => {
+    if (!this.checkConnection()) {
+        this.connect();
+        this.ws.onopen = () => {
+            this.isConnected = true;
+            this.sendOffer(Offer);
+        };
+        return;
+    }
 
     const user = `${this.sessionId}:offer`;
     if (!user) {
@@ -197,8 +222,15 @@ sendOffer = (Offer) =>{
     }
 }
 
-sendAnswer = (answer)=> {
-    if (!this.checkConnection()) return;
+sendAnswer = (answer) => {
+    if (!this.checkConnection()) {
+        this.connect();
+        this.ws.onopen = () => {
+            this.isConnected = true;
+            this.sendAnswer(answer);
+        };
+        return;
+    }
 
     const user = `${this.sessionId}:${this.suffix}`;
     if (!user) {
@@ -252,31 +284,16 @@ disconnect = () => {
 }
 
 
-deleteAnswer=() =>{
-    if (!this.checkConnection()) return;
 
-    const user = `${this.sessionId}:answer`;
-    if (!user) {
-        console.log('❌ Please enter your username', 'error');
+SendOpenConnectionRequest = () => {
+    if (!this.checkConnection()) {
+        this.connect();
+        this.ws.onopen = () => {
+            this.isConnected = true;
+            this.SendOpenConnectionRequest();
+        };
         return;
     }
-
-    try {
-        const message = {
-            method: 'deleteAnswer',
-            UserName: user,
-        };
-
-        this.ws?.send(JSON.stringify(message));
-        
-    } catch (error) {
-       console.log(`❌ failed to delete the answer: ${error || ""}`, 'error');
-    }
-}
-
-
-SendOpenConnectionRequest=() =>{
-    if (!this.checkConnection()) return;
 
     const user = `${this.sessionId}:${this.suffix}`;
     if (!user) {
@@ -284,25 +301,37 @@ SendOpenConnectionRequest=() =>{
         return;
     }
 
+    this.IsOpeningP2PConnection = true;
+
     console.log("we are sending a SendOpenConnectionRequest");
     
 
-    try {
+    try 
+    {
         const message = {
             method: 'openRtcConnectionRequest',
             UserName: user,
-        };
+    };
 
-        this.ws?.send(JSON.stringify(message));
+    this.ws?.send(JSON.stringify(message));
         
     } catch (error) {
-       console.log(`❌ failed to delete the answer: ${error || ""}`, 'error');
+         console.log(`❌ failed to send openRtcConnectionRequest: ${error || ""}`, 'error');
     }
 }
 
 
-SetOnOpenConnectionRequest=(OnopenConnectionReq = null)=>{
-    if (!this.checkConnection()) return;
+SetOnOpenConnectionRequest = (OnopenConnectionReq = null) => {
+    if (!this.checkConnection()) {
+        this.connect();
+        this.ws.onopen = () => {
+            this.isConnected = true;
+            this.SetOnOpenConnectionRequest(OnopenConnectionReq);
+        };
+        return;
+    }
+
+    this.IsOpeningP2PConnection = true;
 
     try {
         // Replace the callback - each Copy Link creates new offer for new receiver
@@ -313,7 +342,7 @@ SetOnOpenConnectionRequest=(OnopenConnectionReq = null)=>{
     }
 }
 
-setSessionId=(sessionId)=>{
+setSessionId = (sessionId) => {
     this.sessionId = sessionId;
 }
 
@@ -330,6 +359,7 @@ const useRtcWS = (sessionId, suffix) => {
 
         if(suffix){
                 connectionRef.current = new RtcWSConnection(sessionId , id);
+                
         }
         else
         {

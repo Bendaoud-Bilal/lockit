@@ -16,18 +16,55 @@ class WebRTC {
         this._Offer = null;
         this._OnChannelOpen = null;
         this._OnGetSend = null;
+        this.IsSendingData = false;
+        this.IsDataBeenSent = false;
+        this.IsChannelOpened = false;
+        
+        // Event callbacks for UI updates
+        this._OnOpeningConnection = null;
+        this._OnSendingData = null;
+        this._OnDataReceived = null;
     }
 
     handleOnGetMessage = (data) => {
+        
         const Data = JSON.parse(data); 
+        console.log("we received a data = " , data);
 
-        
-            if(this._OnGetSend){
-                console.log("we get a send = " , data);
-                this._OnGetSend(Data);
+        if(Data.method==="sendData" && this._OnGetSend)
+        {
+            console.log("we get a send = " , data);
+            this._OnGetSend(Data);
+            this.IsDataBeenSent = true;
+            
+            // Trigger data received callback
+            if (this._OnDataReceived) {
+                this._OnDataReceived();
             }
+            
+            this.sendSend({method: "SendDataReceived"});
+        }
 
-        
+        else if(Data.method==="SendingData" )
+        {
+            this.IsSendingData = true;
+            
+            // Trigger sending data callback
+            if (this._OnSendingData) {
+                this._OnSendingData();
+            }
+        }
+
+        else if(Data.method==="SendDataReceived")
+        {
+            this.IsDataBeenSent = true;
+            
+            // Trigger data received callback for sender
+            if (this._OnDataReceived) {
+                this._OnDataReceived();
+            }
+        }
+
         else{
             console.log("we received a message : " , data);
             
@@ -56,7 +93,17 @@ class WebRTC {
         }
         
         this._SendChannel.onopen = () => {
+            this.IsChannelOpened = true;
             console.log("✅ Sender channel open!!!!");
+            
+            // Trigger sending data callback when channel opens
+            if (this._OnSendingData) {
+                this._OnSendingData();
+            }
+            
+            // Send notification to receiver that we're sending data
+            this.sendSend({method: "SendingData"});
+            
             if (this._OnChannelOpen) {
                 this._OnChannelOpen();
             }
@@ -87,10 +134,9 @@ class WebRTC {
                 this.handleOnGetMessage(e.data);
             }
             this._SendChannel.onopen = () => {
+                this.IsChannelOpened = true;
                 console.log("Receiver channel open!!!!");
-                if (this._OnChannelOpen) {
-                    this._OnChannelOpen();
-                }
+               
             };
             this._SendChannel.onclose = () => console.log("closed!!!!!!");
         }
@@ -211,7 +257,10 @@ class WebRTC {
         console.log("answer = ",answer);
         console.log("this._RtcType = " , this._RtcType);
         
-        
+        // Trigger opening connection callback
+        if (this._OnOpeningConnection) {
+            this._OnOpeningConnection();
+        }
 
         if(this._RtcType==="sender")
         {
@@ -293,7 +342,6 @@ class WebRTC {
         console.log("Message sent:", msg);
     }
 
-
     sendSend(msg)
     {
         if (!this._SendChannel) {
@@ -304,11 +352,11 @@ class WebRTC {
             console.error("Cannot send message: Data channel is not open. Current state:", this._SendChannel.readyState);
             return;
         }
-         console.log("in rtc ibj Message sent:", msg);
+        console.log("in rtc ibj Message sent:", msg);
+        this.IsSendingData = true;
         this._SendChannel.send(
             JSON.stringify(msg)
         );
-       
     }
 
     setOnGetSendCallback(callback)
@@ -329,7 +377,44 @@ class WebRTC {
         console.log("Peer connection closed");
     }
 
-   // public SendNewSend()
+    SetIsSendingData = (r)=>
+    {
+        this.IsSendingData = r;
+    }
+
+    SetIsDataBeenSent = (r)=>
+    {
+        this.IsDataBeenSent = r;
+    }
+
+
+    GetIsSendingData = ()=>
+    {
+        return this.IsSendingData;
+    }
+
+    GetIsChannelOpened = ()=>
+    {
+        return this.IsChannelOpened;
+    }
+
+    GetIsDataBeenSent = ()=>
+    {
+        return this.IsDataBeenSent;
+    }
+
+    // Event callback setters
+    SetOnOpeningConnection = (callback) => {
+        this._OnOpeningConnection = callback;
+    }
+
+    SetOnSendingData = (callback) => {
+        this._OnSendingData = callback;
+    }
+
+    SetOnDataReceived = (callback) => {
+        this._OnDataReceived = callback;
+    }
 
 }
     

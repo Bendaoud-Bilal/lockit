@@ -86,8 +86,17 @@ export const useCreateSendForReceiver = (userId) => {
 
   const mutation = useMutation({
     mutationFn: async (sendData) => {
-      console.log("file in use send = " , sendData.filename);
+      console.log("sending data to server = " , sendData);
       sendData.direction = "received";
+      sendData.userId = userId;
+      
+      // Convert string to Date if needed, then calculate expiresAfter
+      let expiresAt = sendData.expiresAt;
+      if (expiresAt && typeof expiresAt === 'string') {
+        expiresAt = new Date(expiresAt);
+      }
+      sendData.expiresAfter = expiresAt ? (expiresAt.getTime() - Date.now()) : null;
+      
       const res = await link.Post("/api/send/createSendForReceiver" , sendData );
 
       const sends = res?.sends || res.data || res || [];
@@ -124,14 +133,13 @@ export const useCreateSendForReceiver = (userId) => {
     isError: mutation.isError,
   };
 };
-
 // Hook for deleting a send
 export const useDeleteSend = (userId) => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: async (sendId) => {
-      //@ts-ignore
+
       return await link.Delete("/api/send/" + sendId);
     },
     onSuccess: () => {
@@ -153,23 +161,28 @@ export const useDeleteSend = (userId) => {
 
 export const useGetSendById = (sendId, password) => {
 
-  console.log("useGetSendById called with sendId:", sendId, "password:", password ? "***" : "null");
+  console.log("useGetSendById called with sendId:", sendId, "password:", password ? password : "null");
+  
+  // Use a hash of password presence (not the password itself) to trigger refetch
+  const passwordHash = password ? `pwd_${password.length}_${Math.floor(Date.now() / (1000 * 60 * 60 * 24))}` : null;
+  
   const {
     data: send = null,
     isLoading,
     error,
+    refetch,
   } = useQuery({
-    queryKey: ["send", sendId],
+    queryKey: ["send", sendId, passwordHash],
     queryFn: async () => {
       console.log("Fetching send from API...");
-      //@ts-ignore
-      const send = await link.Get("/api/send/" + sendId , password );
+
+      const send = await link.Get("/api/send/" + sendId, { password:password });
       console.log("Send fetched:", send?.id, "type:", send?.type, "contentLength:", Array.isArray(send?.content) ? send.content.length : typeof send?.content);
-      return send ;
+      return send;
     },
     enabled: !!sendId, // Only fetch if sendId is provided
-    staleTime: Infinity, // Never mark as stale
-    gcTime: Infinity, // Keep in cache forever (was cacheTime in older versions)
+    staleTime: 0, // Always refetch when password changes
+    gcTime: 0, // Don't cache sensitive data
   });
   
   
@@ -177,6 +190,7 @@ export const useGetSendById = (sendId, password) => {
     send,
     isLoading,
     error,
+    refetch,
   };
 };
 
@@ -211,23 +225,18 @@ export const useGetEncryptedSendById = (sendId) => {
   };
 };
 
-export const updateSendAccessCount = async (sendId) => {
-  
-  try {
-    const mutation= useMutation({
-      mutationFn: async (sendId) => {
-        return await link.Put("/api/send/" + sendId);
-      },
-      onSuccess: () => {
-        console.log("Send access count updated");
-      }
-      ,onError: (error) => {
-        console.log("Failed to update send access count:", error);
-      },
-    });
-  } catch (error) {
-    console.log("Failed to update send access count:", error);
-  }
+export const useUpdateSendAccessCount = (sendId) => {
+  const mutation = useMutation({
+    mutationFn: async () => {
+      return await link.Put("/api/send/" + sendId);
+    },
+    onSuccess: () => {
+      console.log("Send access count updated");
+    },
+    onError: (error) => {
+      console.log("Failed to update send access count:", error);
+    },
+  });
 
   return {
     updateAccessCount: mutation.mutate,
@@ -235,6 +244,5 @@ export const updateSendAccessCount = async (sendId) => {
     isSuccess: mutation.isSuccess,
     isError: mutation.isError,
   };
-
 };
 

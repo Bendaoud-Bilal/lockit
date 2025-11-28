@@ -40,8 +40,8 @@ const SendContent = () => {
     if (send?.type === "file" && send?.content && send?.extension) {
       try {
         console.log("Creating file from send data...");
-        //@ts-ignore
-        const uint8Array = new Uint8Array(send.content);
+
+        const uint8Array = new Uint8Array(send.content.data);
         const blob = new Blob([uint8Array]);
         const file = new File([blob], `download.${send.extension}`, {
           type: "application/octet-stream",

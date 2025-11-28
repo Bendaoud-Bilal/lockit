@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useRtcWS from "../../hooks/useRtcWS";
 import WebRTC from "../../util/Rtc";
-import { useGetEncryptedSendById } from "../../hooks/useSend";
+import { useGetEncryptedSendById , useUpdateSendAccessCount } from "../../hooks/useSend";
 import { v4 as uuidv4 } from "uuid";
+
 
 
 
@@ -17,6 +18,7 @@ const SendItem = ({
   expireAt,
   createdDate,
   direction,
+  isActive,
   onCopyLink,
   onInvisibleClicked,
   onDelete,
@@ -32,6 +34,12 @@ const SendItem = ({
 
   const [IsCreatingOffer, SetIsCreatingOffer] = useState(false);
 
+  const [IsOpeningConnection , SetIsOpeningConnection] = useState(false);
+
+  const [IsSendingData , SetIsSendingData ] = useState(false);
+
+  const [IsDataBeenSent , SetIsDataBeenSent] = useState(false);
+
   const sessionId = sendId;
 
   // const [rtcObj, setRtcObj] = useState<WebRTC | null>(null);
@@ -40,6 +48,7 @@ const SendItem = ({
   const rtcHook = useRtcWS(sessionId);
 
   const { send, isLoading, error } = useGetEncryptedSendById(sendId);
+  const {updateAccessCount} = useUpdateSendAccessCount(sendId)
 
   // useEffect(() => {
   //   rtcObj?.OnChannelOpen(() => {
@@ -84,10 +93,10 @@ const SendItem = ({
     console.log("error = ", error);
 
     rtcObj.OnChannelOpen(() => {
-      console.log("hello ");
+      console.log("sending data... ");
       if (!isLoading && !error && send) {
         sendSend(send, rtcObj);
-        rtcObj.CloseConnection();
+        //rtcObj.CloseConnection();
       }
     });
   };
@@ -95,6 +104,23 @@ const SendItem = ({
   const handleCreateOffer = async () => {
     // Each Copy Link creates a NEW WebRTC instance for a NEW receiver
     const rtcObj = new WebRTC(Direction);
+
+    // Set up event callbacks for UI updates
+    rtcObj.SetOnSendingData(() => {
+      SetIsSendingData(true);
+      SetIsOpeningConnection(false);
+      // Show toast: Sending data
+      console.log("📤 Sending data...");
+    });
+
+    rtcObj.SetOnDataReceived(() => {
+      SetIsDataBeenSent(true);
+      SetIsSendingData(false);
+      SetIsOpeningConnection(false);
+      // Show toast: Data sent successfully
+      console.log("✅ Data sent successfully!");
+      rtcObj.CloseConnection();
+    });
 
     // Set up what happens when channel opens (callback for later)
     handleChannelOpened(rtcObj);
@@ -136,20 +162,26 @@ const SendItem = ({
         };
         await rtcObj?.OpenConnection(answer);
 
+        //rtcHook.disconnect();
         console.log("🔌 Connection established");
         console.log(rtcObj?.GetChannelState());
+
       }
     );
   };
 
   const handleOnCopyLink = () => {
+
     if (onCopyLink) {
+
       const id = uuidv4();
+      rtcHook.connect();
       rtcHook.setSessionId(id);
       // Copy the link to clipboard
       navigator.clipboard.writeText(id).catch((err) => {
         console.error("Failed to copy link:", err);
       });
+      SetIsOpeningConnection(true);
 
       onCopyLink();
       handleCreateOffer();
@@ -163,9 +195,10 @@ const SendItem = ({
 
   const handleUpdateAccessesCount = async () => {
     // Logic to update accesses count can be added here
+    console.log("direction = " , direction);
+    
     if (direction === "received") {
-      //@ts-ignore
-      const res = await window.api.send.updateAccessCount(sendId, accesses + 1);
+      updateAccessCount();
     } else {
       //@ts-ignore
       // const res = await window.api.send.updateAccessCount(sendId, accesses + 1);
@@ -175,6 +208,10 @@ const SendItem = ({
   const handleTitleClick = async () => {
     if (max && accesses >= max) {
       return; // Prevent navigation if max accesses reached
+    }
+    if(!isActive)
+    {
+      return; // Prevent navigation if send is inactive
     }
     handleUpdateAccessesCount();
     navigate(`/send/${sendId}`);
@@ -195,6 +232,23 @@ const SendItem = ({
       }}
     >
       <div className="card-body" style={{ minWidth: "20rem" }}>
+        {/* Connection Status Toast */}
+        {IsOpeningConnection && (
+          <div className="alert alert-info py-2 mb-2" role="alert">
+            📡 Opening connection...
+          </div>
+        )}
+        {IsSendingData && (
+          <div className="alert alert-warning py-2 mb-2" role="alert">
+            📤 Sending data...
+          </div>
+        )}
+        {IsDataBeenSent && (
+          <div className="alert alert-success py-2 mb-2" role="alert">
+            ✅ Data sent successfully!
+          </div>
+        )}
+        
         <div className="d-flex justify-content-between align-items-start">
           {/* Left Section */}
           <div className="d-flex gap-3 flex-grow-1">
