@@ -15,3 +15,6 @@ build/
 # OS
 Thumbs.db
 .vite
+
+#pathignore
+server/path
