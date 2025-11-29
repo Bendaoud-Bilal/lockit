@@ -23,6 +23,7 @@ const SendItem = ({
   onInvisibleClicked,
   onDelete,
 }) => {
+  
   const navigate = useNavigate();
 
   const Direction = "sender";
@@ -68,8 +69,8 @@ const SendItem = ({
   const sendSend = (Send, rtcObj) => {
     if (Send) {
       console.log("encrypted send in sender  = ", send);
-
-      rtcObj?.sendSend({
+      rtcObj?.sendSend(
+        {
         contentAuthTag: Send.contentAuthTag,
         method: "sendData",
         contentIv: Send.contentIv,
@@ -83,7 +84,8 @@ const SendItem = ({
         filename: Send.filename,
         isActive: Send.isActive,
         passwordProtected: Send.passwordProtected,
-      });
+      }
+    );     
     }
   };
 

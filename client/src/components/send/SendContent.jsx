@@ -90,6 +90,18 @@ const SendContent = () => {
   };
 
   const handleDownloadFile = () => {
+
+    if (fileObject) {
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(fileObject);
+      link.href = url;
+      link.download = fileObject.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+    
     // if (downloadUrl && fileObject) {
     //   const link = document.createElement("a");
     //   link.href = downloadUrl;
