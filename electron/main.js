@@ -13,7 +13,7 @@ function createWindow() {
           "default-src 'self'; " +
           "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
           "style-src 'self' 'unsafe-inline'; " +
-          "connect-src 'self' http://localhost:5173 http://localhost:5174 http://localhost:5175 http://localhost:3000 ws://localhost:3030; " +
+          "connect-src 'self' http://localhost:5173 http://localhost:5174 http://localhost:5175 http://localhost:3000 ws://localhost:3030 wss://realrtcserver.fly.dev; " +
           "img-src 'self' data: https:;"
         ]
       }

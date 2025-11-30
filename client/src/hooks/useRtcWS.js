@@ -38,7 +38,9 @@ connect = () => {
     }
 
     try {
-        this.ws = new WebSocket('ws://localhost:3030');
+
+       // this.ws = new WebSocket('ws://localhost:3030');
+        this.ws = new WebSocket("wss://realrtcserver.fly.dev");
 
         this.ws.onopen = () => {
             this.isConnected = true;
