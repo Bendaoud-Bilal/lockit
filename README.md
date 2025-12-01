@@ -3,8 +3,8 @@ Secure desktop password manager with 2FA authenticator built with Electron + Rea
 
 Windows Installer Link : [Download Lockit - Windows Installer](https://www.mediafire.com/file/cwhjgxeldn2lure/Lockit-1.0.0-Setup.exe/file)
 
-NB.1 : Lockit is currently a windows only application
-NB.2 : You can build installer yourself following instructions bellow [To run Lockit in production (Windows only)]
+- NB.1 : Lockit is currently a windows only application
+- NB.2 : You can build installer yourself following instructions bellow [To run Lockit in production (Windows only)]
 
 ## To run Lockit in development
 After cloning repository, in root directory :
