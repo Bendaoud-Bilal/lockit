@@ -69,5 +69,3 @@ The installer will be created --> \dist\Lockit-1.0.0-Setup.exe, execute it and f
 - Technical docs: `docs/TECHNICAL.md` — architecture and security notes for developers.
 - Development & Contribution: `docs/DEVELOPMENT.md` — how to run locally, contribute, and where to add screenshots.
 - API docs (Vault): `server/API_DOCUMENTATION.md` — endpoints, examples, and security notes.
-
-Feel free to add screenshots to `docs/assets/screenshots/` and reference them from any `docs/*.md` file.
