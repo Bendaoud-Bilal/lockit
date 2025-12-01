@@ -5,11 +5,10 @@ I've completed the core authentication and security infrastructure for Lockit. H
 #### **Core Features:**
 
 **1. User Authentication Flow**
-- **Sign Up:** Users create account with username, email, and master password (min 16 chars with complexity requirements)
-- **Login/Unlock:** Two modes:
   - Full login (with username/email)
   - Quick unlock (when vault is locked but session exists)
-- **Password Reset:** Recovery key system (one-time use, format: XXXX-XXXX-XXXX-XXXX)
+Note about recovery keys & Dual‑wrap:
+ - The system uses a Dual‑wrap approach: the user's `vaultKey` is wrapped under both the master password and the recovery key at account creation (client-side). The server stores only encrypted blobs and hashes; it never sees plaintext `vaultKey`. When a recovery key is used, the server returns the recovery-wrapped blob so the client can locally unwrap it with the recovery key and re-wrap it under a new master password. This improves recoverability while preserving zero-knowledge guarantees.
 
 **2. Encryption Architecture** 
 - **Client-Side Encryption:** All sensitive data encrypted using AES-256-GCM via Web Crypto API

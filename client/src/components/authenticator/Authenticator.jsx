@@ -3,6 +3,7 @@ import { Plus, X, ScanQrCode, StoreIcon } from "lucide-react";
 import AuthenticatorItem from "./AuthenticatorItem";
 import AddTOTP from "./AddTOTP";
 import { useAuth } from "../../context/AuthContext";
+import decryptAesGcmBrowser, { encryptAesGcmBrowser } from "../../utils/crypto";
 import toast from "react-hot-toast";
 import apiService from "../../services/apiService";
 
@@ -13,7 +14,7 @@ const Authenticator = () => {
   const [accounts, setAccounts] = useState([]);
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated, isLocked } = useAuth(); 
+  const { isAuthenticated, isLocked, vaultKey } = useAuth(); 
 
   const fetchCredentials = async () => {
     try {
@@ -29,12 +30,36 @@ const Authenticator = () => {
     try {
       const response = await apiService.getAllTotps();
       const totpsArray = Array.isArray(response.data) ? response.data : [];
-      const formatted = totpsArray.map((item) => ({
-        id: item.id,
-        serviceName: item.serviceName,
-        accountName: item.accountName,
-        secret: item.secret,
-      }));
+      const formatted = [];
+
+      for (const item of totpsArray) {
+        try {
+          // Decrypt the secret client-side using the in-memory vaultKey
+          const decrypted = await decryptAesGcmBrowser(
+            vaultKey,
+            item.encryptedSecret || item.encrypted_secret || item.secret,
+            item.secretIv || item.secret_iv || item.iv,
+            item.secretAuthTag || item.secret_auth_tag || item.authTag
+          );
+
+          formatted.push({
+            id: item.id,
+            serviceName: item.serviceName,
+            accountName: item.accountName,
+            secret: decrypted,
+          });
+        } catch (err) {
+          // If decryption fails, push placeholder and log error
+          console.error("Failed to decrypt TOTP secret for item", item.id, err);
+          formatted.push({
+            id: item.id,
+            serviceName: item.serviceName,
+            accountName: item.accountName,
+            secret: null,
+          });
+        }
+      }
+
       setAccounts(formatted);
     } catch (err) {
       console.error("Erreur fetchAccounts:", err);
@@ -43,14 +68,17 @@ const Authenticator = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated && !isLocked) {
+    // Ensure we have an active session and the in-memory vault key before
+    // attempting to fetch TOTP data (prevents premature 401s and decrypt
+    // attempts when vaultKey is not present yet).
+    if (isAuthenticated && !isLocked && vaultKey) {
       fetchAccounts();
       fetchCredentials();
-    } 
+    }
   }, [isAuthenticated, isLocked]);
 
   useEffect(() => {
-    if (showAddTOTP && isAuthenticated && !isLocked)  {
+    if (showAddTOTP && isAuthenticated && !isLocked && vaultKey)  {
       fetchCredentials();
     }
   }, [showAddTOTP,isAuthenticated,isLocked]);
@@ -71,14 +99,26 @@ const Authenticator = () => {
 
       setLoading(true);
 
+      // Encrypt secret client-side using the vaultKey before sending to server
+      const cleaned = secret.trim().replace(/\s/g, "");
+      let encryptedPayload = {};
+      if (!vaultKey) throw new Error("Vault key not available to encrypt TOTP secret");
+      const enc = await encryptAesGcmBrowser(vaultKey, cleaned);
+      encryptedPayload = {
+        encryptedSecret: enc.ciphertext,
+        secretIv: enc.iv,
+        secretAuthTag: enc.authTag,
+      };
+
       const savedAccount = await apiService.saveTotp({
         serviceName: serviceName.trim(),
         accountName: accountName.trim(),
-        secret: secret.trim().replace(/\s/g, ""),
         credentialId: credentialId ? parseInt(credentialId) : null,
+        ...encryptedPayload,
       });
 
-      setAccounts((prev) => [...prev, savedAccount]);
+      // savedAccount.data contains created entry metadata
+      setAccounts((prev) => [...prev, { id: savedAccount.data.id, serviceName, accountName, secret: cleaned }]);
       await fetchAccounts();
       setShowAddTOTP(false);
       toast.success(`${serviceName} added successfully`);

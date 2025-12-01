@@ -13,6 +13,7 @@ import {
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import cryptoService from "../../services/cryptoService";
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -271,12 +272,47 @@ const printRecoveryKey = async () => {
     try {
       setLoading(true);
 
-      const result = await signup(
-        formData.username,
-        formData.email,
+      // Generate a random vault key (32 bytes) and wrap it client-side
+      const random = new Uint8Array(32);
+      window.crypto.getRandomValues(random);
+      const plainVaultKey = btoa(String.fromCharCode(...random));
+      const vaultSalt = cryptoService.generateSalt();
+
+      const wrapped = await cryptoService.wrapVaultKey(
         formData.masterPassword,
-        recoveryKey
+        plainVaultKey,
+        vaultSalt
       );
+
+      // Also wrap the vault key with the recovery key (Dual‑wrap) so the
+      // recovery key can be used to recover the vault without the master
+      // password. The client performs this wrap and the server stores only
+      // the encrypted blob.
+      const vaultRecoverySalt = cryptoService.generateSalt();
+      const recoveryWrapped = await cryptoService.wrapVaultKey(
+        recoveryKey,
+        plainVaultKey,
+        vaultRecoverySalt
+      );
+
+      const signupPayload = {
+        username: formData.username,
+        email: formData.email,
+        masterPassword: formData.masterPassword,
+        recoveryKey,
+        encryptedVaultKey: wrapped.encryptedKey,
+        vaultKeyIv: wrapped.iv,
+        vaultKeyAuthTag: wrapped.authTag,
+        vaultSalt,
+        // Recovery-wrapped blob
+        encryptedVaultKeyRecovery: recoveryWrapped.encryptedKey,
+        vaultKeyRecoveryIv: recoveryWrapped.iv,
+        vaultKeyRecoveryAuthTag: recoveryWrapped.authTag,
+        vaultRecoverySalt,
+        recoveryKdfIterations: 100000,
+      };
+
+      const result = await signup(signupPayload, plainVaultKey);
 
       if (result.success) {
         toast.success("Account setup complete! Redirecting...");

@@ -4,8 +4,6 @@ import {
   getUserTotps,
   deleteTotp,
   updateTotpState,
-  getUserVaultKey,
-  decryptTotpSecret,
 } from "../services/totp.service.js";
 import prisma from "../services/prisma.service.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -19,28 +17,27 @@ import { ApiError } from "../utils/ApiError.js";
 export async function saveTotp(req, res, next) {
   try {
 
-    const {serviceName,accountName,secret,credentialId} = req.body;
+    const {serviceName,accountName,secret,credentialId, encryptedSecret, secretIv, secretAuthTag} = req.body;
     const userId = req.user.id;
 
-    // Validation
-    if (!serviceName || !accountName || !secret) {
-      throw new ApiError(
-        400,
-        "secret, serviceName, and accountName are required"
-      );
-    }
-    
-    // Validate secret format (base32)
-    const base32Regex = /^[A-Z2-7]+=*$/;
-    if (!base32Regex.test(secret)) {
-      throw new ApiError(400, "Invalid secret format (must be base32)");
+    // Validation: require serviceName and accountName, and at least one of
+    // plaintext `secret` (legacy) or the encrypted secret payload.
+    if (!serviceName || !accountName) {
+      throw new ApiError(400, "serviceName and accountName are required");
     }
 
-    // Save encrypted secret to database
+    const hasEncryptedPayload = encryptedSecret && secretIv && secretAuthTag;
+    if (!hasEncryptedPayload) {
+      // Enforce zero-knowledge: plaintext secrets are not accepted. The client
+      // must encrypt the TOTP secret locally and submit the encrypted blob.
+      throw new ApiError(400, "Encrypted TOTP payload required. Client must provide encryptedSecret, secretIv and secretAuthTag.");
+    }
+
+    // Save provided encrypted secret blob (zero-knowledge flow)
     const totpEntry = await createEncryptedTotpItem(
       userId,
       credentialId,
-      secret,
+      { encryptedSecret, iv: secretIv, authTag: secretAuthTag },
       serviceName,
       accountName,
       serviceName
@@ -64,54 +61,17 @@ export async function saveTotp(req, res, next) {
  */
 export async function getSessionTotps(req, res, next) {
   try {
+    // For zero-knowledge, return encrypted blobs to the client and let the
+    // frontend decrypt locally using the in-memory vault key. Avoid any
+    // server-side decryption of user vault keys.
     const userId = req.user.id;
-
-    // Get all active TOTPs with decrypted secrets
-    const totpSecrets = await prisma.totpSecret.findMany({
-      where: {
-        credential: {
-          userId: userId,
-        },
-        state: "active", // Only active TOTPs
-      },
-      include: {
-        credential: {
-          select: { userId: true },
-        },
-      },
-    });
-
-    // Get user's vault key once
-    const vaultKey = await getUserVaultKey(userId);
-
-    // Decrypt all secrets
-    const decryptedTotps = totpSecrets.map((totp) => {
-      const decryptedSecret = decryptTotpSecret(
-        totp.secretIv,
-        totp.encryptedSecret,
-        totp.secretAuthTag,
-        vaultKey
-      );
-
-      return {
-        id: totp.id,
-        credentialId: totp.credentialId,
-        serviceName: totp.serviceName,
-        accountName: totp.accountName,
-        issuer: totp.issuer,
-        secret: decryptedSecret,
-        algorithm: totp.algorithm,
-        digits: totp.digits,
-        period: totp.period,
-        state: totp.state,
-        createdAt: totp.createdAt,
-      };
-    });
+    let totps = await getUserTotps(userId);
+    totps = totps.filter((t) => t.state === "active");
 
     res.status(200).json({
       success: true,
-      count: decryptedTotps.length,
-      data: decryptedTotps,
+      count: totps.length,
+      data: totps,
     });
   } catch (error) {
     next(error);
@@ -139,7 +99,7 @@ export async function getAllTotps(req, res, next) {
 }
 
 /**
- * Get specific TOTP with decrypted secret
+ * Get specific TOTP encrypted blob (client will decrypt)
  * GET /api/totp/:id
  */
 export async function  getTotpByCredentialId(req, res, next) {
@@ -198,12 +158,9 @@ export async function getTotpId(req, res, next) {
 
 
 /**
- * 
- * gets totp infos for a giver totp id 
- * 
- * 
+/**
+ * Get specific TOTP encrypted blob by TOTP id (client decrypts locally)
  */
-
 export async function  getTotpById(req, res, next) {
   try {
     const totpId = parseInt(req.params.id);

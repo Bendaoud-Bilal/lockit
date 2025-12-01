@@ -34,12 +34,11 @@ try {
   process.exit(1)
 }
 
-// Step 4: Verify icon files exist
-console.log('🎨 Checking icon files...')
+// Step 4: Verify icon file exist
+console.log('🎨 Checking icon file...')
 const iconDir = path.join(__dirname, '..', 'client', 'public', 'icons')
 const requiredIcons = {
-  'icon.ico': 'Windows installer icon',
-  'icon.png': 'Linux icon'
+  'icon.ico': 'Windows installer icon'
 }
 
 let iconWarnings = false
@@ -54,20 +53,11 @@ for (const [filename, description] of Object.entries(requiredIcons)) {
 }
 
 if (iconWarnings) {
-  console.warn('\n⚠️  Some icon files are missing. Build will continue but icons may not display correctly.')
-  console.warn('   Place icon files in: client/public/icons/')
+  console.warn('\n⚠️  Icon file is missing. Build will continue but icon may not display correctly.')
+  console.warn('   Place icon file in: client/public/icons/')
 } else {
-  console.log('✅ All icon files found\n')
-}
-
-// Step 5: Create build directory if it doesn't exist
-const buildDir = path.join(__dirname, '..', 'build')
-if (!fs.existsSync(buildDir)) {
-  fs.mkdirSync(buildDir, { recursive: true })
-  console.log('✅ Build directory created\n')
+  console.log('✅ Icon file found\n')
 }
 
 console.log('✨ Pre-build completed successfully!\n')
-console.log('You can now run: npm run build')
-console.log('or: npm run build:win (Windows only)')
-console.log('or: npm run build:linux (Linux only)\n')
+console.log('You can now run: npm run build (Windows only)')

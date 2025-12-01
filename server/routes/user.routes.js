@@ -10,6 +10,7 @@ router.post(
   authenticate,
   userController.changeMasterPassword
 );
+router.post("/:userId/verify-password", authenticate, userController.verifyPassword);
 router.patch("/:userId/last-login", userController.updateLastLogin);
 router.post(
   "/:userId/recovery-key",

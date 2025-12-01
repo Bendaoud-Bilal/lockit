@@ -22,11 +22,17 @@ async function hashPassword(password, salt) {
 function generateVaultKey(masterPassword, vaultSalt) {
   const plainKey = crypto.randomBytes(32).toString('base64');
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv(
-    'aes-256-gcm',
-    crypto.scryptSync(masterPassword, Buffer.from(vaultSalt, 'base64'), 32),
-    iv
+  // Use PBKDF2 to derive the wrapping key for compatibility with the
+  // client-side PBKDF2-based unwrap implementation (100k iterations).
+  const wrappingKey = crypto.pbkdf2Sync(
+    masterPassword,
+    Buffer.from(vaultSalt, 'base64'),
+    100000,
+    32,
+    'sha256'
   );
+
+  const cipher = crypto.createCipheriv('aes-256-gcm', wrappingKey, iv);
 
   const encrypted = Buffer.concat([
     cipher.update(plainKey, 'base64'),

@@ -29,12 +29,16 @@ export async function generateVaultKey(masterPassword, vaultSalt) {
   const key = crypto.randomBytes(32).toString("base64");
   const iv = crypto.randomBytes(12);
 
-  // Encrypt the vault key with master password
-  const cipher = crypto.createCipheriv(
-    "aes-256-gcm",
-    crypto.scryptSync(masterPassword, Buffer.from(vaultSalt, "base64"), 32),
-    iv
+  // Encrypt the vault key with master password using PBKDF2-derived key
+  const wrappingKey = crypto.pbkdf2Sync(
+    masterPassword,
+    Buffer.from(vaultSalt, "base64"),
+    100000,
+    32,
+    "sha256"
   );
+
+  const cipher = crypto.createCipheriv("aes-256-gcm", wrappingKey, iv);
 
   const encrypted = Buffer.concat([
     cipher.update(key, "base64"),
@@ -51,6 +55,33 @@ export async function generateVaultKey(masterPassword, vaultSalt) {
   };
 }
 
+export async function encryptVaultKey(plainKeyBase64, masterPassword, vaultSalt) {
+  const iv = crypto.randomBytes(12);
+
+  const wrappingKey = crypto.pbkdf2Sync(
+    masterPassword,
+    Buffer.from(vaultSalt, "base64"),
+    100000,
+    32,
+    "sha256"
+  );
+
+  const cipher = crypto.createCipheriv("aes-256-gcm", wrappingKey, iv);
+
+  const encrypted = Buffer.concat([
+    cipher.update(plainKeyBase64, "base64"),
+    cipher.final(),
+  ]);
+
+  const authTag = cipher.getAuthTag();
+
+  return {
+    encryptedKey: encrypted.toString("base64"),
+    iv: iv.toString("base64"),
+    authTag: authTag.toString("base64"),
+  };
+}
+
 export async function decryptVaultKey(
   encryptedKey,
   iv,
@@ -58,9 +89,17 @@ export async function decryptVaultKey(
   masterPassword,
   vaultSalt
 ) {
+  const wrappingKey = crypto.pbkdf2Sync(
+    masterPassword,
+    Buffer.from(vaultSalt, "base64"),
+    100000,
+    32,
+    "sha256"
+  );
+
   const decipher = crypto.createDecipheriv(
     "aes-256-gcm",
-    crypto.scryptSync(masterPassword, Buffer.from(vaultSalt, "base64"), 32),
+    wrappingKey,
     Buffer.from(iv, "base64")
   );
 

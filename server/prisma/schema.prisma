@@ -50,6 +50,13 @@ model RecoveryKey {
   keyHash String @map("key_hash") // Hashed recovery key
   salt    String // Salt for hashing recovery key
   status  String @default("active") // active, used, revoked
+  // Optional: store a recovery-wrapped copy of the user's vault key so the
+  // recovery key can be used to unwrap the vault in a zero-knowledge manner.
+  encryptedVaultKey String? @map("encrypted_vault_key")
+  vaultKeyIv        String? @map("vault_key_iv")
+  vaultKeyAuthTag   String? @map("vault_key_auth_tag")
+  vaultSalt         String? @map("vault_salt")
+  kdfIterations     Int?    @default(100000) @map("kdf_iterations")
 
   createdAt DateTime  @default(now()) @map("created_at")
   usedAt    DateTime? @map("used_at")

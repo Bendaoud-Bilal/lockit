@@ -10,12 +10,14 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import apiService from "../../services/apiService";
+import cryptoService from "../../services/cryptoService";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
-  const { resetPassword } = useAuth();
+  const [serverVaultBlob, setServerVaultBlob] = useState(null);
+  const [oldMasterPassword, setOldMasterPassword] = useState("");
+  const [plainVaultKeyInput, setPlainVaultKeyInput] = useState("");
   const [step, setStep] = useState(1); // 1: verify recovery key, 2: set new password
   const [formData, setFormData] = useState({
     usernameOrEmail: "",
@@ -103,13 +105,21 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      // Verify recovery key with backend
-      await apiService.verifyRecoveryKey(
+      // Verify recovery key with backend and retrieve encrypted vault blob
+      const data = await apiService.verifyRecoveryKey(
         formData.usernameOrEmail,
         formData.recoveryKey
       );
 
       toast.success("Recovery key verified!");
+      // Save blob for step 2 so user can unwrap/rewrap locally
+      setServerVaultBlob({
+        encryptedKey: data.encryptedVaultKey,
+        iv: data.vaultKeyIv,
+        authTag: data.vaultKeyAuthTag,
+        vaultSalt: data.vaultSalt,
+        masterKeyKdfIterations: data.masterKeyKdfIterations || 100000,
+      });
       setStep(2);
     } catch (error) {
       toast.error(error.message || "Invalid recovery key");
@@ -131,10 +141,81 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      const result = await resetPassword(
+      // We must produce a re-wrapped encrypted vault-key blob to send to server.
+      // Options:
+      // 1) User provides old master password -> we can unwrap the server blob
+      // 2) User pastes plain vault key (if they have a backup)
+      // If neither is provided, we cannot preserve existing vault data.
+
+      let rewrappedBlob = null;
+
+      if (plainVaultKeyInput) {
+        // User provided plaintext vault key (base64)
+        const newVaultSalt = cryptoService.generateSalt();
+        const wrapped = await cryptoService.wrapVaultKey(
+          formData.newPassword,
+          plainVaultKeyInput,
+          newVaultSalt
+        );
+        rewrappedBlob = { ...wrapped, vaultSalt: newVaultSalt };
+      } else if (oldMasterPassword) {
+        // Attempt to unwrap using old master password
+        if (!serverVaultBlob) {
+          throw new Error('Missing server vault blob (unexpected)');
+        }
+        const plain = await cryptoService.unwrapVaultKey(
+          oldMasterPassword,
+          serverVaultBlob.encryptedKey,
+          serverVaultBlob.iv,
+          serverVaultBlob.authTag,
+          serverVaultBlob.vaultSalt,
+          serverVaultBlob.masterKeyKdfIterations || 100000
+        );
+
+        const newVaultSalt = cryptoService.generateSalt();
+        const wrapped = await cryptoService.wrapVaultKey(
+          formData.newPassword,
+          plain,
+          newVaultSalt
+        );
+        rewrappedBlob = { ...wrapped, vaultSalt: newVaultSalt };
+      } else if (serverVaultBlob && formData.recoveryKey) {
+        // Attempt to unwrap using the recovery key (Dual‑wrap)
+        try {
+          const plain = await cryptoService.unwrapVaultKey(
+            formData.recoveryKey,
+            serverVaultBlob.encryptedKey,
+            serverVaultBlob.iv,
+            serverVaultBlob.authTag,
+            serverVaultBlob.vaultSalt,
+            serverVaultBlob.masterKeyKdfIterations || 100000
+          );
+
+          const newVaultSalt = cryptoService.generateSalt();
+          const wrapped = await cryptoService.wrapVaultKey(
+            formData.newPassword,
+            plain,
+            newVaultSalt
+          );
+          rewrappedBlob = { ...wrapped, vaultSalt: newVaultSalt };
+        } catch (err) {
+          // Fall through to error below
+          console.error('Recovery-key unwrap failed:', err);
+        }
+      } else {
+        // No way to preserve vault data
+        toast.error(
+          "To preserve your vault, provide your old master password or paste your saved vault key."
+        );
+        setLoading(false);
+        return;
+      }
+
+      const result = await apiService.resetPassword(
         formData.usernameOrEmail,
         formData.recoveryKey,
-        formData.newPassword
+        formData.newPassword,
+        rewrappedBlob
       );
 
       if (result.success) {

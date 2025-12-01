@@ -3,9 +3,12 @@ import { Shield, Copy, Check } from "lucide-react";
 import { useTotpGenerator } from "../../hooks/useTotpGenerator";
 import OtpProgress from "../../components/authenticator/OtpProgress";
 import apiService from "../../services/apiService";
+import { useAuth } from "../../context/AuthContext";
+import decryptAesGcmBrowser from "../../utils/crypto";
 import toast from "react-hot-toast";
 
 function Show2FA({ credentialId, onHide }) {
+const { vaultKey, isAuthenticated, isLocked } = useAuth();
 const [account, setAccount] = useState(null);
 const { totp, timeLeft } = useTotpGenerator(account?.secret || ""); 
 const [copied, setCopied] = useState(false);
@@ -13,15 +16,30 @@ const [copied, setCopied] = useState(false);
 useEffect(() => {
   const fetchTotpAccount = async () => {
     try {
-      const response=await apiService.getTotpByCredentialId(credentialId);
-       setAccount(response.data);
+      const response = await apiService.getTotpByCredentialId(credentialId);
+
+      // Ensure we have the in-memory vault key to decrypt locally
+      if (!vaultKey) {
+        throw new Error("Vault locked: unlock to view 2FA code");
+      }
+
+      const data = response.data;
+      // Decrypt client-side using the vaultKey
+      const decrypted = await decryptAesGcmBrowser(
+        vaultKey,
+        data.encryptedSecret || data.encrypted_secret,
+        data.secretIv || data.secret_iv,
+        data.secretAuthTag || data.secret_auth_tag
+      );
+
+      setAccount({ ...data, secret: decrypted });
     } catch (err) {
-      toast.error("Failed to show 2FA");
       console.error("Erreur lors du chargement du TOTP :", err);
+      toast.error(err.message || "Failed to show 2FA");
     }
   };
 
-  if (credentialId) fetchTotpAccount();
+  if (credentialId && isAuthenticated && !isLocked) fetchTotpAccount();
 }, [credentialId]);
 
 const handleCopy = () => {

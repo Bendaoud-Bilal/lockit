@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import apiService from "../services/apiService";
+import cryptoService from "../services/cryptoService";
 import InactivityWarning from "../components/shared/InactivityWarning";
 
 const AuthContext = createContext(null);
@@ -15,6 +16,7 @@ const AuthContext = createContext(null);
 export const STORAGE_KEYS = {
   TOKEN: "lockit_session_token",
   USER: "lockit_user_data",
+  ENCRYPTED_VAULT: "lockit_encrypted_vault_blob",
   IS_LOCKED: "lockit_is_locked",
 };
 
@@ -169,7 +171,27 @@ export const AuthProvider = ({ children }) => {
         email: data.user.email,
       });
 
-      setVaultKey(data.vaultKey);
+      // Server returns encrypted vault blob; client must unwrap locally
+      if (data.encryptedVaultKey && data.vaultKeyIv && data.vaultKeyAuthTag && data.vaultSalt) {
+        const plain = await cryptoService.unwrapVaultKey(
+          masterPassword,
+          data.encryptedVaultKey,
+          data.vaultKeyIv,
+          data.vaultKeyAuthTag,
+          data.vaultSalt,
+          data.masterKeyKdfIterations || 100000
+        );
+
+        setVaultKey(plain);
+        // Persist encrypted blob for unlock/reload
+        sessionStorage.setItem(STORAGE_KEYS.ENCRYPTED_VAULT, JSON.stringify({
+          encryptedVaultKey: data.encryptedVaultKey,
+          vaultKeyIv: data.vaultKeyIv,
+          vaultKeyAuthTag: data.vaultKeyAuthTag,
+          vaultSalt: data.vaultSalt,
+          masterKeyKdfIterations: data.masterKeyKdfIterations || 100000,
+        }));
+      }
       setIsLocked(false);
       setIsAuthenticated(true);
 
@@ -183,14 +205,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Signup
-  const signup = async (username, email, masterPassword, recoveryKey) => {
+  // `signupPayload` should include encrypted vault blob produced client-side
+  const signup = async (signupPayload, plainVaultKey = null) => {
     try {
-      const data = await apiService.signup(
-        username,
-        email,
-        masterPassword,
-        recoveryKey
-      );
+      const data = await apiService.signup(signupPayload);
 
       setToken(data.token);
       setUser({
@@ -198,9 +216,21 @@ export const AuthProvider = ({ children }) => {
         username: data.user.username,
         email: data.user.email,
       });
-      setVaultKey(data.vaultKey);
-      setIsLocked(false);
-      setIsAuthenticated(true);
+
+      // If caller provided plain vault key (generated client-side), set it in memory
+      if (plainVaultKey) {
+        setVaultKey(plainVaultKey);
+        setIsLocked(false);
+        setIsAuthenticated(true);
+        // Persist encrypted blob for reload/unlock
+        sessionStorage.setItem(STORAGE_KEYS.ENCRYPTED_VAULT, JSON.stringify({
+          encryptedVaultKey: data.encryptedVaultKey,
+          vaultKeyIv: data.vaultKeyIv,
+          vaultKeyAuthTag: data.vaultKeyAuthTag,
+          vaultSalt: data.vaultSalt,
+          masterKeyKdfIterations: data.masterKeyKdfIterations || 100000,
+        }));
+      }
 
       return { success: true };
     } catch (error) {
@@ -268,10 +298,42 @@ export const AuthProvider = ({ children }) => {
       if (!user) {
         throw new Error("No user session found");
       }
+      // Use stored encrypted blob if available
+      const blobJson = sessionStorage.getItem(STORAGE_KEYS.ENCRYPTED_VAULT);
+      if (!blobJson) {
+        // As fallback, request encrypted blob from server via login endpoint
+        const data = await apiService.login(user.username, masterPassword);
+        if (data.encryptedVaultKey && data.vaultKeyIv && data.vaultKeyAuthTag && data.vaultSalt) {
+          const plain = await cryptoService.unwrapVaultKey(
+            masterPassword,
+            data.encryptedVaultKey,
+            data.vaultKeyIv,
+            data.vaultKeyAuthTag,
+            data.vaultSalt,
+            data.masterKeyKdfIterations || 100000
+          );
+          setVaultKey(plain);
+          sessionStorage.setItem(STORAGE_KEYS.ENCRYPTED_VAULT, JSON.stringify({
+            encryptedVaultKey: data.encryptedVaultKey,
+            vaultKeyIv: data.vaultKeyIv,
+            vaultKeyAuthTag: data.vaultKeyAuthTag,
+            vaultSalt: data.vaultSalt,
+            masterKeyKdfIterations: data.masterKeyKdfIterations || 100000,
+          }));
+        }
+      } else {
+        const blob = JSON.parse(blobJson);
+        const plain = await cryptoService.unwrapVaultKey(
+          masterPassword,
+          blob.encryptedVaultKey,
+          blob.vaultKeyIv,
+          blob.vaultKeyAuthTag,
+          blob.vaultSalt,
+          blob.masterKeyKdfIterations || 100000
+        );
+        setVaultKey(plain);
+      }
 
-      const data = await apiService.login(user.username, masterPassword);
-
-      setVaultKey(data.vaultKey);
       setIsLocked(false);
       setIsAuthenticated(true);
 
@@ -300,14 +362,30 @@ export const AuthProvider = ({ children }) => {
   // Change master password
   const changeMasterPassword = async (currentPassword, newPassword) => {
     try {
-      const data = await apiService.changeMasterPassword(
-        user.id,
-        currentPassword,
-        newPassword
+      if (!vaultKey) {
+        throw new Error('Vault key not available in memory');
+      }
+
+      // Client re-wraps existing vaultKey with the new password
+      const newVaultSalt = cryptoService.generateSalt();
+      const rewrapped = await cryptoService.wrapVaultKey(
+        newPassword,
+        vaultKey,
+        newVaultSalt
       );
 
-      setVaultKey(data.newVaultKey);
+      const payload = {
+        currentPassword,
+        newPassword,
+        encryptedVaultKey: rewrapped.encryptedKey,
+        vaultKeyIv: rewrapped.iv,
+        vaultKeyAuthTag: rewrapped.authTag,
+        vaultSalt: newVaultSalt,
+      };
 
+      await apiService.changeMasterPassword(user.id, payload);
+
+      // Update in-memory vaultKey stays the same (we didn't rotate the vaultKey itself)
       return { success: true };
     } catch (error) {
       console.error("Change password error:", error);
@@ -329,10 +407,29 @@ export const AuthProvider = ({ children }) => {
   // Generate recovery key
   const generateRecoveryKey = async (masterPassword, recoveryKey) => {
     try {
+      if (!vaultKey) throw new Error('Vault key not available to create recovery blob');
+
+      // Create a recovery-wrapped blob locally so the recovery key can decrypt
+      // the vault key later (Dual‑wrap). Send the blob to the server along with
+      // the recovery key hash so the server never sees plaintext vaultKey.
+      const vaultRecoverySalt = cryptoService.generateSalt();
+      const recoveryWrapped = await cryptoService.wrapVaultKey(
+        recoveryKey,
+        vaultKey,
+        vaultRecoverySalt
+      );
+
       await apiService.generateRecoveryKey(
         user.id,
         masterPassword,
-        recoveryKey
+        recoveryKey,
+        {
+          encryptedKey: recoveryWrapped.encryptedKey,
+          iv: recoveryWrapped.iv,
+          authTag: recoveryWrapped.authTag,
+          vaultSalt: vaultRecoverySalt,
+          kdfIterations: 100000,
+        }
       );
       return { success: true };
     } catch (error) {

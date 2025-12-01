@@ -25,7 +25,6 @@ import {
   Folder,
   Trash2,
 } from "lucide-react"
-import Security from "./Security"
 import Attachments from "./Attachments"
 import IconPicker from "./IconPicker"
 import { prepareCredentialForStorage, decryptCredentialForClient } from '../../utils/credentialHelpers';
@@ -252,15 +251,7 @@ const AddItemModal = ({
         // alert('Please fix the errors in the form');
         return;
       }
-      // Clear old invalid keys from sessionStorage
-      sessionStorage.removeItem('vaultKey');
-    
-      // Use a properly generated 256-bit key (32 bytes = 256 bits)
-      // Generated using: crypto.randomBytes(32).toString('base64')
-      // const vaultKey = 'YsrxSVjMzoS8M252H++OCmcrSgRlyKAY5WSEETmSEbs=';
-    
-      // Store it for future use
-      sessionStorage.setItem('vaultKey', vKey);
+      // Keep vault key only in memory (do not persist plaintext vaultKey)
     
       if (!vaultKey) {
         throw new Error('No vault key found. Please login first.');
@@ -1029,7 +1020,7 @@ const AddItemModal = ({
         {activeTab === "attachments" && 
         <Attachments 
           credentialId={savedCredentialId} 
-          vaultKey={sessionStorage.getItem('vaultKey')}
+          vaultKey={vKey}
           selectedFiles={selectedFiles}
           setSelectedFiles={setSelectedFiles}
         />

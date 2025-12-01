@@ -13,9 +13,7 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run electron:dev\"",
     "electron:dev": "electron .",
     "prebuild": "node scripts/prebuild.js",
-    "build": "npm run prebuild && electron-builder build --win --linux",
-    "build:win": "npm run prebuild && electron-builder build --win",
-    "build:linux": "npm run prebuild && electron-builder build --linux",
+    "build": "npm run prebuild && electron-builder build --win",
     "postinstall": "electron-builder install-app-deps"
     
   },
@@ -73,46 +71,6 @@
       "deleteAppDataOnUninstall": false,
       "perMachine": false,
       "allowElevation": true
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "client/public/icons",
-      "category": "Utility",
-      "synopsis": "Secure Password Manager",
-      "description": "Lockit is a secure, local-first password manager with end-to-end encryption",
-      "artifactName": "${productName}-${version}.${ext}",
-      "desktop": {
-        "Name": "Lockit",
-        "Comment": "Secure Password Manager",
-        "Categories": "Utility;Security;",
-        "Keywords": "password;security;encryption;"
-      }
-    },
-    "deb": {
-      "depends": [
-        "gconf2",
-        "gconf-service",
-        "libnotify4",
-        "libappindicator1",
-        "libxtst6",
-        "libnss3"
-      ]
-    },
-    "appImage": {
-      "artifactName": "${productName}-${version}.${ext}"
     }
   },
   "dependencies": {

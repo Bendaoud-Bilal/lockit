@@ -95,9 +95,16 @@ export function decryptTotpSecret(iv, encryptedSecret, authTag, vaultKeyBase64) 
 }
 
 /**
- * Get user's vault key from database
+ * WARNING/DEPRECATED: This function DOES NOT return a plaintext vault key.
+ * It returns the stored encrypted vault-key blob (`encryptedVaultKey`).
+ *
+ * Keep serverside code from attempting to decrypt or use this value as a
+ * plaintext key. The server must never possess users' plaintext vault keys
+ * in a zero-knowledge architecture. This helper exists only for legacy
+ * compatibility and should not be used to perform server-side decryption.
+ *
  * @param {number} userId - User ID
- * @returns {string} - Vault key (hex string)
+ * @returns {string} - Encrypted vault key blob (base64/hex string)
  */
 export async function getUserVaultKey(userId) {
   try {
@@ -131,28 +138,39 @@ export async function getUserVaultKey(userId) {
  * @param {string} issuer - Issuer of the TOTP (optional, defaults to serviceName)
  * @returns {Object} - Created TOTP entry (without decrypted secret)
  */
-export async function createEncryptedTotpItem(userId,credentialId, secret, serviceName, accountName, issuer = null) {
+export async function createEncryptedTotpItem(userId, credentialId, payload, serviceName, accountName, issuer = null) {
   try {
-    if ( !secret || !serviceName) {
-      throw new ApiError(400, "Credential ID, secret, and service name are required");
+    if (!payload || !serviceName) {
+      throw new ApiError(400, "Credential ID, payload, and service name are required");
     }
 
-    // Get user's vault key
-    const vaultKey = await getUserVaultKey(userId);
+    // Payload can be either { encryptedSecret, iv, authTag } provided by client
+    // or { plainSecret } for legacy server-side encryption
+    let encryptedSecret;
+    let iv;
+    let authTag;
 
-    // Encrypt the secret
-    const encrypted = encryptTotpSecret(secret, vaultKey);
+    // Only accept client-provided encrypted blobs to maintain zero-knowledge
+    // guarantees. Reject any attempt to submit plaintext `plainSecret`.
+    if (payload.encryptedSecret && payload.iv && payload.authTag) {
+      encryptedSecret = payload.encryptedSecret;
+      iv = payload.iv;
+      authTag = payload.authTag;
+    } else if (payload.plainSecret) {
+      throw new ApiError(400, "Plaintext TOTP secrets are not accepted. Please encrypt the secret client-side and submit the encrypted blob.");
+    } else {
+      throw new ApiError(400, "Invalid TOTP payload");
+    }
 
-    // Save to database
     const totpSecret = await prisma.totpSecret.create({
       data: {
         credentialId,
         serviceName,
         accountName,
-        issuer: issuer || serviceName, // Use serviceName as default issuer
-        encryptedSecret: encrypted.encryptedSecret,
-        secretIv: encrypted.iv,
-        secretAuthTag: encrypted.authTag,
+        issuer: issuer || serviceName,
+        encryptedSecret,
+        secretIv: iv,
+        secretAuthTag: authTag,
       },
       select: {
         id: true,
@@ -165,16 +183,13 @@ export async function createEncryptedTotpItem(userId,credentialId, secret, servi
         state: true,
         createdAt: true,
       },
+    });
 
+    await prisma.credential.update({
+      where: { id: credentialId },
+      data: { has2fa: true },
     });
-    const updateCredential=await prisma.credential.update({
-      where:{
-        id:credentialId
-      },
-      data:{
-        has2fa: true
-      }
-    });
+
     return totpSecret;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -185,10 +200,14 @@ export async function createEncryptedTotpItem(userId,credentialId, secret, servi
 }
 
 /**
- * Get and decrypt TOTP secret
- * @param {number} totpId - TOTP entry ID
+ * Get TOTP entry encrypted blob for client-side decryption
+ * @param {number} credentialid - Credential ID
  * @param {number} userId - User ID (for authorization)
- * @returns {Object} - TOTP entry with decrypted secret
+ * @returns {Object} - TOTP entry with encryptedSecret, secretIv, secretAuthTag
+ *
+ * Note: Despite the historic name, this function does NOT perform server-side
+ * decryption. It returns the encrypted blob so the client can decrypt locally
+ * using the user's in-memory vault key (zero-knowledge).
  */
 export async function getDecryptedSecret(credentialid, userId) {
   try {
@@ -215,24 +234,16 @@ export async function getDecryptedSecret(credentialid, userId) {
       throw new ApiError(403, "Unauthorized access to TOTP entry");
     }
 
-    // Get user's vault key
-    const vaultKey = await getUserVaultKey(userId);
-
-    // Decrypt the secret
-    const decryptedSecret = decryptTotpSecret(
-      totpSecret.secretIv,
-      totpSecret.encryptedSecret,
-      totpSecret.secretAuthTag,
-      vaultKey
-    );
-
+    // Return encrypted blob to client for local decryption (zero-knowledge)
     return {
       id: totpSecret.id,
       credentialId: totpSecret.credentialId,
       serviceName: totpSecret.serviceName,
       accountName: totpSecret.accountName,
       issuer: totpSecret.issuer,
-      secret: decryptedSecret,
+      encryptedSecret: totpSecret.encryptedSecret,
+      secretIv: totpSecret.secretIv,
+      secretAuthTag: totpSecret.secretAuthTag,
       algorithm: totpSecret.algorithm,
       digits: totpSecret.digits,
       period: totpSecret.period,
@@ -262,24 +273,16 @@ export async function getUserTotps(userId) {
         credential: {userId :userId}
       },
     });
-    const result=[];
-    for (const item of totpSecrets) {
-      const decrypted = decryptTotpSecret(
-        item.secretIv,
-        item.encryptedSecret,
-        item.secretAuthTag,
-        await getUserVaultKey(userId),
-      );
-
-      result.push({
-        id: item.id,
-        serviceName: item.serviceName,
-        accountName: item.accountName,
-        secret: decrypted,
-        state:item.state
-      });
-    }
-    return result;
+    // Return encrypted TOTP entries for client-side decryption
+    return totpSecrets.map((item) => ({
+      id: item.id,
+      serviceName: item.serviceName,
+      accountName: item.accountName,
+      encryptedSecret: item.encryptedSecret,
+      secretIv: item.secretIv,
+      secretAuthTag: item.secretAuthTag,
+      state: item.state,
+    }));
   } catch (error) {
     throw new ApiError(500, `Error fetching TOTP entries: ${error.message}`);
   }

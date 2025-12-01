@@ -25,11 +25,18 @@ async function exampleSaveCredential() {
     notes: "My main account"
   };
 
-  // Get vault key from session storage (stored after login)
-  const vaultKey = sessionStorage.getItem('vaultKey');
-  
+  // Get encrypted vault blob metadata from session storage and unwrap via AuthContext
+  const blobJson = sessionStorage.getItem('lockit_encrypted_vault_blob');
+  if (!blobJson) {
+    throw new Error('No encrypted vault blob found. Please login first.');
+  }
+  const blob = JSON.parse(blobJson);
+  // The real flow should use AuthContext.unlock(masterPassword) to derive the
+  // plaintext vault key into memory. This example assumes `vaultKey` is available
+  // in-memory (not persisted) after unlocking.
+  const vaultKey = /* obtain in-memory vault key from AuthContext after unlock */ null;
   if (!vaultKey) {
-    throw new Error('No vault key found. Please login first.');
+    throw new Error('Vault is locked. Please unlock to obtain the vault key in memory.');
   }
 
   // Encrypt and prepare for API
@@ -77,8 +84,13 @@ async function exampleLoadCredentials() {
 
   const encryptedCredentials = await response.json();
   
-  // Get vault key
-  const vaultKey = sessionStorage.getItem('vaultKey');
+  // In production, you should unlock the vault via AuthContext which will
+  // derive the plaintext vault key into memory. Do NOT persist the plaintext
+  // vault key in storage. Here we assume the vault has been unlocked and
+  // `vaultKey` is available in memory (not persisted).
+  const vaultKey = /* in-memory vault key from AuthContext.unlock(...) */ null;
+
+  if (!vaultKey) throw new Error('Vault is locked. Unlock to get the in-memory vault key');
 
   // Decrypt all credentials
   const decryptedCredentials = [];
@@ -161,18 +173,22 @@ function useVaultKey() {
   const [vaultKey, setVaultKey] = React.useState(null);
 
   React.useEffect(() => {
-    // Load vault key from session storage on mount
-    const key = sessionStorage.getItem('vaultKey');
-    setVaultKey(key);
+    // Vault key should NOT be loaded from sessionStorage. Instead load the
+    // encrypted vault blob metadata (if any) and require the user to unlock
+    // to derive the plaintext vault key into memory. This example leaves the
+    // value null to emphasize that keys belong in memory only.
+    const blob = sessionStorage.getItem('lockit_encrypted_vault_blob');
+    // Do not set plaintext vault key from storage
   }, []);
 
   const saveVaultKey = (key) => {
-    sessionStorage.setItem('vaultKey', key);
+    // Save only in memory. Do NOT persist plaintext vault key to sessionStorage/localStorage.
     setVaultKey(key);
   };
 
   const clearVaultKey = () => {
-    sessionStorage.removeItem('vaultKey');
+    // Do not persist vault key; remove any in-memory reference. Optionally remove encrypted blob metadata.
+    sessionStorage.removeItem('lockit_encrypted_vault_blob');
     setVaultKey(null);
   };
 

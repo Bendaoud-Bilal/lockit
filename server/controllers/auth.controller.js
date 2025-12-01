@@ -3,9 +3,28 @@ import * as cryptoService from "../services/crypto.service.js";
 import * as sessionService from "../services/session.service.js";
 import { ApiError } from "../utils/ApiError.js";
 
+/*
+  Zero-Knowledge Contract (server-side):
+  - The server MUST NOT possess or generate plaintext vault keys for users.
+  - The server stores only encrypted vault-key blobs and ciphertext for user data.
+  - Any rotation of the vault-key (re-wrapping) MUST be performed by the client
+    or with a client-provided re-wrapped blob. Server-side generation or silent
+    rotation is disallowed because it breaks zero-knowledge guarantees.
+  - Endpoints that change authentication credentials (password reset/change)
+    must accept a client-provided encrypted vault-key blob when the vault key
+    must remain accessible after the change.
+*/
+
 export async function signup(req, res, next) {
   try {
     const { username, email, masterPassword, recoveryKey } = req.body;
+    // Optionally accept a client-provided encrypted vaultKey blob (zero-knowledge)
+    const {
+      encryptedVaultKey: clientEncryptedVaultKey,
+      vaultKeyIv: clientVaultKeyIv,
+      vaultKeyAuthTag: clientVaultKeyAuthTag,
+      vaultSalt: clientVaultSalt,
+    } = req.body;
 
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -18,7 +37,10 @@ export async function signup(req, res, next) {
     }
 
     const masterSalt = cryptoService.generateSalt();
-    const vaultSalt = cryptoService.generateSalt();
+    // If the client provided an encrypted vault-key blob, it will include the
+    // `vaultSalt` used client-side to derive the wrapping key. Use that value
+    // when present; otherwise generate a new salt server-side.
+    const vaultSalt = clientVaultSalt || cryptoService.generateSalt();
     const recoveryKeySalt = cryptoService.generateSalt();
 
     const masterPasswordHash = await cryptoService.hashPassword(
@@ -26,10 +48,18 @@ export async function signup(req, res, next) {
       masterSalt
     );
 
-    const vaultKeyData = await cryptoService.generateVaultKey(
-      masterPassword,
-      vaultSalt
-    );
+    // If client provided an encrypted vault key blob, store it directly (zero-knowledge)
+    let vaultKeyData;
+    if (clientEncryptedVaultKey && clientVaultKeyIv && clientVaultKeyAuthTag && clientVaultSalt) {
+      vaultKeyData = {
+        encryptedKey: clientEncryptedVaultKey,
+        iv: clientVaultKeyIv,
+        authTag: clientVaultKeyAuthTag,
+        plainKey: null,
+      };
+    } else {
+      vaultKeyData = await cryptoService.generateVaultKey(masterPassword, vaultSalt);
+    }
 
     const recoveryKeyHash = await cryptoService.hashRecoveryKey(
       recoveryKey,
@@ -47,20 +77,28 @@ export async function signup(req, res, next) {
           argon2Iterations: 3,
           kdfMemory: 65536,
           kdfParallelism: 4,
-          encryptedVaultKey: vaultKeyData.encryptedKey,
-          vaultKeyIv: vaultKeyData.iv,
-          vaultKeyAuthTag: vaultKeyData.authTag,
+              encryptedVaultKey: vaultKeyData.encryptedKey,
+              vaultKeyIv: vaultKeyData.iv,
+              vaultKeyAuthTag: vaultKeyData.authTag,
           vaultSalt,
           masterKeyKdfIterations: 100000,
         },
       });
 
+      // If client provided a recovery-wrapped vault blob include it in the
+      // created recovery key record so the recovery key can be used to
+      // directly unwrap the vault key client-side (Dual‑wrap).
       await tx.recoveryKey.create({
         data: {
           userId: newUser.id,
           keyHash: recoveryKeyHash,
           salt: recoveryKeySalt,
           status: "active",
+          encryptedVaultKey: req.body.encryptedVaultKeyRecovery || null,
+          vaultKeyIv: req.body.vaultKeyRecoveryIv || null,
+          vaultKeyAuthTag: req.body.vaultKeyRecoveryAuthTag || null,
+          vaultSalt: req.body.vaultRecoverySalt || null,
+          kdfIterations: req.body.recoveryKdfIterations || 100000,
         },
       });
 
@@ -69,6 +107,7 @@ export async function signup(req, res, next) {
 
     const token = sessionService.createSession(user.id);
 
+    // For zero-knowledge, do NOT return plaintext vault key. Return only metadata.
     res.status(201).json({
       success: true,
       user: {
@@ -77,7 +116,10 @@ export async function signup(req, res, next) {
         email: user.email,
       },
       token,
-      vaultKey: vaultKeyData.plainKey,
+      encryptedVaultKey: vaultKeyData.encryptedKey,
+      vaultKeyIv: vaultKeyData.iv,
+      vaultKeyAuthTag: vaultKeyData.authTag,
+      vaultSalt,
     });
   } catch (error) {
     next(error);
@@ -108,13 +150,8 @@ export async function login(req, res, next) {
       throw new ApiError(401, "Invalid credentials");
     }
 
-    const vaultKey = await cryptoService.decryptVaultKey(
-      user.encryptedVaultKey,
-      user.vaultKeyIv,
-      user.vaultKeyAuthTag,
-      masterPassword,
-      user.vaultSalt
-    );
+    // Zero-knowledge: do not decrypt or return the plaintext vault key here.
+    // Return the encrypted vault key blob so the client can decrypt it locally.
 
     const token = sessionService.createSession(user.id);
 
@@ -132,7 +169,11 @@ export async function login(req, res, next) {
         email: user.email,
       },
       token,
-      vaultKey,
+      encryptedVaultKey: user.encryptedVaultKey,
+      vaultKeyIv: user.vaultKeyIv,
+      vaultKeyAuthTag: user.vaultKeyAuthTag,
+      vaultSalt: user.vaultSalt,
+      masterKeyKdfIterations: user.masterKeyKdfIterations || 100000,
     });
   } catch (error) {
     next(error);
@@ -171,7 +212,22 @@ export async function verifyRecoveryKey(req, res, next) {
       throw new ApiError(400, "Invalid recovery key");
     }
 
-    res.json({ success: true, message: "Recovery key verified" });
+    // Return the recovery-wrapped vault blob (if present) so the client can
+    // unwrap it using the recovery key and re-wrap under a new password.
+    const recoveryBlob = {
+      encryptedVaultKey: activeKey.encryptedVaultKey || user.encryptedVaultKey,
+      vaultKeyIv: activeKey.vaultKeyIv || user.vaultKeyIv,
+      vaultKeyAuthTag: activeKey.vaultKeyAuthTag || user.vaultKeyAuthTag,
+      vaultSalt: activeKey.vaultSalt || user.vaultSalt,
+      kdfIterations: activeKey.kdfIterations || user.masterKeyKdfIterations || 100000,
+    };
+
+    res.json({
+      success: true,
+      message: "Recovery key verified",
+      ...recoveryBlob,
+      masterKeyKdfIterations: recoveryBlob.kdfIterations,
+    });
   } catch (error) {
     next(error);
   }
@@ -210,16 +266,34 @@ export async function resetPassword(req, res, next) {
     }
 
     const newMasterSalt = cryptoService.generateSalt();
-    const newVaultSalt = cryptoService.generateSalt();
+    // Zero-knowledge policy: the server MUST NOT generate or rotate a vault key
+    // silently when handling password resets. If the client cannot re-wrap the
+    // existing vault key (for example the user lost their master password and
+    // cannot decrypt the vault key), then the server cannot preserve zero-knowledge
+    // guarantees. To remain zero-knowledge, require the client to provide a
+    // re-encrypted vault-key blob (encrypted with the new master password)
+    // as part of the reset payload. Reject requests that do not include this
+    // blob with an explicit error explaining the required client action.
+
+    // Expect client to include re-wrapped vault blob produced client-side:
+    // { encryptedVaultKey, vaultKeyIv, vaultKeyAuthTag, vaultSalt }
+    const {
+      encryptedVaultKey: clientEncryptedVaultKey,
+      vaultKeyIv: clientVaultKeyIv,
+      vaultKeyAuthTag: clientVaultKeyAuthTag,
+      vaultSalt: clientVaultSalt,
+    } = req.body;
+
+    if (!clientEncryptedVaultKey || !clientVaultKeyIv || !clientVaultKeyAuthTag || !clientVaultSalt) {
+      // Do NOT perform server-side vault key generation here to avoid exposing
+      // plaintext vault keys or breaking zero-knowledge. Client must re-wrap
+      // the existing vault key and submit the blob.
+      throw new ApiError(400, "Password reset requires a client-provided re-encrypted vault key blob. Call the recovery verify endpoint from the client and submit the re-wrapped encrypted vault key with the reset request.");
+    }
 
     const newMasterPasswordHash = await cryptoService.hashPassword(
       newPassword,
       newMasterSalt
-    );
-
-    const newVaultKeyData = await cryptoService.generateVaultKey(
-      newPassword,
-      newVaultSalt
     );
 
     await prisma.$transaction(async (tx) => {
@@ -228,10 +302,10 @@ export async function resetPassword(req, res, next) {
         data: {
           masterPasswordHash: newMasterPasswordHash,
           salt: newMasterSalt,
-          encryptedVaultKey: newVaultKeyData.encryptedKey,
-          vaultKeyIv: newVaultKeyData.iv,
-          vaultKeyAuthTag: newVaultKeyData.authTag,
-          vaultSalt: newVaultSalt,
+          encryptedVaultKey: clientEncryptedVaultKey,
+          vaultKeyIv: clientVaultKeyIv,
+          vaultKeyAuthTag: clientVaultKeyAuthTag,
+          vaultSalt: clientVaultSalt,
         },
       });
 
@@ -247,7 +321,7 @@ export async function resetPassword(req, res, next) {
     res.json({
       success: true,
       message:
-        "Password reset successfully. Please log in with your new password and generate a new recovery key.",
+        "Password reset successfully. Client re-wrapped vault key accepted. Please log in with your new password.",
     });
   } catch (error) {
     next(error);

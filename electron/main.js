@@ -40,7 +40,6 @@ function initLogger() {
 
 async function initDatabase() {
   // In development, we check if the server directory exists in the project root
-  // This is more reliable than checking app.isPackaged
   const serverDir = path.join(__dirname, '../server')
   const isDev = fs.existsSync(serverDir)
   
@@ -454,7 +453,6 @@ app.whenReady().then(async () => {
   logger.log('User data path:', app.getPath('userData'))
   logger.log('Exe path:', app.getPath('exe'))
   logger.log('Resources path:', process.resourcesPath)
-  logger.log('NODE_ENV:', process.env.NODE_ENV)
   
   const dbPath = path.join(app.getPath('userData'), 'lockit.db')
   if (fs.existsSync(dbPath)) {

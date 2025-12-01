@@ -735,18 +735,17 @@ Hacker modifies encrypted file in database
 ### 4. **Key Management**
 
 ```javascript
-// Vault Key Storage (session only)
-sessionStorage.setItem("vaultKey", key); // Cleared on browser close
-// NOT localStorage (persists after close)
-// NOT in code (visible in source)
-// NOT sent to server (stays in browser)
-
-// In Production:
-// 1. User enters master password
-// 2. Derive vault key using PBKDF2/Argon2
-// 3. Store in sessionStorage
-// 4. Use for encryption/decryption
-// 5. Clear on logout
+// Vault Key Handling (Zero-Knowledge)
+// - Server stores only an encrypted vault-key blob (encrypted with a key
+//   derived from the user's master password). The client unwraps the blob
+//   locally after the user authenticates.
+// - DO NOT persist the plaintext vault key to localStorage/sessionStorage.
+//   Keep the plaintext key in memory only for the session lifetime.
+// - Persist only the encrypted blob metadata for unlock flows, e.g.:
+//   sessionStorage.setItem('lockit_encrypted_vault_blob', JSON.stringify({...}))
+// - To unlock, derive the unwrapping key from the master password and
+//   decrypt the blob into memory. Clear the plaintext on logout.
+```
 ```
 
 ### 5. **Unique IVs**

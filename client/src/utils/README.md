@@ -12,13 +12,21 @@ These utilities provide **client-side encryption** for credentials in the Lockit
 
 ## How It Works
 
-### 1. **Vault Key** (Received from Server)
+### 1. **Vault Key** (Encrypted blob stored on server)
 
-After login, your server sends a Base64-encoded vault key. This key decrypts ALL your credentials.
+After login, the server returns an encrypted vault-key blob (not the plaintext key). The client must unwrap the blob locally using the master password and keep the plaintext vault key only in memory. Persist only the encrypted blob metadata for unlock flows.
 
 ```javascript
-// Store vault key after login
-sessionStorage.setItem("vaultKey", vaultKeyFromServer);
+// After login, store only the encrypted blob metadata for unlock/reload
+sessionStorage.setItem('lockit_encrypted_vault_blob', JSON.stringify({
+  encryptedVaultKey: data.encryptedVaultKey,
+  vaultKeyIv: data.vaultKeyIv,
+  vaultKeyAuthTag: data.vaultKeyAuthTag,
+  vaultSalt: data.vaultSalt,
+  masterKeyKdfIterations: data.masterKeyKdfIterations || 100000,
+}));
+
+// Do NOT store plaintext vault key in sessionStorage/localStorage
 ```
 
 ### 2. **Encrypting Credentials** (Before Saving)
@@ -202,7 +210,7 @@ const AddItemModal = ({ show, setShow }) => {
 ## Next Steps
 
 1. Get vault key from server after login
-2. Store in `sessionStorage.setItem('vaultKey', key)`
+ 2. Store encrypted blob metadata in `sessionStorage` (do NOT store plaintext vault key)
 3. Use `prepareCredentialForStorage()` before saving
 4. Use `decryptCredentialForClient()` after loading
 5. Clear vault key on logout: `sessionStorage.removeItem('vaultKey')`

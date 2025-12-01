@@ -46,7 +46,17 @@ class CryptoService {
    * Convert Base64 string to ArrayBuffer
    */
   base64ToArrayBuffer(base64) {
-    const binary = atob(base64);
+    // Normalize base64: replace URL-safe chars and add padding if missing
+    let b64 = base64.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4;
+    if (pad === 2) b64 += "==";
+    else if (pad === 3) b64 += "=";
+    else if (pad === 1) {
+      // invalid base64 length
+      throw new Error("Invalid base64 string");
+    }
+
+    const binary = atob(b64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);
@@ -127,6 +137,84 @@ class CryptoService {
     } catch (error) {
       console.error("Error deriving vault key:", error);
       throw new Error("Failed to derive vault key");
+    }
+  }
+
+  /**
+   * Wrap (encrypt) a base64-encoded vault key using a key derived from masterPassword.
+   * Returns { encryptedKey, iv, authTag } all base64-encoded.
+   */
+  async wrapVaultKey(masterPassword, plainKeyBase64, vaultSalt, iterations = 100000) {
+    try {
+      const wrappingKey = await this.deriveVaultKey(masterPassword, vaultSalt, iterations);
+
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+      const keyBytes = this.base64ToArrayBuffer(plainKeyBase64);
+
+      const encryptedBuffer = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv, tagLength: 128 },
+        wrappingKey,
+        keyBytes
+      );
+
+      const encryptedBytes = new Uint8Array(encryptedBuffer);
+      const ciphertext = encryptedBytes.slice(0, -16);
+      const authTag = encryptedBytes.slice(-16);
+
+      return {
+        encryptedKey: this.arrayBufferToBase64(ciphertext.buffer),
+        iv: this.arrayBufferToBase64(iv.buffer),
+        authTag: this.arrayBufferToBase64(authTag.buffer),
+      };
+    } catch (error) {
+      console.error("Error wrapping vault key:", error);
+      throw new Error("Failed to wrap vault key");
+    }
+  }
+
+  /**
+   * Unwrap (decrypt) an encrypted vault key blob and return the plain vault key as base64 string.
+   */
+  async unwrapVaultKey(masterPassword, encryptedKeyBase64, ivBase64, authTagBase64, vaultSalt, iterations = 100000) {
+    try {
+      const wrappingKey = await this.deriveVaultKey(masterPassword, vaultSalt, iterations);
+
+      const encrypted = this.base64ToArrayBuffer(encryptedKeyBase64);
+      const iv = this.base64ToArrayBuffer(ivBase64);
+      const authTag = this.base64ToArrayBuffer(authTagBase64);
+
+      // Diagnostic: log lengths to help debug common issues
+      try {
+        console.debug("unwrapVaultKey inputs:", {
+          encryptedBytes: new Uint8Array(encrypted).length,
+          ivBytes: new Uint8Array(iv).length,
+          authTagBytes: new Uint8Array(authTag).length,
+        });
+      } catch (e) {
+        console.debug("unwrapVaultKey: failed to compute input lengths", e);
+      }
+
+      const combined = new Uint8Array(encrypted.byteLength + authTag.byteLength);
+      combined.set(new Uint8Array(encrypted), 0);
+      combined.set(new Uint8Array(authTag), encrypted.byteLength);
+
+      const decryptedBuffer = await window.crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: new Uint8Array(iv), tagLength: 128 },
+        wrappingKey,
+        combined.buffer
+      );
+
+      return this.arrayBufferToBase64(decryptedBuffer);
+    } catch (error) {
+      console.error("Error unwrapping vault key:", error, {
+        encrypted: encryptedKeyBase64,
+        iv: ivBase64,
+        authTag: authTagBase64,
+        vaultSalt,
+        iterations,
+      });
+      throw new Error("Failed to unwrap vault key");
     }
   }
 

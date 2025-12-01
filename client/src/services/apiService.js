@@ -121,13 +121,23 @@ class ApiService {
 
 
  // TOTP endpoints 
-  async saveTotp({ serviceName, accountName, secret, credentialId }) {
-    return this.client.post("/api/totp", {
+  // Accept either plaintext `secret` (legacy) or encrypted payload
+  async saveTotp({ serviceName, accountName, secret, credentialId, encryptedSecret, secretIv, secretAuthTag }) {
+    const payload = {
       serviceName,
       accountName,
-      secret,
       credentialId: credentialId ? parseInt(credentialId) : null,
-    });
+    };
+
+    if (encryptedSecret && secretIv && secretAuthTag) {
+      payload.encryptedSecret = encryptedSecret;
+      payload.secretIv = secretIv;
+      payload.secretAuthTag = secretAuthTag;
+    } else if (secret) {
+      payload.secret = secret;
+    }
+
+    return this.client.post("/api/totp", payload);
   }
   async getTOTPCredentials(){
     return this.client.get("/api/totp/credentials");
@@ -162,13 +172,9 @@ async updateTotpState(totpId, state) {
     });
   }
 
-  async signup(username, email, masterPassword, recoveryKey) {
-    return this.client.post("/api/auth/signup", {
-      username,
-      email,
-      masterPassword,
-      recoveryKey,
-    });
+  // `signupPayload` should contain: { username, email, masterPassword, recoveryKey, encryptedVaultKey, vaultKeyIv, vaultKeyAuthTag, vaultSalt }
+  async signup(signupPayload) {
+    return this.client.post("/api/auth/signup", signupPayload);
   }
 
   async logout() {
@@ -182,12 +188,21 @@ async updateTotpState(totpId, state) {
     });
   }
 
-  async resetPassword(usernameOrEmail, recoveryKey, newPassword) {
-    return this.client.post("/api/auth/reset-password", {
+  async resetPassword(usernameOrEmail, recoveryKey, newPassword, encryptedBlob = null) {
+    const payload = {
       usernameOrEmail,
       recoveryKey,
       newPassword,
-    });
+    };
+
+    if (encryptedBlob) {
+      payload.encryptedVaultKey = encryptedBlob.encryptedKey;
+      payload.vaultKeyIv = encryptedBlob.iv;
+      payload.vaultKeyAuthTag = encryptedBlob.authTag;
+      payload.vaultSalt = encryptedBlob.vaultSalt;
+    }
+
+    return this.client.post("/api/auth/reset-password", payload);
   }
 
   // User endpoints
@@ -195,10 +210,14 @@ async updateTotpState(totpId, state) {
     return this.client.patch(`/api/users/${userId}`, updates);
   }
 
-  async changeMasterPassword(userId, currentPassword, newPassword) {
-    return this.client.post(`/api/users/${userId}/change-password`, {
-      currentPassword,
-      newPassword,
+  // `payload` should contain { currentPassword, newPassword, encryptedVaultKey, vaultKeyIv, vaultKeyAuthTag, vaultSalt }
+  async changeMasterPassword(userId, payload) {
+    return this.client.post(`/api/users/${userId}/change-password`, payload);
+  }
+
+  async verifyCurrentPassword(userId, masterPassword) {
+    return this.client.post(`/api/users/${userId}/verify-password`, {
+      masterPassword,
     });
   }
 
@@ -207,11 +226,18 @@ async updateTotpState(totpId, state) {
   }
 
   // Recovery Key endpoints
-  async generateRecoveryKey(userId, masterPassword, recoveryKey) {
-    return this.client.post(`/api/users/${userId}/recovery-key`, {
-      masterPassword,
-      recoveryKey,
-    });
+  // Optionally supply `encryptedBlob` which should contain:
+  // { encryptedKey, iv, authTag, vaultSalt, kdfIterations }
+  async generateRecoveryKey(userId, masterPassword, recoveryKey, encryptedBlob = null) {
+    const payload = { masterPassword, recoveryKey };
+    if (encryptedBlob) {
+      payload.encryptedVaultKeyRecovery = encryptedBlob.encryptedKey;
+      payload.vaultKeyRecoveryIv = encryptedBlob.iv;
+      payload.vaultKeyRecoveryAuthTag = encryptedBlob.authTag;
+      payload.vaultRecoverySalt = encryptedBlob.vaultSalt;
+      payload.recoveryKdfIterations = encryptedBlob.kdfIterations || 100000;
+    }
+    return this.client.post(`/api/users/${userId}/recovery-key`, payload);
   }
 
   async getRecoveryKeys(userId) {

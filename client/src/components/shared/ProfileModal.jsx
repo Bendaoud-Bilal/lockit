@@ -3,6 +3,7 @@ import { X, Eye, EyeOff, RefreshCw, Save } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 import cryptoService from "../../services/cryptoService.js";
+import apiService from "../../services/apiService";
 import { calculatePasswordStrength as scorePassword } from '../../utils/crypto';
 
 const ProfileModal = ({ isOpen, onClose }) => {
@@ -178,13 +179,11 @@ const ProfileModal = ({ isOpen, onClose }) => {
           throw new Error(passwordResult.error || "Failed to change password");
         }
       } else {
-        const verifyResult = await changeMasterPassword(
-          formData.currentPassword,
-          formData.currentPassword // Pass same password to verify only
-        );
-
-        if (!verifyResult.success) {
-          throw new Error("Current password is incorrect");
+        // Verify current password without rotating vault key on the server
+        try {
+          await apiService.verifyCurrentPassword(user.id, formData.currentPassword);
+        } catch (err) {
+          throw new Error(err.message || "Current password is incorrect");
         }
       }
 
